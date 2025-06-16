@@ -1,53 +1,268 @@
-# Web Access Advisor - Project Planning
+# Web Access Advisor v2 - Project Planning
 
-## Project Overview
-**Web Access Advisor** is an AI-assisted accessibility assessment tool designed to help developers identify, understand, and fix accessibility issues in web applications. The tool combines automated testing with intelligent analysis to provide actionable insights for WCAG 2.1 compliance and screen reader compatibility.
+## 🎯 Project Overview
 
-## Target Users
-- **Frontend Developers** - Primary users needing accessibility guidance during development
-- **QA Engineers** - Secondary users performing accessibility testing workflows  
-- **Accessibility Specialists** - Expert users requiring detailed compliance reports
-- **Screen Reader Users** - End beneficiaries of improved accessibility implementations
+**Vision**: A React-based accessibility testing tool that records user interactions, replays them with snapshot capture, and provides AI-powered accessibility analysis.
 
-## Accessibility Standards & Focus
-- **WCAG 2.1 AA Compliance** - Primary standard for accessibility evaluation
-- **Screen Reader Technology** - Special focus on NVDA, JAWS, VoiceOver compatibility
-- **Keyboard Navigation** - Complete keyboard accessibility validation
-- **Color Contrast** - Automated contrast ratio checking and suggestions
-- **Semantic HTML** - Proper heading structure, landmarks, and ARIA usage
+**Architecture**: Record-first approach with parent-step flow tracking for intelligent accessibility analysis.
 
-## Technology Stack
+## 🏗️ Technical Stack
 
-### Frontend
-- **React** - Vanilla React 18+ for UI components
-- **Tailwind CSS** - Utility-first styling framework
-- **React Router** - Client-side routing for SPA navigation
-- **React Hook Form** - Form handling and validation
+### Frontend Framework
+- **React 18** - Modern functional components with hooks
+- **Tailwind CSS** - Utility-first styling with accessibility focus
+- **Vite** - Fast development and build tooling
 
-### Browser Automation
-- **Playwright** - Core browser automation engine
-- **Auto-Playwright** - Enhanced automation capabilities
-- **Axe-Core** - Accessibility testing engine integration
-- **DOM Snapshots** - Before/after state capture for analysis
+### Browser Automation & Testing
+- **Playwright** - Browser automation and recording
+- **Auto-Playwright** - AI-enhanced browser interactions (OpenAI-powered)
+- **Axe-core** - Accessibility testing engine
+- **@axe-core/playwright** - Playwright integration for axe
 
 ### AI & Analysis
-- **OpenAI GPT-4** - Direct API integration for accessibility insights
-- **Custom Prompts** - Specialized accessibility evaluation prompts
-- **Report Generation** - Structured accessibility reports with remediation guidance
+- **Google Gemini 1.5** - LLM for accessibility analysis and recommendations
+- **@google/generative-ai** - Official Gemini SDK
 
-### Configuration & Build
-- **Vite** - Modern build tool and development server
-- **Environment Variables** - Configuration through .env files
-- **Node.js APIs** - Server-side functionality when needed
+### Testing & Quality
+- **Vitest** - Unit testing framework
+- **@testing-library/react** - React component testing
+- **@testing-library/jest-dom** - Additional testing matchers
 
-## Project Architecture
+## 🔄 Core Workflow
 
-### Core Components
+### Two-Phase Architecture
+
+#### Phase 1: Recording (Fast & Smooth)
+1. User enters URL → Browser navigation
+2. User interacts → Actions captured in real-time (no snapshots)
+3. Actions displayed in live feed
+4. Recording saved as JSON action sequence
+
+#### Phase 2: Replay & Analysis (Background Processing)
+1. Replay recorded actions with proper waits
+2. Capture HTML snapshots + axe context at each step
+3. Build parent-step relationship metadata
+4. Group snapshots into logical flows
+5. Batch flows for Gemini analysis
+6. Generate accessibility reports
+
+## 📁 Project Structure
+
 ```
-to be added as developnment proceeds
+src/
+├── components/
+│   ├── ModeToggle.jsx           # Manual/Auto mode switcher
+│   ├── URLInput.jsx             # URL entry for testing
+│   ├── RecordingControls.jsx    # Start/Stop recording
+│   ├── ActionList.jsx           # Real-time action display
+│   ├── ReplayControls.jsx       # Replay with options
+│   ├── ProgressIndicator.jsx    # Status notifications
+│   └── AnalysisResults.jsx      # AI analysis display
+├── services/
+│   ├── recorder.js              # Fast action recording
+│   ├── replayer.js              # Action replay + snapshots
+│   ├── gemini.js                # AI analysis service
+│   ├── snapshots.js             # File system management
+│   └── flowAnalyzer.js          # Parent-step flow detection
+├── utils/
+│   ├── stepTracker.js           # Parent relationship tracking
+│   └── actionParser.js          # Action parsing/validation
+└── examples/
+    └── accessibility-workflow.js # Example usage patterns
 ```
 
-### Configuration & Build
+## 🔗 Parent-Step Flow Tracking
+
+### Concept
+Parent-step relationships enable intelligent flow analysis by tracking where each interaction branches from, not just sequential order.
+
+### Implementation
+```javascript
+// Example flow tracking
+Step 1: Load page (parent: none)
+Step 2: Fill email (parent: Step 1) 
+Step 3: Open help modal (parent: Step 2) ← branches off
+Step 4: Close modal (parent: Step 3) ← continues modal branch  
+Step 5: Fill password (parent: Step 2) ← returns to main flow
+```
+
+### Benefits
+- **Separate Analysis**: Modal interactions analyzed independently
+- **Context Preservation**: Each flow maintains proper context
+- **Token Efficiency**: Smaller, focused analysis requests
+- **Better Results**: AI can focus on specific interaction patterns
+
+## 💾 Data Storage Strategy
+
+### Session-Based Structure
+```
+/snapshots/
+  /session_2025-06-16_14-30-45/
+    manifest.json                # Complete session metadata
+    /step_001_initial_load/
+      snapshot.html             # Full HTML content
+      axe_context.json          # Axe accessibility context
+      screenshot.png            # Optional visual reference
+    /step_002_form_interaction/
+      ...
+```
+
+### Metadata Schema
+```json
+{
+  "sessionId": "session_2025-06-16_14-30-45",
+  "url": "https://example.com/form",
+  "totalSteps": 5,
+  "steps": [
+    {
+      "step": 1,
+      "parentStep": null,
+      "action": "initial_load",
+      "actionType": "navigation",
+      "interactionTarget": null,
+      "flowContext": "baseline",
+      "uiState": "form_empty",
+      "timestamp": "2025-06-16T14:30:45Z",
+      "htmlFile": "step_001.html",
+      "axeFile": "step_001_axe.json",
+      "screenshotFile": "step_001.png",
+      "domChanges": "baseline",
+      "tokenEstimate": 2500
+    }
+  ]
+}
+```
+
+## 🤖 AI Analysis Strategy
+
+### Flow-Based Batching
+1. **Group by parent relationships**: Main flows vs. modal sub-flows
+2. **Optimize token usage**: Batch similar interaction types
+3. **Provide context**: Include parent steps for sub-flow context
+4. **Parallel analysis**: Multiple flow types analyzed separately
+
+### Batch Types
+- **Form Accessibility**: Form interactions and validation
+- **Modal Accessibility**: Modal workflows and focus management
+- **Navigation Accessibility**: Page navigation and routing
+- **General Accessibility**: Mixed interaction patterns
+
+### Gemini Prompts
+- **Structured analysis**: Consistent format for issue extraction
+- **WCAG focus**: Specific compliance assessment
+- **Actionable recommendations**: Practical implementation guidance
+- **Severity classification**: High/medium/low priority issues
+
+## 🔧 Environment Configuration
+
+### Required API Keys
+```env
+# OpenAI (for auto-playwright only)
+OPENAI_API_KEY=sk-proj-...
+
+# Gemini (for accessibility analysis)
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# App Configuration
+VITE_APP_NAME=Web Access Advisor
+VITE_APP_VERSION=2.0.0
+NODE_ENV=development
+```
+
+## 🚀 Development Workflow
+
+### Mode Selection
+- **Manual Mode** (Default): User-guided recording with maximum control
+- **Auto Mode** (Experimental): AI-generated interactions for simple pages
+
+### Recording Process
+1. Enter URL and navigate
+2. Start recording with custom name
+3. Interact with page (actions captured instantly)
+4. Stop recording when complete
+
+### Analysis Process
+1. Configure replay options (screenshots, waits, AI analysis)
+2. Replay actions with snapshot capture
+3. Flow analysis and intelligent batching
+4. Gemini AI analysis of accessibility issues
+5. Structured results with recommendations
+
+## 🎨 UI/UX Principles
+
+### Accessibility-First Design
+- **WCAG 2.1 AA Compliance**: All components meet accessibility standards
+- **Keyboard Navigation**: Full keyboard accessibility
+- **Screen Reader Support**: Proper ARIA labels and announcements
+- **Color Contrast**: Minimum 4.5:1 ratio throughout
+- **Focus Management**: Clear focus indicators and logical tab order
+
+### Modern React Patterns
+- **Functional Components**: No class components
+- **Custom Hooks**: Reusable state logic
+- **Context API**: Global state management
+- **Error Boundaries**: Graceful error handling
+- **Performance**: React.memo and optimization
+
+### Responsive Design
+- **Mobile-First**: Tailwind's responsive utilities
+- **Progressive Enhancement**: Works on all screen sizes
+- **Touch-Friendly**: Appropriate touch targets
+- **Loading States**: Clear feedback for all operations
+
+## 🧪 Testing Strategy
+
+### Unit Testing (Vitest + React Testing Library)
+- **Component Testing**: All React components
+- **Service Testing**: Business logic and API calls
+- **Utils Testing**: Helper functions and utilities
+- **Integration Testing**: Component interaction
+
+### E2E Testing (Playwright)
+- **Recording Workflow**: Complete record-replay cycle
+- **Analysis Pipeline**: End-to-end analysis process
+- **Error Scenarios**: Graceful failure handling
+- **Performance**: Response times and resource usage
+
+### Accessibility Testing
+- **Self-Testing**: Use the tool on itself
+- **Screen Reader Testing**: NVDA/JAWS compatibility
+- **Keyboard Testing**: Complete keyboard navigation
+- **Color Contrast**: Automated and manual verification
+
+## 🔄 Future Pipeline Features
+
+### Recording Management
+- **Recording Library**: Save and organize recordings
+- **Recording Editor**: Modify recorded actions
+- **Recording Sharing**: Export/import capabilities
+
+### Pipeline Builder
+- **Drag-Drop Interface**: Visual pipeline construction
+- **Recording Chaining**: Combine multiple recordings
+- **Conditional Logic**: Dynamic flow control
+- **Scheduled Runs**: Automated regression testing
+
+### Advanced Analysis
+- **Trend Analysis**: Track accessibility improvements over time
+- **Comparison Reports**: Before/after analysis
+- **Custom Rules**: Organization-specific accessibility requirements
+- **Integration APIs**: Connect with CI/CD pipelines
+
+## 🔒 Security & Privacy
+
+### Data Handling
+- **Local Storage**: All snapshots stored locally
+- **API Security**: Secure API key management
+- **Sensitive Data**: Automatic detection and masking
+- **Clean-up**: Automatic old snapshot removal
+
+### Privacy Protection
+- **No Data Collection**: No telemetry or analytics
+- **Local Processing**: Analysis happens locally
+- **User Control**: Complete control over data retention
+
+This architecture provides a solid foundation for building a powerful, accessible, and user-friendly accessibility testing tool with modern React patterns and AI-enhanced analysis capabilities.
 ```
 public/                  # Static assets
 ├── index.html          # Main HTML template

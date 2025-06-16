@@ -4,19 +4,23 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { GeminiAnalysis } from '../types/index.ts';
 
 // Initialize Gemini client
-const genAI = new GoogleGenerativeAI(import.meta.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
 const modelName = "gemini-2.0-flash"; // Updated to the latest model
 
 /**
  * Analyzes accessibility issues using Gemini
  * 
- * @param {string} htmlContent - The HTML content to analyze
- * @param {Array} axeResults - Results from axe accessibility testing
- * @returns {Promise<Object>} Analysis results from Gemini
+ * @param htmlContent - The HTML content to analyze
+ * @param axeResults - Results from axe accessibility testing
+ * @returns Analysis results from Gemini
  */
-export const analyzeAccessibility = async (htmlContent, axeResults) => {
+export const analyzeAccessibility = async (
+  htmlContent: string, 
+  axeResults: any[]
+): Promise<GeminiAnalysis> => {
   try {
     const model = genAI.getGenerativeModel({ model: modelName });
 
@@ -36,22 +40,20 @@ Please provide:
 4. WCAG compliance assessment
 
 Format your response as a structured analysis with clear sections.
-`;
-
-    const result = await model.generateContent(prompt);
+`;    const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
 
+    // Parse the response into structured format
+    // TODO: Parse Gemini response into structured AccessibilityIssue format
     return {
-      success: true,
-      analysis: text,
-      model: modelName
+      summary: text,
+      issues: [],
+      recommendations: [],
+      score: 0
     };
   } catch (error) {
     console.error('Gemini API error:', error);
-    return {
-      success: false,
-      error: error.message
-    };
+    throw new Error(error instanceof Error ? error.message : 'Unknown Gemini API error');
   }
 };

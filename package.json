@@ -3,16 +3,30 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev:cli": "npm run dev --workspace=packages/cli",
+    "dev:server": "node server/dist/index.js",
+    "dev:full": "concurrently \"npm run dev:server\" \"npm run dev\"",
+    "build": "npm run build --workspaces && vite build",
+    "build:core": "npm run build --workspace=packages/core",
+    "build:cli": "npm run build --workspace=packages/cli",
+    "build:server": "tsc --project server/tsconfig.json",
+    "preview": "vite preview",
+    "cli": "node packages/cli/dist/cli.js"
   },
   "dependencies": {
-    "@axe-core/playwright": "^4.10.2",
     "@google/generative-ai": "^0.24.1",
+    "@tanstack/react-query": "^5.80.7",
     "auto-playwright": "^1.16.1",
     "axe-core": "^4.10.3",
+    "chalk": "^5.4.1",
+    "commander": "^14.0.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "playwright": "^1.53.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -20,14 +34,21 @@
     "react-router-dom": "^7.6.2"
   },
   "devDependencies": {
+    "@tanstack/react-query-devtools": "^5.80.7",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.2",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.5.2",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.1.2",
+    "dotenv": "^16.5.0",
     "postcss": "^8.5.5",
-    "tailwindcss": "^4.1.10",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "vitest": "^3.2.3"
   }
