@@ -6,7 +6,7 @@ import { chromium, Page, Browser, BrowserContext } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
-import { GeminiService } from './gemini';
+import { GeminiService } from './gemini.js';
 import type { 
   UserAction, 
   SnapshotData, 
@@ -15,8 +15,10 @@ import type {
   SessionManifest,
   StepDetail,
   AxeContext,
-  GeminiAnalysis
-} from './types';
+  GeminiAnalysis,
+  DOMChangeType,
+  DOMChangeDetails
+} from './types.js';
 
 /**
  * Main analysis engine class
@@ -26,6 +28,8 @@ export class AccessibilityAnalyzer {
   private context: BrowserContext | null = null;
   private page: Page | null = null;
   private geminiService: GeminiService | null = null;
+  private domChangeDetector: DOMChangeDetector = new DOMChangeDetector();
+  private previousHtmlState: string | null = null;
 
   /**
    * Initialize the analyzer
@@ -66,9 +70,11 @@ export class AccessibilityAnalyzer {
     try {
       if (!this.page) {
         throw new Error('Analyzer not initialized');
-      }
-
-      console.log(`Starting analysis session: ${sessionId}`);
+      }      console.log(`Starting analysis session: ${sessionId}`);
+      
+      // Reset DOM change detector and HTML state for new session
+      this.domChangeDetector.reset();
+      this.previousHtmlState = null;
 
       // Replay each action and capture snapshots
       for (let i = 0; i < actions.length; i++) {
@@ -83,28 +89,45 @@ export class AccessibilityAnalyzer {
           await this.page.waitForLoadState('networkidle');
         }
 
-        // Capture snapshot
-        const snapshot = await this.captureSnapshot(
-          this.page, 
-          i + 1, 
-          action, 
-          sessionDir,
-          captureScreenshots
-        );
-        snapshots.push(snapshot);
-      }      // Perform Gemini analysis if enabled and service available
+        // Detect DOM changes
+        const domChangeDetails = await this.domChangeDetector.detectChanges(this.page, action);
+        console.log(`  DOM Change: ${domChangeDetails.type} - ${domChangeDetails.description}`);        // Only capture snapshot if changes are significant or it's a navigation
+        const shouldSnapshot = domChangeDetails.significant || 
+                              domChangeDetails.type === 'navigation' ||
+                              i === 0; // Always snapshot first step
+
+        if (shouldSnapshot) {
+          console.log(`  Capturing snapshot for significant ${domChangeDetails.type} change`);
+          const snapshot = await this.captureSnapshot(
+            this.page, 
+            i + 1, 
+            action,
+            domChangeDetails,
+            sessionDir,
+            captureScreenshots
+          );
+          snapshots.push(snapshot);
+            // Store current HTML for next iteration's before/after comparison
+          this.previousHtmlState = snapshot.html;
+        } else {
+          console.log(`  Skipping snapshot - no significant changes`);
+        }
+      }
+
+      // Perform Gemini analysis if enabled and service available
       if (analyzeWithGemini && this.geminiService && snapshots.length > 0) {
         console.log('Running Gemini accessibility analysis...');
         try {
-          const lastSnapshot = snapshots[snapshots.length - 1];
-          geminiAnalysis = await this.geminiService.analyzeAccessibility(
+          const lastSnapshot = snapshots[snapshots.length - 1];          geminiAnalysis = await this.geminiService.analyzeAccessibility(
             lastSnapshot.html,
             lastSnapshot.axeResults,
             {
               url: actions[0]?.url || 'unknown',
               action: actions[actions.length - 1]?.type || 'unknown',
-              step: snapshots.length
-            }
+              step: snapshots.length,
+              domChangeType: lastSnapshot.domChangeType
+            },
+            this.previousHtmlState || undefined
           );
         } catch (error) {
           console.warn('Gemini analysis failed:', error);
@@ -179,14 +202,14 @@ export class AccessibilityAnalyzer {
       default:
         console.warn(`Unknown action type: ${action.type}`);
     }
-  }
-  /**
+  }  /**
    * Capture accessibility snapshot
    */
   private async captureSnapshot(
     page: Page,
     stepNumber: number,
     action: UserAction,
+    domChangeDetails: DOMChangeDetails,
     sessionDir: string,
     captureScreenshots: boolean
   ): Promise<SnapshotData> {
@@ -200,6 +223,8 @@ export class AccessibilityAnalyzer {
       html: '',
       axeContext: {} as AxeContext,
       axeResults: [],
+      domChangeType: domChangeDetails.type,
+      domChangeDetails: domChangeDetails,
       files: {
         html: '',
         axeContext: '',
@@ -280,7 +305,8 @@ export class AccessibilityAnalyzer {
         axeFile: path.basename(snapshot.files.axeContext),
         axeResultsFile: path.basename(snapshot.files.axeResults),
         screenshotFile: snapshot.files.screenshot ? path.basename(snapshot.files.screenshot) : undefined,
-        domChanges: 'detected', // TODO: Implement actual DOM change detection
+        domChangeType: snapshot.domChangeType,
+        domChanges: snapshot.domChangeDetails.description,
         tokenEstimate: this.estimateTokens(snapshot)
       }))
     };
@@ -354,9 +380,7 @@ export class AccessibilityAnalyzer {
    */
   private generateSessionId(): string {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
+  }  /**
    * Clean up resources
    */
   async cleanup(): Promise<void> {
@@ -366,5 +390,101 @@ export class AccessibilityAnalyzer {
       this.context = null;
       this.page = null;
     }
+    this.domChangeDetector.reset();
+    this.previousHtmlState = null;
+  }
+}
+
+/**
+ * DOM Change Detection utility
+ */
+class DOMChangeDetector {
+  private previousState: {
+    url: string;
+    title: string;
+    elementCount: number;
+    bodyHTML: string;
+  } | null = null;
+
+  /**
+   * Detect and categorize DOM changes
+   */
+  async detectChanges(page: Page, action: UserAction): Promise<DOMChangeDetails> {
+    const currentState = await page.evaluate(() => ({
+      url: window.location.href,
+      title: document.title,
+      elementCount: document.querySelectorAll('*').length,
+      bodyHTML: document.body.innerHTML
+    }));
+
+    if (!this.previousState) {
+      // First time - initialize
+      this.previousState = currentState;
+      return {
+        type: 'navigation',
+        significant: true,
+        elementsAdded: currentState.elementCount,
+        elementsRemoved: 0,
+        elementsModified: 0,
+        urlChanged: false,
+        titleChanged: false,
+        description: 'Initial page load'
+      };
+    }
+
+    // Compare states
+    const urlChanged = this.previousState.url !== currentState.url;
+    const titleChanged = this.previousState.title !== currentState.title;
+    const elementCountDiff = currentState.elementCount - this.previousState.elementCount;
+    const bodyChanged = this.previousState.bodyHTML !== currentState.bodyHTML;
+
+    // Determine change type and significance
+    let changeType: DOMChangeType;
+    let significant = false;
+    let description = '';
+
+    if (urlChanged) {
+      changeType = 'navigation';
+      significant = true;
+      description = 'Navigation to new page';
+    } else if (!bodyChanged) {
+      changeType = 'none';
+      description = 'No DOM changes detected';
+    } else if (Math.abs(elementCountDiff) > 10 || titleChanged) {
+      changeType = 'content';
+      significant = true;
+      description = `Significant content change (${elementCountDiff > 0 ? '+' : ''}${elementCountDiff} elements)`;
+    } else if (Math.abs(elementCountDiff) > 0) {
+      changeType = 'interaction';
+      significant = elementCountDiff > 2;
+      description = `Interactive change (${elementCountDiff > 0 ? '+' : ''}${elementCountDiff} elements)`;
+    } else {
+      changeType = 'layout';
+      significant = false;
+      description = 'Layout or style changes only';
+    }
+
+    const changeDetails: DOMChangeDetails = {
+      type: changeType,
+      significant,
+      elementsAdded: Math.max(0, elementCountDiff),
+      elementsRemoved: Math.max(0, -elementCountDiff),
+      elementsModified: bodyChanged ? 1 : 0,
+      urlChanged,
+      titleChanged,
+      description
+    };
+
+    // Update state for next comparison
+    this.previousState = currentState;
+
+    return changeDetails;
+  }
+
+  /**
+   * Reset detector state
+   */
+  reset(): void {
+    this.previousState = null;
   }
 }

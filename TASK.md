@@ -183,3 +183,30 @@ npm install -D vitest @vitejs/plugin-react
 
 **Last Updated**: 2025-06-16
 **Next Review**: Check progress on React foundation setup
+
+### DOM Change Detection & Smart Snapshots
+- ✅ **Intelligent Snapshot Capture**: Only snapshots when significant DOM changes occur
+- ✅ **Change Type Classification**: Navigation, content, interaction, layout, none
+- ✅ **Efficiency Optimization**: Skips unnecessary snapshots and analysis
+- ✅ **Detailed Change Tracking**: Element counts, URL changes, title changes
+- ✅ **Context-Aware Analysis**: LLM gets change type for better prompts
+
+### DOM Change Types
+- **Navigation**: URL changes, new pages (always snapshot)
+- **Content**: Significant DOM updates, new data (snapshot if >10 elements)
+- **Interaction**: Small DOM changes, UI state (snapshot if >2 elements)
+- **Layout**: Style/CSS changes only (usually skip)
+- **None**: No changes detected (skip snapshot)
+
+### Component-Focused LLM Analysis (NEW!)
+- ✅ **Before/After State Comparison**: Analyzes component behavior changes during interactions
+- ✅ **Interactive Component Detection**: Automatically identifies dropdowns, modals, tabs, carousels, etc.
+- ✅ **Code Fix Examples**: Provides actual corrected HTML code, not just descriptions
+- ✅ **Component-Specific Reporting**: Detailed analysis per component type with WCAG rule references
+- ✅ **Screen Reader Focus**: Specifically targets assistive technology compatibility issues
+
+### Enhanced LLM Prompt Features
+- **16 Component Types**: Expandable content, dropdowns, tabs, modals, autocomplete, error handling, dynamic content, keyboard nav, carousels, tree views, data tables, sortable tables, tooltips, context menus, validation messages, live regions
+- **State Change Analysis**: Compares DOM before/after user interactions to detect attribute update failures
+- **Practical Fixes**: Shows both problematic HTML and corrected code examples
+- **Actionable Reports**: Component name, issue description, explanation, relevant HTML, corrected code, change summary

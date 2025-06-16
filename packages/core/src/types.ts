@@ -19,6 +19,8 @@ export interface SnapshotData {
   html: string;
   axeContext: AxeContext;
   axeResults: any[];
+  domChangeType: DOMChangeType;
+  domChangeDetails: DOMChangeDetails;
   screenshot?: Buffer;
   files: {
     html: string;
@@ -26,6 +28,19 @@ export interface SnapshotData {
     axeResults: string;
     screenshot?: string;
   };
+}
+
+export type DOMChangeType = 'navigation' | 'content' | 'interaction' | 'layout' | 'none';
+
+export interface DOMChangeDetails {
+  type: DOMChangeType;
+  significant: boolean;
+  elementsAdded: number;
+  elementsRemoved: number;
+  elementsModified: number;
+  urlChanged: boolean;
+  titleChanged: boolean;
+  description: string;
 }
 
 export interface AxeContext {
@@ -66,6 +81,7 @@ export interface StepDetail {
   axeFile: string;
   axeResultsFile: string;
   screenshotFile?: string;
+  domChangeType: DOMChangeType;
   domChanges: string;
   tokenEstimate: number;
 }
@@ -89,9 +105,20 @@ export interface AnalysisResult {
 
 export interface GeminiAnalysis {
   summary: string;
-  issues: AccessibilityIssue[];
+  components: ComponentAccessibilityIssue[];
   recommendations: string[];
   score: number;
+}
+
+export interface ComponentAccessibilityIssue {
+  componentName: string;
+  issue: string;
+  explanation: string;
+  relevantHtml: string;
+  correctedCode: string;
+  codeChangeSummary: string;
+  impact: 'critical' | 'serious' | 'moderate' | 'minor';
+  wcagRule: string;
 }
 
 export interface AccessibilityIssue {
