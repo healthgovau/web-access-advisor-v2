@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base accessibility styles */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply font-sans text-gray-900 antialiased;
+    line-height: 1.6;
+  }
+  
+  /* Ensure focus is always visible */
+  *:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+  
+  /* Remove outline for mouse users, keep for keyboard users */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+  
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    * {
+      border-color: currentColor;
+    }
+  }
+  
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

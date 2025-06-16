@@ -1,0 +1,34 @@
+{
+  "name": "web-access-advisor",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "auto-playwright": "^1.16.1",
+    "axe-core": "^4.10.3",
+    "openai": "^5.3.0",
+    "playwright": "^1.53.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-hook-form": "^7.58.0",
+    "react-router-dom": "^7.6.2"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.5.2",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.5",
+    "tailwindcss": "^4.1.10",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.3"
+  }
+}
