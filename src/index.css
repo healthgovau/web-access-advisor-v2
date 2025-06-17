@@ -41,3 +41,24 @@
     }
   }
 }
+
+/* Custom animation for counter-clockwise replay spinner */
+@keyframes spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-spin-reverse {
+  animation: spin-reverse 1s linear infinite;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin-reverse {
+    animation: none;
+  }
+}

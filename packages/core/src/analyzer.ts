@@ -112,9 +112,16 @@ export class AccessibilityAnalyzer {
         // Execute the action
         await this.executeAction(this.page, action);
 
-        // Wait for stability if requested
+        // Wait for stability if requested (with timeout)
         if (waitForStability) {
-          await this.page.waitForLoadState('networkidle');
+          try {
+            console.log(`  Waiting for page stability...`);
+            await this.page.waitForLoadState('networkidle', { timeout: 15000 });
+            console.log(`  ✅ Page stabilized`);
+          } catch (error) {
+            console.warn(`  ⚠️ Page stability timeout - continuing anyway:`, error instanceof Error ? error.message : error);
+            // Continue anyway - don't let this block the analysis
+          }
         }
 
         // Detect DOM changes
@@ -142,25 +149,36 @@ export class AccessibilityAnalyzer {
         }
       }
 
+      console.log(`🧠 PHASE 3: Running AI accessibility analysis...`);
+      
       // Perform Gemini analysis if enabled and service available
       if (analyzeWithGemini && this.geminiService && snapshots.length > 0) {
-        console.log('Running Gemini accessibility analysis...');
+        console.log(`🤖 Analyzing ${snapshots.length} snapshots with Gemini AI...`);
         try {
-          const lastSnapshot = snapshots[snapshots.length - 1];          geminiAnalysis = await this.geminiService.analyzeAccessibility(
-            lastSnapshot.html,
-            lastSnapshot.axeResults,
+          // Generate manifest first for flow analysis
+          const tempManifest = await this.generateManifest(sessionId, actions, snapshots);
+          
+          // Use enhanced flow analysis for multiple snapshots
+          geminiAnalysis = await this.geminiService.analyzeAccessibilityFlow(
+            snapshots,
+            tempManifest,
             {
               url: actions[0]?.url || 'unknown',
-              action: actions[actions.length - 1]?.type || 'unknown',
-              step: snapshots.length,
-              domChangeType: lastSnapshot.domChangeType
-            },
-            this.previousHtmlState || undefined
+              sessionId,
+              totalSteps: snapshots.length
+            }
           );
+          
+          console.log(`✅ Gemini analysis completed - found ${geminiAnalysis?.components?.length || 0} accessibility issues`);
         } catch (error) {
-          console.warn('Gemini analysis failed:', error);
+          console.warn('❌ Gemini analysis failed:', error);
+          geminiAnalysis = undefined;
           // Continue without Gemini analysis
         }
+      } else if (!this.geminiService) {
+        console.log(`⚠️ Gemini service not available - skipping AI analysis`);
+      } else {
+        console.log(`⚠️ No snapshots captured - skipping AI analysis`);
       }
 
       // Generate metadata manifest
@@ -190,45 +208,88 @@ export class AccessibilityAnalyzer {
   }
 
   /**
-   * Execute a user action
+   * Execute a user action with timeout and error handling
    */
   private async executeAction(page: Page, action: UserAction): Promise<void> {
-    switch (action.type) {
-      case 'navigate':
-        if (action.url) {
-          await page.goto(action.url);
-        }
-        break;
-      case 'click':
-        if (action.selector) {
-          await page.click(action.selector);
-        }
-        break;
-      case 'fill':
-        if (action.selector && action.value) {
-          await page.fill(action.selector, action.value);
-        }
-        break;
-      case 'select':
-        if (action.selector && action.value) {
-          await page.selectOption(action.selector, action.value);
-        }
-        break;
-      case 'scroll':
-        await page.evaluate(() => window.scrollBy(0, 300));
-        break;
-      case 'hover':
-        if (action.selector) {
-          await page.hover(action.selector);
-        }
-        break;
-      case 'key':
-        if (action.value) {
-          await page.keyboard.press(action.value);
-        }
-        break;
-      default:
-        console.warn(`Unknown action type: ${action.type}`);
+    try {
+      console.log(`  Executing ${action.type} action...`);
+      
+      switch (action.type) {
+        case 'navigate':
+          if (action.url) {
+            console.log(`    Navigating to: ${action.url}`);
+            await page.goto(action.url, { timeout: 30000 });
+          }
+          break;
+          
+        case 'click':
+          if (action.selector) {
+            console.log(`    Clicking element: ${action.selector}`);
+            
+            // Check if element exists first
+            const elementExists = await page.locator(action.selector).count();
+            console.log(`    Element count for selector "${action.selector}": ${elementExists}`);
+            
+            if (elementExists === 0) {
+              console.warn(`    ⚠️ Element not found: ${action.selector}`);
+              // Try to get page info for debugging
+              const url = page.url();
+              const title = await page.title();
+              console.log(`    Current page: ${url} - "${title}"`);
+              return; // Skip this action
+            }
+            
+            // Wait for element to be available, then click with timeout
+            await page.waitForSelector(action.selector, { timeout: 10000 });
+            await page.click(action.selector, { timeout: 10000 });
+          }
+          break;
+          
+        case 'fill':
+          if (action.selector && action.value) {
+            console.log(`    Filling input: ${action.selector} with "${action.value}"`);
+            await page.waitForSelector(action.selector, { timeout: 10000 });
+            await page.fill(action.selector, action.value, { timeout: 10000 });
+          }
+          break;
+          
+        case 'select':
+          if (action.selector && action.value) {
+            console.log(`    Selecting option: ${action.value} in ${action.selector}`);
+            await page.waitForSelector(action.selector, { timeout: 10000 });
+            await page.selectOption(action.selector, action.value, { timeout: 10000 });
+          }
+          break;
+          
+        case 'scroll':
+          console.log(`    Scrolling page`);
+          await page.evaluate(() => window.scrollBy(0, 300));
+          break;
+          
+        case 'hover':
+          if (action.selector) {
+            console.log(`    Hovering over: ${action.selector}`);
+            await page.waitForSelector(action.selector, { timeout: 10000 });
+            await page.hover(action.selector, { timeout: 10000 });
+          }
+          break;
+          
+        case 'key':
+          if (action.value) {
+            console.log(`    Pressing key: ${action.value}`);
+            await page.keyboard.press(action.value);
+          }
+          break;
+          
+        default:
+          console.warn(`Unknown action type: ${action.type}`);
+      }
+      
+      console.log(`  ✅ ${action.type} action completed successfully`);
+      
+    } catch (error) {
+      console.warn(`  ⚠️ ${action.type} action failed:`, error instanceof Error ? error.message : error);
+      // Don't throw - continue with analysis even if action fails
     }
   }  /**
    * Capture accessibility snapshot

@@ -11,7 +11,7 @@
     "dev:cli": "npm run dev --workspace=packages/cli",
     "dev:server": "set API_PORT=3002 && node server/dist/server/index.js",
     "dev:full": "concurrently \"npm run dev:server\" \"npm run dev\"",
-    "build": "npm run build --workspaces && vite build",
+    "build": "npm run build --workspaces && npm run build:server && vite build",
     "build:core": "npm run build --workspace=packages/core",
     "build:cli": "npm run build --workspace=packages/cli",
     "build:server": "tsc --project server/tsconfig.json",

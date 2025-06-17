@@ -12,6 +12,7 @@ import ThreePhaseStatus from './components/ThreePhaseStatus';
 import AnalysisResults from './components/AnalysisResults';
 import AnalysisControls from './components/AnalysisControls';
 import ErrorDisplay from './components/ErrorDisplay';
+import { useAccessibilityAnalysis } from './hooks/useAccessibilityAnalysis';
 import * as recordingApi from './services/recordingApi';
 import type { AppState, ProgressStage } from './types';
 import './App.css';
@@ -28,9 +29,11 @@ function App() {
       message: 'Ready to start accessibility testing'
     }
   });
-
   // Polling interval reference
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
+
+  // Accessibility analysis hook
+  const { handleAnalysisResult } = useAccessibilityAnalysis();
 
   // Update state helper
   const updateState = (updates: Partial<AppState>) => {
@@ -146,64 +149,60 @@ function App() {
       await new Promise(resolve => setTimeout(resolve, 800));
       
       updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
-      
-      // Brief delay to show the capturing phase
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      updateProgress('processing-with-ai', 'Processing with AI accessibility analysis');
+        // Start with replay phase - this is what the backend actually does first
+      updateProgress('replaying-actions', 'Starting replay and analysis process');
 
       // Start the analysis
-      const response = await recordingApi.analyzeSession(state.sessionId);if (response.status === 'completed' && response.result) {        // Check for warnings (e.g., Gemini not available)
-        if (response.result.warnings && response.result.warnings.length > 0) {
-          const warningMessage = response.result.warnings[0];
-          if (warningMessage.includes('Gemini') || warningMessage.includes('AI analysis unavailable')) {
-            updateProgress('completed', 'Analysis complete', undefined, 'AI analysis unavailable - Gemini API not configured');
-          } else {
-            updateProgress('completed', 'Analysis complete', undefined, `Warning: ${warningMessage}`);
-          }
-        } else {
-          updateProgress('completed', 'Analysis complete', undefined, 'Report generated successfully');
-        }
+      const response = await recordingApi.analyzeSession(state.sessionId);
+
+      if (response.status === 'completed' && response.result) {
+        // Analysis completed immediately - handle result
+        const resultHandler = handleAnalysisResult(response.result);
+        updateProgress(resultHandler.stage, resultHandler.message, undefined, resultHandler.details);
         updateState({
           mode: 'results',
           analysisResult: response.result,
           loading: false
         });
-      } else {
-        // Poll for analysis completion with progress updates
-        updateProgress('replaying-actions', 'Replaying actions in headless browser');
-
-        const pollAnalysis = async () => {
+      } else {        // Poll for analysis completion with conservative progress updates
+        let pollCount = 0;
+          const pollAnalysis = async () => {
           try {
+            pollCount++;
             const statusResponse = await recordingApi.getAnalysisStatus(response.analysisId);
 
-            // Update progress based on analysis stage
-            if (statusResponse.status === 'analyzing') {
-              updateProgress('processing-with-ai', 'Processing with AI accessibility analysis');
-            }
+            console.log(`Polling analysis status (attempt ${pollCount}):`, statusResponse.status);
 
             if (statusResponse.status === 'completed' && statusResponse.result) {
-              // Check for warnings in the final result
-              if (statusResponse.result.warnings && statusResponse.result.warnings.length > 0) {
-                const warningMessage = statusResponse.result.warnings[0];
-                if (warningMessage.includes('Gemini') || warningMessage.includes('AI analysis unavailable')) {
-                  updateProgress('completed', 'Analysis complete', undefined, 'AI analysis unavailable - Gemini API not configured');
-                } else {
-                  updateProgress('completed', 'Analysis complete', undefined, `Warning: ${warningMessage}`);
-                }
-              } else {
-                updateProgress('completed', 'Analysis complete', undefined, 'Report generated successfully');
-              }
+              // Analysis complete - handle result immediately
+              console.log('Analysis completed, handling result');
+              const resultHandler = handleAnalysisResult(statusResponse.result);
+              updateProgress(resultHandler.stage, resultHandler.message, undefined, resultHandler.details);
 
               updateState({
                 mode: 'results',
                 analysisResult: statusResponse.result,
                 loading: false
               });
+              return; // Stop polling
+            } 
+            
+            // Analysis still in progress - update UI based on poll count and status
+            if (statusResponse.status === 'analyzing') {
+              updateProgress('processing-with-ai', 'AI analyzing accessibility issues');
+            } else if (pollCount < 5) {
+              updateProgress('replaying-actions', 'Replaying recorded actions');
+            } else if (pollCount < 15) {
+              updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
             } else {
-              setTimeout(pollAnalysis, 2000); // Check every 2 seconds
+              // Assume AI processing if taking longer
+              updateProgress('processing-with-ai', 'AI analyzing accessibility issues');
             }
+
+            // Continue polling
+            setTimeout(pollAnalysis, 2000); // Check every 2 seconds
           } catch (error) {
+            console.error('Analysis polling error:', error);
             updateProgress('error', 'Analysis failed', undefined, undefined, error instanceof Error ? error.message : 'Unknown error');
             updateState({
               error: error instanceof Error ? error.message : 'Analysis failed',
@@ -211,7 +210,7 @@ function App() {
               mode: 'results'
             });
           }
-        }; setTimeout(pollAnalysis, 2000);
+        };setTimeout(pollAnalysis, 2000);
       }
 
     } catch (error) {

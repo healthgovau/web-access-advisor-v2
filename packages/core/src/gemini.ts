@@ -331,43 +331,93 @@ Focus on actionable issues that can be addressed by developers, prioritizing cri
   }
   /**
    * Parses Gemini response into structured component-based format
-   */
-  private parseGeminiResponse(text: string, context: { step: number }): GeminiAnalysis {
+   */  private parseGeminiResponse(text: string, context: { step: number }): GeminiAnalysis {
     try {
       // Try to extract JSON from response
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        return {
-          summary: parsed.summary || 'Component analysis completed',
-          components: this.parseComponents(parsed.components || []),
-          recommendations: parsed.recommendations || [],
-          score: Math.max(0, Math.min(100, parsed.score || 0))
-        };
+        const validComponents = this.parseComponents(parsed.components || []);
+        
+        // Only return analysis if we have valid components
+        if (validComponents.length > 0) {
+          return {
+            summary: parsed.summary || 'Component analysis completed',
+            components: validComponents,
+            recommendations: parsed.recommendations || [],
+            score: Math.max(0, Math.min(100, parsed.score || 0))
+          };
+        } else {
+          console.warn('⚠️ Gemini analysis returned no valid components, falling back to text parsing');
+        }
+      } else {
+        console.warn('⚠️ No JSON found in Gemini response, falling back to text parsing');
       }
     } catch (error) {
-      console.warn('Failed to parse Gemini JSON response, using fallback:', error);
+      console.warn('⚠️ Failed to parse Gemini JSON response, using fallback:', error);
     }
 
-    // Fallback: extract information from text
-    return this.parseTextResponse(text, context.step);
+    // Fallback: extract information from text or return empty analysis
+    const fallbackAnalysis = this.parseTextResponse(text, context.step);
+    
+    // If fallback also has no components, return a minimal valid analysis
+    if (!fallbackAnalysis.components || fallbackAnalysis.components.length === 0) {
+      console.warn('⚠️ Both JSON and text parsing failed to extract meaningful components');
+      return {
+        summary: 'Analysis completed but no specific accessibility issues were identified by AI',
+        components: [],
+        recommendations: [
+          'Review the website manually for accessibility issues',
+          'Run automated accessibility tools like axe or Lighthouse',
+          'Test with screen readers and keyboard navigation'
+        ],
+        score: 75 // Neutral score when AI can't provide specific feedback
+      };
+    }
+    
+    return fallbackAnalysis;
   }
-
   /**
    * Validates and formats component accessibility issues
    */
   private parseComponents(components: any[]): ComponentAccessibilityIssue[] {
-    return components.map(component => ({
-      componentName: component.componentName || 'Unknown Component',
-      issue: component.issue || 'No issue description provided',
-      explanation: component.explanation || 'No explanation provided',
-      relevantHtml: component.relevantHtml || '',
-      correctedCode: component.correctedCode || '',
-      codeChangeSummary: component.codeChangeSummary || '',
-      impact: ['critical', 'serious', 'moderate', 'minor'].includes(component.impact) 
-        ? component.impact : 'moderate',
-      wcagRule: component.wcagRule || 'unknown'
-    }));
+    if (!Array.isArray(components) || components.length === 0) {
+      console.warn('⚠️ Gemini returned no components or invalid component data');
+      return [];
+    }
+
+    return components
+      .filter(component => {
+        // Filter out components with no meaningful data
+        const hasValidName = component.componentName && 
+                            component.componentName !== 'Unknown Component' && 
+                            component.componentName.trim().length > 0;
+        const hasValidIssue = component.issue && 
+                             component.issue !== 'No issue description provided' && 
+                             component.issue.trim().length > 0;
+        
+        if (!hasValidName || !hasValidIssue) {
+          console.warn('🗑️ Filtering out invalid component:', {
+            name: component.componentName,
+            issue: component.issue
+          });
+          return false;
+        }
+        
+        return true;
+      })
+      .map(component => ({
+        componentName: component.componentName.trim(),
+        issue: component.issue.trim(),
+        explanation: component.explanation?.trim() || 'No detailed explanation provided',
+        relevantHtml: component.relevantHtml || '',
+        correctedCode: component.correctedCode || '',
+        codeChangeSummary: component.codeChangeSummary || '',
+        impact: ['critical', 'serious', 'moderate', 'minor'].includes(component.impact) 
+          ? component.impact : 'moderate',
+        wcagRule: component.wcagRule && component.wcagRule !== 'unknown' 
+          ? component.wcagRule : 'General Accessibility'
+      }));
   }
   /**
    * Fallback text parsing when JSON parsing fails

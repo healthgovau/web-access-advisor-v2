@@ -74,17 +74,7 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
         phases[0].details = `${actionCount} actions captured`;
         // Keep other phases as pending until analysis starts
         break;
-        
-      case 'preparing-analysis':
-        phases[0].status = 'completed';
-        phases[0].message = 'Recording complete';
-        phases[0].details = `${actionCount} actions captured`;
-        
-        phases[1].status = 'active';
-        phases[1].message = 'Preparing analysis...';
-        phases[1].details = 'Initializing replay environment';
-        break;
-        
+          case 'preparing-analysis':
       case 'replaying-actions':
       case 'capturing-snapshots':
       case 'running-accessibility-checks':
@@ -93,13 +83,15 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
         phases[0].details = `${actionCount} actions captured`;
         
         phases[1].status = 'active';
-        phases[1].message = currentStage === 'replaying-actions' ? 'Replaying actions...' :
+        phases[1].message = currentStage === 'preparing-analysis' ? 'Preparing analysis...' :
+                           currentStage === 'replaying-actions' ? 'Replaying actions...' :
                            currentStage === 'capturing-snapshots' ? 'Capturing snapshots...' :
                            'Running accessibility checks...';
-        phases[1].details = `${snapshotCount} snapshots captured`;
+        phases[1].details = snapshotCount > 0 ? 
+          `${snapshotCount} snapshots captured` : 
+          'Processing user interactions';
         break;
-        
-      case 'processing-with-ai':
+          case 'processing-with-ai':
       case 'generating-report':
         phases[0].status = 'completed';
         phases[0].message = 'Recording complete';
@@ -110,8 +102,10 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
         phases[1].details = `${snapshotCount} snapshots captured`;
         
         phases[2].status = 'active';
-        phases[2].message = currentStage === 'processing-with-ai' ? 'AI processing...' : 'Generating report...';
-        phases[2].details = 'Analyzing components and generating insights';
+        phases[2].message = currentStage === 'processing-with-ai' ? 'AI analyzing flow...' : 'Finalizing results...';
+        phases[2].details = snapshotCount > 0 ? 
+          `Analyzing ${snapshotCount} snapshots with AI` : 
+          'Processing accessibility data';
         break;
           case 'completed':
         phases[0].status = 'completed';
@@ -204,7 +198,7 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
           <div key={phase.phase} className={`border rounded p-3 transition-all duration-300 ${getStatusColor(phase.status)}`}>
             <div className="flex items-center space-x-2 mb-1">              <span className="text-lg flex-shrink-0">
                 {phase.status === 'active' ? (
-                  <div className={phase.phase === 'replay' ? 'animate-spin' : ''}>
+                  <div className={phase.phase === 'replay' ? 'animate-spin-reverse' : ''}>
                     {getStatusIcon(phase.status, phase.phase)}
                   </div>
                 ) : (
