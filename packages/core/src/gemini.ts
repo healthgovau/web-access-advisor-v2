@@ -259,12 +259,10 @@ Respond with a JSON object with this exact structure:
   "summary": "Overview of accessibility findings across the interaction flow",
   "components": [
     {
-      "componentName": "Specific component name (e.g., Search Button, Navigation Menu)",
-      "issue": "Clear description of the accessibility issue",
-      "explanation": "Detailed explanation of why this is a problem",
-      "relevantHtml": "Key HTML snippet showing the issue",
-      "correctedCode": "Fixed HTML with proper accessibility attributes",
-      "codeChangeSummary": "Brief summary of the fix",
+      "componentName": "Specific component name (e.g., Search Button, Navigation Menu)",      "issue": "Clear description of the accessibility issue - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
+      "explanation": "Detailed explanation of why this is a problem - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)","relevantHtml": "EXACT HTML element(s) with the accessibility issue - show ONLY the specific problematic element, not <html>, <body>, or unrelated parent containers",
+      "correctedCode": "Fixed HTML showing the exact same element(s) with proper accessibility attributes",
+      "codeChangeSummary": "Brief summary of the fix (e.g., 'Added aria-label to button', 'Changed div to semantic heading')",
       "impact": "critical|serious|moderate|minor",
       "wcagRule": "WCAG 2.1 guideline reference (e.g., 1.3.1 Info and Relationships)"
     }
@@ -278,9 +276,23 @@ Respond with a JSON object with this exact structure:
 **Requirements:**
 - Each component must have a specific, non-generic name
 - Issues must be actionable and specific
+- CRITICAL: ALWAYS wrap HTML element names in backticks in issue and explanation text
+- Examples: "page lacks a \`main\` landmark", "missing \`h1\` heading", "button needs \`aria-label\`", "\`div\` should be \`button\`"
+- NEVER write: "h1", "main", "button" - ALWAYS write: "\`h1\`", "\`main\`", "\`button\`"
+- relevantHtml must show ONLY the problematic element - NEVER show <html>, <body>, or unrelated parent containers
+- If the issue is "missing main landmark", show the container where <main> should be added
+- If the issue is "missing h1", show the section/div where the h1 should be placed
+- correctedCode should show the minimal fix for the exact same element(s) shown in relevantHtml
 - Provide concrete HTML fixes when possible
 - Focus on real accessibility barriers found in the captured snapshots
 - If no significant issues are found, return an empty components array
+
+Example of good relevantHtml vs correctedCode pairing:
+BAD: relevantHtml shows <html> but issue is missing heading
+GOOD: relevantHtml shows <div class="content"> and correctedCode shows <div class="content"><h1>Page Title</h1>
+
+BAD: relevantHtml shows <html> but issue is missing main landmark  
+GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode shows <body><main><div class="page-content">
 
 Focus on actionable issues that can be addressed by developers, prioritizing critical accessibility barriers.
 `;

@@ -1,5 +1,8 @@
 # GitHub Copilot Instructions for Web Access Advisor
 
+## 🚨 CRITICAL: OVERLY COMPLIMENTING ME IS NOT HELPFUL. I RELY ON YOU FOR OBJECTIVITY AND TRUTHFULNESS.
+**Don't begin each response with words like "You're absolutely right!", unless I am right**
+
 ## 🚨 CRITICAL: ASK BEFORE ANY CODE CHANGES
 **ALWAYS ask for explicit permission before making ANY modifications to code files, creating new files, or running terminal commands.**
 

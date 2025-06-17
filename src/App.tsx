@@ -150,13 +150,16 @@ function App() {
       
       updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
         // Start with replay phase - this is what the backend actually does first
-      updateProgress('replaying-actions', 'Starting replay and analysis process');
-
-      // Start the analysis
+      updateProgress('replaying-actions', 'Starting replay and analysis process');      // Start the analysis
       const response = await recordingApi.analyzeSession(state.sessionId);
 
       if (response.status === 'completed' && response.result) {
-        // Analysis completed immediately - handle result
+        // Analysis completed immediately - show AI phase briefly then complete
+        updateProgress('processing-with-ai', 'AI analyzing accessibility issues');
+        
+        // Brief delay to show the AI processing phase
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         const resultHandler = handleAnalysisResult(response.result);
         updateProgress(resultHandler.stage, resultHandler.message, undefined, resultHandler.details);
         updateState({
@@ -164,9 +167,14 @@ function App() {
           analysisResult: response.result,
           loading: false
         });
-      } else {        // Poll for analysis completion with conservative progress updates
+      } else {
+        // Poll for analysis completion with more aggressive phase updates
         let pollCount = 0;
-          const pollAnalysis = async () => {
+        
+        // Show AI processing phase immediately
+        updateProgress('processing-with-ai', 'AI analyzing accessibility issues');
+        
+        const pollAnalysis = async () => {
           try {
             pollCount++;
             const statusResponse = await recordingApi.getAnalysisStatus(response.analysisId);
@@ -186,17 +194,9 @@ function App() {
               });
               return; // Stop polling
             } 
-              // Analysis still in progress - update UI based on poll count and status
-            if (statusResponse.status === 'analyzing') {
-              updateProgress('processing-with-ai', 'AI analyzing accessibility issues');
-            } else if (pollCount < 3) {
-              updateProgress('replaying-actions', 'Replaying recorded actions');
-            } else if (pollCount < 8) {
-              updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
-            } else {
-              // Assume AI processing if taking longer than expected
-              updateProgress('processing-with-ai', 'AI analyzing accessibility issues');
-            }
+            
+            // Analysis still in progress - keep showing AI processing
+            updateProgress('processing-with-ai', 'AI analyzing accessibility issues');
 
             // Continue polling - more frequent when we expect completion soon
             const nextPollDelay = pollCount > 10 ? 1000 : 2000; // Poll faster after 10 attempts
@@ -210,7 +210,9 @@ function App() {
               mode: 'results'
             });
           }
-        };setTimeout(pollAnalysis, 2000);
+        };
+
+        setTimeout(pollAnalysis, 2000);
       }
 
     } catch (error) {
