@@ -91,6 +91,7 @@ export interface AnalysisOptions {
   waitForStability?: boolean;
   analyzeWithGemini?: boolean;
   outputDir?: string;
+  onProgress?: (phase: 'replaying-actions' | 'capturing-snapshots' | 'running-accessibility-checks' | 'processing-with-ai' | 'generating-report', message: string, step?: number, total?: number, snapshotCount?: number) => void;
 }
 
 export interface AnalysisResult {

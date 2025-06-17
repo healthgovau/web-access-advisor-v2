@@ -49,6 +49,20 @@ import type {
 const app = express();
 const PORT = process.env.API_PORT || 3002;
 
+// Analysis phase tracking
+interface AnalysisState {
+  sessionId: string;
+  status: 'analyzing' | 'completed' | 'failed';
+  phase: 'replaying-actions' | 'capturing-snapshots' | 'running-accessibility-checks' | 'processing-with-ai' | 'generating-report' | 'completed';
+  message: string;
+  result?: AnalysisResult;
+  manifest?: SessionManifest;
+  startTime: Date;
+  currentStep?: number;
+  totalSteps?: number;
+  snapshotCount?: number; // Track snapshots captured so far
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -59,6 +73,7 @@ let analyzer: AccessibilityAnalyzer | null = null;
 
 // In-memory storage for analysis sessions (replace with database in production)
 const sessions = new Map<string, SessionManifest>();
+const analysisStates = new Map<string, AnalysisState>();
 
 /**
  * Initialize analyzer
@@ -401,13 +416,75 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
 
     console.log(`Starting analysis of session ${sessionId} with ${recordingSession.actions.length} actions`);
 
+    // Initialize analysis state tracking
+    const analysisState: AnalysisState = {
+      sessionId,
+      status: 'analyzing',
+      phase: 'replaying-actions',
+      message: 'Starting analysis and replaying user actions...',
+      startTime: new Date(),
+      currentStep: 0,
+      totalSteps: recordingSession.actions.length
+    };
+    analysisStates.set(sessionId, analysisState);
+
+    // Return immediately with analysis ID, then process asynchronously
+    res.json({
+      analysisId: sessionId,
+      status: 'analyzing',
+      phase: analysisState.phase,
+      message: analysisState.message
+    });
+
+    // Process analysis asynchronously
+    processAnalysisAsync(sessionId, recordingSession.actions);
+
+  } catch (error) {
+    console.error('Analysis start error:', error);
+    res.status(500).json({
+      error: 'Failed to start analysis',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * Process analysis asynchronously with phase tracking
+ */
+async function processAnalysisAsync(sessionId: string, actions: UserAction[]) {
+  const analysisState = analysisStates.get(sessionId);
+  if (!analysisState) {
+    console.error(`Analysis state not found for session ${sessionId}`);
+    return;
+  }
+
+  try {
     const currentAnalyzer = await initializeAnalyzer();
+
+    // Progress callback to update analysis state
+    const onProgress = (
+      phase: 'replaying-actions' | 'capturing-snapshots' | 'running-accessibility-checks' | 'processing-with-ai' | 'generating-report',
+      message: string,
+      step?: number,
+      total?: number,
+      snapshotCount?: number
+    ) => {
+      analysisState.phase = phase;
+      analysisState.message = message;
+      analysisState.currentStep = step;
+      analysisState.totalSteps = total;
+      if (snapshotCount !== undefined) {
+        analysisState.snapshotCount = snapshotCount;
+      }
+      console.log(`📊 Phase: ${phase} - ${message}${step && total ? ` (${step}/${total})` : ''}${snapshotCount !== undefined ? ` [${snapshotCount} snapshots]` : ''}`);
+    };
     
-    // Run the analysis with timeout
-    const analysisPromise = currentAnalyzer.analyzeActions(recordingSession.actions, {
+    // Run the actual analysis with real progress tracking
+    const analysisPromise = currentAnalyzer.analyzeActions(actions, {
       captureScreenshots: true,
       analyzeWithGemini: true,
-      waitForStability: true
+      waitForStability: true,
+      onProgress
     });
 
     // Set up timeout for analysis (5 minutes)
@@ -417,26 +494,26 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
 
     const result: AnalysisResult = await Promise.race([analysisPromise, timeoutPromise]);
     
-    // Store analysis result in session storage
+    // Store analysis result
     if (result.success && result.manifest) {
       sessions.set(sessionId, result.manifest);
+      analysisState.manifest = result.manifest;
     }
 
-    res.json({
-      analysisId: result.sessionId,
-      status: 'completed',
-      result: result
-    });
+    // Mark as completed
+    analysisState.status = 'completed';
+    analysisState.phase = 'completed';
+    analysisState.message = 'Analysis complete';
+    analysisState.result = result;
 
-  } catch (error: any) {
-    console.error('Session analysis error:', error);
-    res.status(500).json({
-      error: 'Failed to analyze session',
-      details: error.message,
-      sessionId: req.params.sessionId
-    });
+    console.log(`✅ Analysis completed for session ${sessionId}`);
+
+  } catch (error) {
+    console.error(`❌ Analysis failed for session ${sessionId}:`, error);
+    analysisState.status = 'failed';
+    analysisState.message = `Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
   }
-});
+}
 
 /**
  * Get analysis status and result
@@ -444,25 +521,42 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
 app.get('/api/analysis/:analysisId/status', async (req: any, res: any) => {
   try {
     const { analysisId } = req.params;
-    const session = sessions.get(analysisId);
     
-    if (!session) {
-      return res.status(404).json({
-        error: 'Analysis not found',
-        analysisId
+    // Check if analysis is in progress
+    const analysisState = analysisStates.get(analysisId);
+    if (analysisState) {
+      return res.json({
+        status: analysisState.status,
+        phase: analysisState.phase,
+        message: analysisState.message,
+        currentStep: analysisState.currentStep,
+        totalSteps: analysisState.totalSteps,
+        snapshotCount: analysisState.snapshotCount || 0,
+        result: analysisState.result
       });
     }
     
-    // For completed sessions, return completed status with result
-    res.json({
-      status: 'completed' as const,
-      result: {
-        success: true,
-        sessionId: analysisId,
-        manifest: session,
-        snapshotCount: session.totalSteps,
-        snapshots: [] // TODO: Load actual snapshots
-      }
+    // Check for completed session in legacy storage
+    const session = sessions.get(analysisId);
+    if (session) {
+      return res.json({
+        status: 'completed' as const,
+        phase: 'completed' as const,
+        message: 'Analysis complete',
+        result: {
+          success: true,
+          sessionId: analysisId,
+          manifest: session,
+          snapshotCount: session.totalSteps,
+          snapshots: [] // TODO: Load actual snapshots
+        }
+      });
+    }
+    
+    // Analysis not found
+    return res.status(404).json({
+      error: 'Analysis not found',
+      analysisId
     });
     
   } catch (error: any) {

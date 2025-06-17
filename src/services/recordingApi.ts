@@ -29,8 +29,13 @@ export interface StopSessionResponse {
 
 export interface AnalyzeSessionResponse {
   analysisId: string;
-  status: 'analyzing' | 'completed';
+  status: 'analyzing' | 'completed' | 'failed';
   result?: AnalysisResult;
+  phase?: 'replaying-actions' | 'capturing-snapshots' | 'running-accessibility-checks' | 'processing-with-ai' | 'generating-report' | 'completed';
+  message?: string;
+  currentStep?: number;
+  totalSteps?: number;
+  snapshotCount?: number;
 }
 
 /**

@@ -60,7 +60,8 @@ export class AccessibilityAnalyzer {
       captureScreenshots = true,
       waitForStability = true,
       analyzeWithGemini = true,
-      outputDir = './snapshots'
+      outputDir = './snapshots',
+      onProgress
     } = options;
 
     const sessionId = this.generateSessionId();
@@ -103,11 +104,15 @@ export class AccessibilityAnalyzer {
       this.previousHtmlState = null;
 
       console.log(`🔄 PHASE 2: Replaying actions and capturing snapshots...`);
+      onProgress?.('replaying-actions', 'Replaying user actions in browser...', 0, actions.length, 0);
 
       // Replay each action and capture snapshots
       for (let i = 0; i < actions.length; i++) {
         const action = actions[i];
         console.log(`Processing step ${i + 1}: ${action.type}`);
+
+        // Update progress for current step
+        onProgress?.('replaying-actions', `Replaying step ${i + 1}: ${action.type}`, i + 1, actions.length, snapshots.length);
 
         // Execute the action
         await this.executeAction(this.page, action);
@@ -133,6 +138,8 @@ export class AccessibilityAnalyzer {
 
         if (shouldSnapshot) {
           console.log(`  Capturing snapshot for significant ${domChangeDetails.type} change`);
+          onProgress?.('capturing-snapshots', `Capturing snapshot ${snapshots.length + 1}`, snapshots.length + 1, actions.length, snapshots.length + 1);
+          
           const snapshot = await this.captureSnapshot(
             this.page, 
             i + 1, 
@@ -142,18 +149,26 @@ export class AccessibilityAnalyzer {
             captureScreenshots
           );
           snapshots.push(snapshot);
+          
+          // Update progress with new snapshot count
+          onProgress?.('replaying-actions', `Replaying step ${i + 1}: ${action.type}`, i + 1, actions.length, snapshots.length);
             // Store current HTML for next iteration's before/after comparison
           this.previousHtmlState = snapshot.html;
         } else {
           console.log(`  Skipping snapshot - no significant changes`);
+          // Still update progress even if no snapshot
+          onProgress?.('replaying-actions', `Replaying step ${i + 1}: ${action.type}`, i + 1, actions.length, snapshots.length);
         }
       }
 
       console.log(`🧠 PHASE 3: Running AI accessibility analysis...`);
+      onProgress?.('running-accessibility-checks', 'Running automated accessibility checks...', snapshots.length, snapshots.length, snapshots.length);
       
       // Perform Gemini analysis if enabled and service available
       if (analyzeWithGemini && this.geminiService && snapshots.length > 0) {
         console.log(`🤖 Analyzing ${snapshots.length} snapshots with Gemini AI...`);
+        onProgress?.('processing-with-ai', `Analyzing ${snapshots.length} snapshots with AI...`, undefined, undefined, snapshots.length);
+        
         try {
           // Generate manifest first for flow analysis
           const tempManifest = await this.generateManifest(sessionId, actions, snapshots);
@@ -181,6 +196,9 @@ export class AccessibilityAnalyzer {
         console.log(`⚠️ No snapshots captured - skipping AI analysis`);
       }
 
+      // Generate final report
+      onProgress?.('generating-report', 'Generating final accessibility report...', undefined, undefined, snapshots.length);
+      
       // Generate metadata manifest
       const manifest = await this.generateManifest(sessionId, actions, snapshots);
       await writeFile(

@@ -129,6 +129,7 @@ export interface ProgressState {
   progress?: number;
   details?: string;
   error?: string;
+  snapshotCount?: number;
 }
 
 export interface AppState {

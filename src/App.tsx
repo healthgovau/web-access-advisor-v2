@@ -146,20 +146,12 @@ function App() {
       updateProgress('replaying-actions', 'Replaying actions in headless browser');
       
       // Brief delay to show the replaying phase
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
-        // Start with replay phase - this is what the backend actually does first
-      updateProgress('replaying-actions', 'Starting replay and analysis process');      // Start the analysis
+      await new Promise(resolve => setTimeout(resolve, 800));      updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
+        // Start the analysis
       const response = await recordingApi.analyzeSession(state.sessionId);
 
       if (response.status === 'completed' && response.result) {
-        // Analysis completed immediately - show AI phase briefly then complete
-        updateProgress('processing-with-ai', 'AI analyzing accessibility issues');
-        
-        // Brief delay to show the AI processing phase
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
+        // Analysis completed immediately (unlikely but possible)
         const resultHandler = handleAnalysisResult(response.result);
         updateProgress(resultHandler.stage, resultHandler.message, undefined, resultHandler.details);
         updateState({
@@ -168,24 +160,36 @@ function App() {
           loading: false
         });
       } else {
-        // Poll for analysis completion with more aggressive phase updates
-        let pollCount = 0;
-        
-        // Show AI processing phase immediately
-        updateProgress('processing-with-ai', 'AI analyzing accessibility issues');
-        
+        // Poll for analysis completion - backend is now processing
         const pollAnalysis = async () => {
           try {
-            pollCount++;
-            const statusResponse = await recordingApi.getAnalysisStatus(response.analysisId);
-
-            console.log(`Polling analysis status (attempt ${pollCount}):`, statusResponse.status);
-
-            if (statusResponse.status === 'completed' && statusResponse.result) {
-              // Analysis complete - handle result immediately
+            const statusResponse = await recordingApi.getAnalysisStatus(response.analysisId);            console.log(`Polling analysis status:`, {
+              status: statusResponse.status,
+              phase: statusResponse.phase,
+              message: statusResponse.message,
+              snapshotCount: statusResponse.snapshotCount
+            });            // Use backend-provided phase information directly
+            if (statusResponse.phase && statusResponse.message) {
+              // Map backend phases to frontend progress stages
+              const stageMapping: Record<string, ProgressStage> = {
+                'replaying-actions': 'replaying-actions',
+                'capturing-snapshots': 'capturing-snapshots', 
+                'running-accessibility-checks': 'running-accessibility-checks',
+                'processing-with-ai': 'processing-with-ai',
+                'generating-report': 'generating-report',
+                'completed': 'completed'
+              };
+              
+              const frontendStage = stageMapping[statusResponse.phase] || statusResponse.phase as ProgressStage;
+              
+              // Update progress with real-time snapshot count
+              console.log(`Updating progress: stage=${frontendStage}, snapshotCount=${statusResponse.snapshotCount}`);
+              updateProgress(frontendStage, statusResponse.message, undefined, undefined, undefined, statusResponse.snapshotCount);
+            }if (statusResponse.status === 'completed' && statusResponse.result) {
+              // Analysis complete - handle result
               console.log('Analysis completed, handling result');
               const resultHandler = handleAnalysisResult(statusResponse.result);
-              updateProgress(resultHandler.stage, resultHandler.message, undefined, resultHandler.details);
+              updateProgress(resultHandler.stage, resultHandler.message, undefined, resultHandler.details, undefined, statusResponse.result.snapshotCount);
 
               updateState({
                 mode: 'results',
@@ -193,14 +197,21 @@ function App() {
                 loading: false
               });
               return; // Stop polling
-            } 
-            
-            // Analysis still in progress - keep showing AI processing
-            updateProgress('processing-with-ai', 'AI analyzing accessibility issues');
+            }
 
-            // Continue polling - more frequent when we expect completion soon
-            const nextPollDelay = pollCount > 10 ? 1000 : 2000; // Poll faster after 10 attempts
-            setTimeout(pollAnalysis, nextPollDelay);
+            if (statusResponse.status === 'failed') {
+              // Analysis failed
+              updateProgress('error', statusResponse.message || 'Analysis failed');
+              updateState({
+                error: statusResponse.message || 'Analysis failed',
+                loading: false,
+                mode: 'results'
+              });
+              return; // Stop polling
+            }
+            
+            // Analysis still in progress - continue polling
+            setTimeout(pollAnalysis, 2000);
           } catch (error) {
             console.error('Analysis polling error:', error);
             updateProgress('error', 'Analysis failed', undefined, undefined, error instanceof Error ? error.message : 'Unknown error');
@@ -212,7 +223,8 @@ function App() {
           }
         };
 
-        setTimeout(pollAnalysis, 2000);
+        // Start polling immediately
+        setTimeout(pollAnalysis, 1000);
       }
 
     } catch (error) {
@@ -267,13 +279,12 @@ function App() {
     return () => {
       stopActionPolling();
     };
-  }, []);
-
-  // Update progress helper
-  const updateProgress = (stage: ProgressStage, message: string, progress?: number, details?: string, error?: string) => {
+  }, []);  // Update progress helper
+  const updateProgress = (stage: ProgressStage, message: string, progress?: number, details?: string, error?: string, snapshotCount?: number) => {
+    console.log(`📊 UpdateProgress called: stage=${stage}, snapshotCount=${snapshotCount}`);
     setState(prev => ({
       ...prev,
-      progress: { stage, message, progress, details, error }
+      progress: { stage, message, progress, details, error, snapshotCount }
     }));
   };
 
@@ -311,11 +322,16 @@ function App() {
                   isLoading={state.loading}
                 />
               </div>
-            )}            {/* Three-Phase Status - Always visible */}            <ThreePhaseStatus
+            )}            {/* Three-Phase Status - Always visible */}
+            <ThreePhaseStatus
               currentStage={state.progress.stage}
               error={state.progress.error}
               actionCount={state.actions.length}
-              snapshotCount={state.analysisResult?.snapshotCount || 0}
+              snapshotCount={(() => {
+                const snapshotCount = state.progress.snapshotCount || state.analysisResult?.snapshotCount || 0;
+                console.log(`🎯 Rendering ThreePhaseStatus: progressSnapshotCount=${state.progress.snapshotCount}, resultSnapshotCount=${state.analysisResult?.snapshotCount}, final=${snapshotCount}`);
+                return snapshotCount;
+              })()}
               warnings={state.analysisResult?.warnings || []}
             />{/* Error Display */}
             {state.error && <ErrorDisplay error={state.error} />}{/* Setup Mode - URL input moved above */}

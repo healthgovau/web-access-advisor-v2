@@ -28,9 +28,12 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
   snapshotCount = 0,
   warnings = []
 }) => {
-  
-  // Determine phase statuses based on current stage
-  const getPhaseStatuses = (): PhaseStatus[] => {    const phases: PhaseStatus[] = [
+    // Determine phase statuses based on current stage
+  const getPhaseStatuses = (): PhaseStatus[] => {
+    // Debug log to help track stage transitions
+    console.log('ThreePhaseStatus - Current stage:', currentStage);
+    
+    const phases: PhaseStatus[] = [
       {
         phase: 'recording',
         status: 'pending',
@@ -79,15 +82,18 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
       case 'running-accessibility-checks':
         phases[0].status = 'completed';
         phases[0].message = 'Recording complete';
-        phases[0].details = `${actionCount} actions captured`;
-          phases[1].status = 'active';
+        phases[0].details = `${actionCount} actions captured`;        phases[1].status = 'active';
         phases[1].message = currentStage === 'preparing-analysis' ? 'Preparing replay...' :
-                           currentStage === 'replaying-actions' ? 'Replaying actions...' :
-                           currentStage === 'capturing-snapshots' ? 'Capturing snapshots...' :
-                           'Running accessibility checks...';
+                           currentStage === 'replaying-actions' ? 'Replaying interactions...' :
+                           currentStage === 'capturing-snapshots' ? 'Capturing screenshots...' :
+                           'Running accessibility scans...';
         phases[1].details = snapshotCount > 0 ? 
           `${snapshotCount} snapshots captured` : 
           'Processing interactions';
+        
+        phases[2].status = 'pending';
+        phases[2].message = 'Waiting for replay';
+        phases[2].details = 'Analysis will begin after replay completes';
         break;
           case 'processing-with-ai':
       case 'generating-report':
@@ -151,8 +157,7 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
           phases[1].status = 'completed';
           phases[2].status = 'error';
           phases[2].message = 'AI analysis failed';
-          phases[2].error = error;
-        }
+          phases[2].error = error;        }
         break;
     }
 
