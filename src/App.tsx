@@ -186,21 +186,21 @@ function App() {
               });
               return; // Stop polling
             } 
-            
-            // Analysis still in progress - update UI based on poll count and status
+              // Analysis still in progress - update UI based on poll count and status
             if (statusResponse.status === 'analyzing') {
               updateProgress('processing-with-ai', 'AI analyzing accessibility issues');
-            } else if (pollCount < 5) {
+            } else if (pollCount < 3) {
               updateProgress('replaying-actions', 'Replaying recorded actions');
-            } else if (pollCount < 15) {
+            } else if (pollCount < 8) {
               updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
             } else {
-              // Assume AI processing if taking longer
+              // Assume AI processing if taking longer than expected
               updateProgress('processing-with-ai', 'AI analyzing accessibility issues');
             }
 
-            // Continue polling
-            setTimeout(pollAnalysis, 2000); // Check every 2 seconds
+            // Continue polling - more frequent when we expect completion soon
+            const nextPollDelay = pollCount > 10 ? 1000 : 2000; // Poll faster after 10 attempts
+            setTimeout(pollAnalysis, nextPollDelay);
           } catch (error) {
             console.error('Analysis polling error:', error);
             updateProgress('error', 'Analysis failed', undefined, undefined, error instanceof Error ? error.message : 'Unknown error');

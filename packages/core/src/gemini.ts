@@ -254,30 +254,33 @@ ${JSON.stringify(step.axeResults || [], null, 2)}
    - Navigation flows: Landmarks, headings, breadcrumbs
 
 **Output Format:**
-Respond with a JSON object focusing on component-level accessibility issues:
+Respond with a JSON object with this exact structure:
 {
   "summary": "Overview of accessibility findings across the interaction flow",
   "components": [
     {
-      "name": "Component name (e.g., Modal Dialog, Form Validation)",
-      "type": "modal|form|navigation|interactive",
-      "flowContext": "main_flow|modal_flow|form_flow|sub_flow", 
-      "stepsInvolved": [1, 2, 3],
+      "componentName": "Specific component name (e.g., Search Button, Navigation Menu)",
+      "issue": "Clear description of the accessibility issue",
+      "explanation": "Detailed explanation of why this is a problem",
+      "relevantHtml": "Key HTML snippet showing the issue",
+      "correctedCode": "Fixed HTML with proper accessibility attributes",
+      "codeChangeSummary": "Brief summary of the fix",
       "impact": "critical|serious|moderate|minor",
-      "issues": [
-        {
-          "category": "focus_management|state_updates|keyboard_navigation|aria_attributes|announcements",
-          "description": "Specific accessibility issue description",
-          "recommendation": "Actionable fix with code examples if relevant",
-          "wcagReference": "WCAG 2.1 guideline reference"
-        }
-      ]
+      "wcagRule": "WCAG 2.1 guideline reference (e.g., 1.3.1 Info and Relationships)"
     }
   ],
   "recommendations": [
-    "Overall flow-level accessibility improvements"
-  ]
+    "Overall accessibility improvements for the interaction flow"
+  ],
+  "score": 75
 }
+
+**Requirements:**
+- Each component must have a specific, non-generic name
+- Issues must be actionable and specific
+- Provide concrete HTML fixes when possible
+- Focus on real accessibility barriers found in the captured snapshots
+- If no significant issues are found, return an empty components array
 
 Focus on actionable issues that can be addressed by developers, prioritizing critical accessibility barriers.
 `;

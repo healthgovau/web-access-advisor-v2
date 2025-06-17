@@ -129,8 +129,11 @@ export async function getAnalysisStatus(analysisId: string): Promise<AnalyzeSess
   const response = await fetch(`${API_BASE}/analysis/${analysisId}/status`);
 
   if (!response.ok) {
+    console.error(`Failed to get analysis status: ${response.status} ${response.statusText}`);
     throw new Error(`Failed to get analysis status: ${response.statusText}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  console.log(`Analysis status for ${analysisId}:`, result);
+  return result;
 }
