@@ -237,3 +237,18 @@ npm install -D vitest @vitejs/plugin-react
 - **State Change Analysis**: Compares DOM before/after user interactions to detect attribute update failures
 - **Practical Fixes**: Shows both problematic HTML and corrected code examples
 - **Actionable Reports**: Component name, issue description, explanation, relevant HTML, corrected code, change summary
+
+### Storage & Analysis Architecture Improvements
+- ✅ **Consolidated storage structure** - Moved from separate `recordings/` and `snapshots/` to unified `snapshots/session_*/` directories containing `recording.json`, `manifest.json`, and step data
+- ✅ **Implemented sophisticated parent-step flow tracking** - Added modal, form, and navigation flow detection with proper parent-child relationships  
+- ✅ **Multi-snapshot LLM analysis** - Updated Gemini integration to analyze complete interaction flows instead of just final state
+- ✅ **Enhanced flow context detection** - Automatic categorization of interactions into main_flow, modal_flow, form_flow, navigation_flow, and sub_flow
+- ✅ **Improved UI state tracking** - Dynamic state detection (form_filled, modal_open, element_clicked, etc.) based on interaction patterns
+- ✅ **Removed WebM capture** - Eliminated unnecessary video recording to focus on HTML/Axe snapshots and optional screenshots
+- ✅ **Updated API endpoints** - Modified recording list/download endpoints to work with consolidated structure
+
+### Technical Architecture
+- ✅ **Flow-based snapshot grouping** - LLM analysis now groups snapshots by interaction type for more focused accessibility assessment
+- ✅ **Enhanced metadata generation** - SessionManifest includes parent relationships, flow context, UI states, and token estimates
+- ✅ **Smart interaction detection** - Automatic detection of modal interactions, form flows, and navigation patterns
+- ✅ **Comprehensive flow analysis prompts** - Gemini now receives structured flow data with before/after comparisons and component context

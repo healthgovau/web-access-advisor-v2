@@ -10,7 +10,7 @@ interface ActionListProps {
 }
 
 const ActionList: React.FC<ActionListProps> = ({ actions, isRecording }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false); // Collapsed by default
 
   const getActionIcon = (actionType: string) => {
     switch (actionType) {

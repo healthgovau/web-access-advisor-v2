@@ -539,58 +539,33 @@ async function startServer() {
 }
 
 /**
- * List saved recordings
+ * List saved recordings from consolidated snapshot structure
  */
 app.get('/api/recordings', async (req: any, res: any) => {
   try {
-    const { readdir, stat } = await import('fs/promises');
-    const path = await import('path');
+    console.log('📋 Listing saved recordings from consolidated structure');
     
-    const recordingsDir = './recordings';
+    // Use the recording service's method for consolidated structure
+    const recordings = await browserRecordingService.listSavedRecordings();
     
-    try {
-      const files = await readdir(recordingsDir);
-      const recordings = [];
-      
-      for (const file of files) {
-        if (file.endsWith('.json')) {
-          const filePath = path.join(recordingsDir, file);
-          const stats = await stat(filePath);
-          const { readFile } = await import('fs/promises');
-          
-          try {
-            const content = await readFile(filePath, 'utf8');
-            const recording = JSON.parse(content);
-            
-            recordings.push({
-              filename: file,
-              sessionId: recording.sessionId,
-              sessionName: recording.sessionName,
-              url: recording.url,
-              startTime: recording.startTime,
-              endTime: recording.endTime,
-              duration: recording.duration,
-              actionCount: recording.actionCount,
-              fileSize: stats.size,
-              created: stats.mtime
-            });
-          } catch (parseError) {
-            console.error(`Failed to parse recording file ${file}:`, parseError);
-          }
-        }
-      }
-      
-      // Sort by creation time (newest first)
-      recordings.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
-      
-      res.json(recordings);
-    } catch (error) {
-      // Directory doesn't exist or is empty
-      res.json([]);
-    }
+    // Transform to match expected frontend format
+    const transformedRecordings = recordings.map(recording => ({
+      filename: `${recording.sessionId}.json`,
+      sessionId: recording.sessionId,
+      sessionName: recording.sessionName,
+      url: recording.url,
+      startTime: recording.startTime,
+      endTime: recording.endTime,
+      duration: recording.duration,
+      actionCount: recording.actionCount,
+      fileSize: 0, // Not available in new structure
+      created: recording.startTime
+    }));
+    
+    res.json(transformedRecordings);
   } catch (error) {
-    console.error('Failed to list recordings:', error);
-    res.status(500).json({
+    console.error('❌ Failed to list recordings:', error);
+    res.status(500).json({ 
       error: 'Failed to list recordings',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -603,24 +578,20 @@ app.get('/api/recordings', async (req: any, res: any) => {
 app.get('/api/recordings/:sessionId', async (req: any, res: any) => {
   try {
     const { sessionId } = req.params;
-    const { readFile } = await import('fs/promises');
-    const path = await import('path');
     
-    const filePath = path.join('./recordings', `${sessionId}.json`);
+    // Use the recording service's method for consolidated structure
+    const recording = await browserRecordingService.getSavedRecording(sessionId);
     
-    try {
-      const content = await readFile(filePath, 'utf8');
-      const recording = JSON.parse(content);
-      
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Disposition', `attachment; filename="${sessionId}.json"`);
-      res.json(recording);
-    } catch (error) {
-      res.status(404).json({
+    if (!recording) {
+      return res.status(404).json({
         error: 'Recording not found',
         sessionId
       });
     }
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${sessionId}.json"`);
+    res.json(recording);
   } catch (error) {
     console.error('Failed to download recording:', error);
     res.status(500).json({

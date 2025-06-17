@@ -119,20 +119,20 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                         </div>                        <div className="space-y-3 text-left">
                           <div>
                             <span className="text-sm font-medium text-gray-700">Issue: </span>
-                            <span className="text-sm text-gray-600" style={{ fontWeight: 'normal' }}>{component.issue}</span>
+                            <span className="text-sm text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>{component.issue}</span>
                           </div>
                           
                           <div>
                             <span className="text-sm font-medium text-gray-700">Explanation: </span>
-                            <span className="text-sm text-gray-600" style={{ fontWeight: 'normal' }}>{component.explanation}</span>
+                            <span className="text-sm text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>{component.explanation}</span>
                           </div>
                           
                           {component.correctedCode && (
                             <div>
                               <span className="text-sm font-medium text-gray-700">Recommended Solution: </span>
-                              <span className="text-sm text-gray-600" style={{ fontWeight: 'normal' }}>{component.codeChangeSummary}</span>
-                              <pre className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-600 overflow-x-auto" style={{ fontWeight: 'normal' }}>
-                                <code style={{ fontWeight: 'normal' }}>{component.correctedCode}</code>
+                              <span className="text-sm text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>{component.codeChangeSummary}</span>
+                              <pre className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-600 overflow-x-auto" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
+                                <code style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>{component.correctedCode}</code>
                               </pre>
                             </div>
                           )}
@@ -145,7 +145,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-sm text-blue-600 hover:text-blue-800 underline"
-                                style={{ fontWeight: 'normal' }}
+                                style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}
                               >
                                 {component.wcagRule}
                               </a>

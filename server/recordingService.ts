@@ -4,7 +4,7 @@
  */
 
 import { chromium, Browser, BrowserContext, Page } from 'playwright';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, readdir, readFile } from 'fs/promises';
 import path from 'path';
 import type { UserAction } from '@web-access-advisor/core';
 
@@ -38,7 +38,7 @@ export interface SavedRecording {
 
 export class BrowserRecordingService {
   private sessions = new Map<string, RecordingSession>();
-  private recordingsDir = './recordings';
+  private snapshotsDir = './snapshots';
   /**
    * Start a new recording session with a real browser
    */
@@ -223,14 +223,14 @@ export class BrowserRecordingService {
     
     return session;
   }
-
   /**
-   * Save recording to disk as JSON file
+   * Save recording to disk as JSON file in consolidated snapshot structure
    */
   private async saveRecording(session: RecordingSession, endTime: Date): Promise<void> {
     try {
-      // Ensure recordings directory exists
-      await mkdir(this.recordingsDir, { recursive: true });
+      // Create session directory in snapshots folder
+      const sessionDir = path.join(this.snapshotsDir, session.sessionId);
+      await mkdir(sessionDir, { recursive: true });
 
       // Create the saved recording object
       const savedRecording: SavedRecording = {
@@ -249,11 +249,11 @@ export class BrowserRecordingService {
         }
       };
 
-      // Save to file using session ID as filename
-      const filePath = path.join(this.recordingsDir, `${session.sessionId}.json`);
+      // Save recording.json in the session directory (consolidated with snapshots)
+      const filePath = path.join(sessionDir, 'recording.json');
       await writeFile(filePath, JSON.stringify(savedRecording, null, 2), 'utf8');
 
-      console.log(`✓ Recording saved: ${filePath}`);
+      console.log(`✓ Recording saved to consolidated structure: ${filePath}`);
     } catch (error) {
       console.error(`Failed to save recording for session ${session.sessionId}:`, error);
     }
@@ -279,6 +279,55 @@ export class BrowserRecordingService {
   getSessionActions(sessionId: string): UserAction[] {
     const session = this.sessions.get(sessionId);
     return session?.actions || [];
+  }
+
+  /**
+   * List all saved recordings from consolidated snapshot structure
+   */
+  async listSavedRecordings(): Promise<SavedRecording[]> {
+    try {
+      await mkdir(this.snapshotsDir, { recursive: true });
+      const files = await readdir(this.snapshotsDir, { withFileTypes: true });
+      
+      const recordings: SavedRecording[] = [];
+      
+      // Look for session directories containing recording.json
+      for (const file of files) {
+        if (file.isDirectory() && file.name.startsWith('session_')) {
+          try {
+            const recordingPath = path.join(this.snapshotsDir, file.name, 'recording.json');
+            const content = await readFile(recordingPath, 'utf8');
+            const recording = JSON.parse(content) as SavedRecording;
+            recordings.push(recording);
+          } catch (error) {
+            // Skip invalid or missing recording files
+            console.warn(`Skipping invalid recording in ${file.name}:`, error);
+          }
+        }
+      }
+      
+      // Sort by start time (newest first)
+      return recordings.sort((a, b) => 
+        new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+      );
+    } catch (error) {
+      console.error('Failed to list saved recordings:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get a specific saved recording by session ID from consolidated structure
+   */
+  async getSavedRecording(sessionId: string): Promise<SavedRecording | null> {
+    try {
+      const recordingPath = path.join(this.snapshotsDir, sessionId, 'recording.json');
+      const content = await readFile(recordingPath, 'utf8');
+      return JSON.parse(content) as SavedRecording;
+    } catch (error) {
+      console.error(`Failed to get recording ${sessionId}:`, error);
+      return null;
+    }
   }
 
   /**

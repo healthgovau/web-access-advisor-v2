@@ -74,7 +74,7 @@ export interface StepDetail {
   action: string;
   actionType: 'navigation' | 'interaction' | 'form_input' | 'other';
   interactionTarget?: string;
-  flowContext: string;
+  flowContext: 'main_flow' | 'modal_flow' | 'form_flow' | 'navigation_flow' | 'sub_flow';
   uiState: string;
   timestamp: string;
   htmlFile: string;

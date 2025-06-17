@@ -15,8 +15,6 @@ interface PhaseStatus {
 
 interface ThreePhaseStatusProps {
   currentStage: ProgressStage;
-  message: string;
-  details?: string;
   error?: string;
   actionCount?: number;
   snapshotCount?: number;
@@ -25,8 +23,6 @@ interface ThreePhaseStatusProps {
 
 const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({ 
   currentStage, 
-  message, 
-  details, 
   error,
   actionCount = 0,
   snapshotCount = 0,
@@ -172,11 +168,15 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
     return phases;
   };
 
-  const phases = getPhaseStatuses();
-  const getStatusIcon = (status: PhaseStatus['status']) => {
+  const phases = getPhaseStatuses();  const getStatusIcon = (status: PhaseStatus['status'], phase: string) => {
     switch (status) {
       case 'pending': return '⏸️';
-      case 'active': return '🔄';
+      case 'active': 
+        // Use different icons for different phases
+        if (phase === 'recording') return '🔴';
+        if (phase === 'replay') return '🔄';
+        if (phase === 'ai') return '🧠';
+        return '🔄';
       case 'completed': return '✅';
       case 'error': return '❌';
       case 'skipped': return '⚠️';
@@ -202,12 +202,13 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
       <div className="grid grid-cols-3 gap-3 mb-3">
         {phases.map((phase) => (
           <div key={phase.phase} className={`border rounded p-3 transition-all duration-300 ${getStatusColor(phase.status)}`}>
-            <div className="flex items-center space-x-2 mb-1">
-              <span className="text-lg flex-shrink-0">
+            <div className="flex items-center space-x-2 mb-1">              <span className="text-lg flex-shrink-0">
                 {phase.status === 'active' ? (
-                  <div className="animate-spin">{getStatusIcon(phase.status)}</div>
+                  <div className={phase.phase === 'replay' ? 'animate-spin' : ''}>
+                    {getStatusIcon(phase.status, phase.phase)}
+                  </div>
                 ) : (
-                  getStatusIcon(phase.status)
+                  getStatusIcon(phase.status, phase.phase)
                 )}
               </span>
               
@@ -230,16 +231,7 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
               </div>
             )}
           </div>
-        ))}
-      </div>
-      
-      {/* Overall status message */}
-      {(message || details) && (
-        <div className="pt-2 border-t border-gray-200">
-          <p className="text-sm text-gray-600">{message}</p>
-          {details && <p className="text-xs text-gray-500 mt-1">{details}</p>}
-        </div>
-      )}
+        ))}      </div>
     </div>
   );
 };

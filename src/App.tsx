@@ -310,11 +310,8 @@ function App() {
                   isLoading={state.loading}
                 />
               </div>
-            )}            {/* Three-Phase Status - Always visible */}
-            <ThreePhaseStatus
+            )}            {/* Three-Phase Status - Always visible */}            <ThreePhaseStatus
               currentStage={state.progress.stage}
-              message={state.progress.message}
-              details={state.progress.details}
               error={state.progress.error}
               actionCount={state.actions.length}
               snapshotCount={state.analysisResult?.snapshotCount || 0}

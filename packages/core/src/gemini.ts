@@ -54,6 +54,55 @@ export class GeminiService {
     }
   }
   /**
+   * Analyzes accessibility issues using multiple snapshots with flow context
+   * Provides comprehensive analysis of interaction sequences and state changes
+   * 
+   * @param snapshots - Array of snapshots representing the interaction flow
+   * @param manifest - Session manifest with parent-step relationships 
+   * @param context - Overall session context
+   * @returns Structured accessibility analysis
+   */
+  async analyzeAccessibilityFlow(
+    snapshots: any[],
+    manifest: any,
+    context: {
+      url: string;
+      sessionId: string;
+      totalSteps: number;
+    }
+  ): Promise<GeminiAnalysis> {
+    try {
+      const model = this.genAI.getGenerativeModel({ model: this.modelName });
+
+      const prompt = this.buildFlowAnalysisPrompt(snapshots, manifest, context);
+      
+      // Set up timeout for Gemini API call (3 minutes for complex flow analysis)
+      const geminiPromise = model.generateContent(prompt);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Gemini API timeout after 3 minutes')), 3 * 60 * 1000);
+      });
+
+      const result = await Promise.race([geminiPromise, timeoutPromise]);
+      const response = await result.response;
+      const text = response.text();      return this.parseGeminiResponse(text, { step: context.totalSteps });
+
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          throw new Error('Gemini API request timed out. The analysis may be too complex.');
+        }
+        if (error.message.includes('quota') || error.message.includes('rate limit')) {
+          throw new Error('Gemini API quota exceeded. Please try again later.');
+        }
+        if (error.message.includes('content filter') || error.message.includes('safety')) {
+          throw new Error('Content was filtered by Gemini safety systems.');
+        }
+      }
+      
+      throw new Error(`Gemini AI analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+  /**
    * Builds a comprehensive component-focused prompt for Gemini analysis
    * Based on before/after DOM state comparison methodology
    */
@@ -135,6 +184,136 @@ Respond with a JSON object:
 
 **Important**: Report ONLY components with identified accessibility issues. Do not report on components where no accessibility issue was found. Focus on actionable insights and practical fixes for screen reader compatibility.
 `;
+  }
+  /**
+   * Builds a comprehensive flow analysis prompt for multi-snapshot analysis
+   * Focuses on interaction sequences, state changes, and parent-child relationships
+   */
+  private buildFlowAnalysisPrompt(
+    snapshots: any[],
+    manifest: any,
+    context: { url: string; sessionId: string; totalSteps: number }
+  ): string {
+    // Group snapshots by flow context
+    const flowGroups = this.groupSnapshotsByFlow(snapshots, manifest);
+    
+    return `
+Your task is to analyze a complete user interaction flow consisting of ${context.totalSteps} steps captured during accessibility testing. Each step represents a user action and the resulting DOM state, with parent-child relationships indicating interaction branching (e.g., modals, sub-flows).
+
+**Session Context:**
+- URL: ${context.url}
+- Session ID: ${context.sessionId}
+- Total Steps: ${context.totalSteps}
+- Flow Groups: ${Object.keys(flowGroups).join(', ')}
+
+**Interaction Flow Analysis:**
+
+${Object.entries(flowGroups).map(([flowType, steps]: [string, any[]]) => {
+  return `
+**${flowType.toUpperCase()} FLOW:**
+${steps.map((step: any, index: number) => {
+  const stepDetail = manifest.stepDetails.find((s: any) => s.step === step.step);
+  return `
+Step ${step.step} (Parent: ${stepDetail?.parentStep || 'none'}):
+- Action: ${stepDetail?.action || step.action} 
+- UI State: ${stepDetail?.uiState || 'unknown'}
+- DOM Changes: ${stepDetail?.domChanges || step.domChangeDetails?.description || 'none'}
+- Axe Violations: ${step.axeResults?.length || 0}
+
+DOM Snapshot (truncated):
+${this.truncateHtml(step.html)}
+
+Axe Violations:
+${JSON.stringify(step.axeResults || [], null, 2)}
+`;
+}).join('\n')}
+`;
+}).join('\n')}
+
+**Analysis Instructions:**
+
+1. **Flow Relationship Analysis**: 
+   - Examine parent-child relationships between steps
+   - Identify main flow vs. sub-flows (modals, forms, navigation)
+   - Assess how state changes cascade through related steps
+
+2. **Component Accessibility Assessment**:
+   - Focus on interactive components across the flow
+   - Analyze state management (expanded/collapsed, selected/unselected, etc.)
+   - Evaluate keyboard navigation and focus management
+   - Check ARIA attributes and role consistency
+
+3. **Before/After State Comparison**:
+   - Compare DOM states between related steps
+   - Identify missing or incorrect attribute updates
+   - Assess dynamic content announcements
+
+4. **Flow-Specific Issues**:
+   - Modal flows: Focus management, escape handling, backdrop behavior
+   - Form flows: Validation, error states, progress indication
+   - Navigation flows: Landmarks, headings, breadcrumbs
+
+**Output Format:**
+Respond with a JSON object focusing on component-level accessibility issues:
+{
+  "summary": "Overview of accessibility findings across the interaction flow",
+  "components": [
+    {
+      "name": "Component name (e.g., Modal Dialog, Form Validation)",
+      "type": "modal|form|navigation|interactive",
+      "flowContext": "main_flow|modal_flow|form_flow|sub_flow", 
+      "stepsInvolved": [1, 2, 3],
+      "impact": "critical|serious|moderate|minor",
+      "issues": [
+        {
+          "category": "focus_management|state_updates|keyboard_navigation|aria_attributes|announcements",
+          "description": "Specific accessibility issue description",
+          "recommendation": "Actionable fix with code examples if relevant",
+          "wcagReference": "WCAG 2.1 guideline reference"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Overall flow-level accessibility improvements"
+  ]
+}
+
+Focus on actionable issues that can be addressed by developers, prioritizing critical accessibility barriers.
+`;
+  }
+
+  /**
+   * Group snapshots by flow type for organized analysis
+   */
+  private groupSnapshotsByFlow(snapshots: any[], manifest: any): Record<string, any[]> {
+    const groups: Record<string, any[]> = {
+      main_flow: [],
+      modal_flow: [],
+      form_flow: [],
+      navigation_flow: [],
+      sub_flow: []
+    };
+
+    snapshots.forEach((snapshot) => {
+      const stepDetail = manifest.stepDetails.find((s: any) => s.step === snapshot.step);
+      const flowContext = stepDetail?.flowContext || 'main_flow';
+      
+      if (groups[flowContext]) {
+        groups[flowContext].push(snapshot);
+      } else {
+        groups.main_flow.push(snapshot);
+      }
+    });
+
+    // Remove empty groups
+    Object.keys(groups).forEach(key => {
+      if (groups[key].length === 0) {
+        delete groups[key];
+      }
+    });
+
+    return groups;
   }
 
   /**
