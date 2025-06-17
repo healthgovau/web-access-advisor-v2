@@ -121,6 +121,7 @@ export interface ComponentAccessibilityIssue {
   codeChangeSummary: string;
   impact: 'critical' | 'serious' | 'moderate' | 'minor';
   wcagRule: string;
+  wcagUrl?: string;
 }
 
 export interface AccessibilityIssue {

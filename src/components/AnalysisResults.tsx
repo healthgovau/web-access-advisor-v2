@@ -327,13 +327,18 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                                 <code>{formatHtmlCode(component.correctedCode)}</code>
                               </pre>
                             </div>
-                          )}
-                          
-                          {component.wcagRule && (
+                          )}                          {component.wcagRule && (
                             <div>
                               <span className="text-base font-medium text-gray-700">WCAG Guideline: </span>
                               <a 
-                                href={`https://www.w3.org/WAI/WCAG21/Understanding/${component.wcagRule.toLowerCase().replace(/\s+/g, '-')}.html`}
+                                href={(() => {
+                                  console.log('🔗 WCAG Link Debug:', {
+                                    wcagRule: component.wcagRule,
+                                    wcagUrl: component.wcagUrl,
+                                    finalUrl: component.wcagUrl || 'https://www.w3.org/WAI/WCAG21/Understanding/'
+                                  });
+                                  return component.wcagUrl || 'https://www.w3.org/WAI/WCAG21/Understanding/';
+                                })()}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-base text-blue-600 hover:text-blue-800 underline"

@@ -1,7 +1,8 @@
 # GitHub Copilot Instructions for Web Access Advisor
 
 ## 🚨 CRITICAL: OVERLY COMPLIMENTING ME IS NOT HELPFUL. I RELY ON YOU FOR OBJECTIVITY AND TRUTHFULNESS.
-**Don't begin each response with words like "You're absolutely right!", unless I am right**
+**Don't begin each response with words like "You're absolutely right!" or "You're right!", unless I am verifiably right**
+The issue is that it confuses me as to whether I am correct or not, as I need to be able to interpret your responses correctly.
 
 ## 🚨 CRITICAL: ASK BEFORE ANY CODE CHANGES
 **ALWAYS ask for explicit permission before making ANY modifications to code files, creating new files, or running terminal commands.**

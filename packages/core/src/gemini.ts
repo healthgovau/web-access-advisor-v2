@@ -175,12 +175,23 @@ Respond with a JSON object:
       "correctedCode": "Show corrected HTML that resolves the issue",
       "codeChangeSummary": "Brief description of the fix",
       "impact": "critical|serious|moderate|minor",
-      "wcagRule": "WCAG rule reference"
+      "wcagRule": "WCAG rule reference (e.g., '4.1.2 Name, Role, Value')",
+      "wcagUrl": "Complete URL to the specific WCAG Understanding document (e.g., 'https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html')"
     }
   ],
   "recommendations": ["actionable recommendations"],
   "score": 0-100
 }
+
+**WCAG URL Requirements:**
+- Always provide the complete URL to the specific WCAG 2.1 Understanding document
+- Use the format: https://www.w3.org/WAI/WCAG21/Understanding/[page-name].html
+- Common examples:
+  - 4.1.2 Name, Role, Value → https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html
+  - 1.4.3 Contrast (Minimum) → https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html
+  - 2.4.7 Focus Visible → https://www.w3.org/WAI/WCAG21/Understanding/focus-visible.html
+  - 2.1.1 Keyboard → https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html
+- If unsure of the exact URL, use: https://www.w3.org/WAI/WCAG21/Understanding/
 
 **Important**: Report ONLY components with identified accessibility issues. Do not report on components where no accessibility issue was found. Focus on actionable insights and practical fixes for screen reader compatibility.
 `;
@@ -262,9 +273,9 @@ Respond with a JSON object with this exact structure:
       "componentName": "Specific component name (e.g., Search Button, Navigation Menu)",      "issue": "Clear description of the accessibility issue - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
       "explanation": "Detailed explanation of why this is a problem - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)","relevantHtml": "EXACT HTML element(s) with the accessibility issue - show ONLY the specific problematic element, not <html>, <body>, or unrelated parent containers",
       "correctedCode": "Fixed HTML showing the exact same element(s) with proper accessibility attributes",
-      "codeChangeSummary": "Brief summary of the fix (e.g., 'Added aria-label to button', 'Changed div to semantic heading')",
-      "impact": "critical|serious|moderate|minor",
-      "wcagRule": "WCAG 2.1 guideline reference (e.g., 1.3.1 Info and Relationships)"
+      "codeChangeSummary": "Brief summary of the fix (e.g., 'Added aria-label to button', 'Changed div to semantic heading')",      "impact": "critical|serious|moderate|minor",
+      "wcagRule": "WCAG 2.1 guideline reference (e.g., 1.3.1 Info and Relationships)",
+      "wcagUrl": "Complete URL to the specific WCAG Understanding document (e.g., 'https://www.w3.org/WAI/WCAG21/Understanding/info-and-relationships.html')"
     }
   ],
   "recommendations": [
@@ -272,6 +283,19 @@ Respond with a JSON object with this exact structure:
   ],
   "score": 75
 }
+
+**WCAG URL Requirements:**
+- Always provide the complete URL to the specific WCAG 2.1 Understanding document
+- Use the format: https://www.w3.org/WAI/WCAG21/Understanding/[page-name].html
+- Common examples:
+  - 1.3.1 Info and Relationships → https://www.w3.org/WAI/WCAG21/Understanding/info-and-relationships.html
+  - 4.1.2 Name, Role, Value → https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html
+  - 1.4.3 Contrast (Minimum) → https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html
+  - 2.4.7 Focus Visible → https://www.w3.org/WAI/WCAG21/Understanding/focus-visible.html
+  - 2.1.1 Keyboard → https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html
+  - 1.1.1 Non-text Content → https://www.w3.org/WAI/WCAG21/Understanding/non-text-content.html
+  - 2.4.6 Headings and Labels → https://www.w3.org/WAI/WCAG21/Understanding/headings-and-labels.html
+- If unsure of the exact URL, use: https://www.w3.org/WAI/WCAG21/Understanding/
 
 **Requirements:**
 - Each component must have a specific, non-generic name
@@ -347,11 +371,11 @@ Focus on actionable issues that can be addressed by developers, prioritizing cri
   /**
    * Parses Gemini response into structured component-based format
    */  private parseGeminiResponse(text: string, context: { step: number }): GeminiAnalysis {
-    try {
-      // Try to extract JSON from response
+    try {      // Try to extract JSON from response
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
+        console.log('🔍 Full Gemini response parsed:', JSON.stringify(parsed, null, 2));
         const validComponents = this.parseComponents(parsed.components || []);
         
         // Only return analysis if we have valid components
@@ -420,19 +444,28 @@ Focus on actionable issues that can be addressed by developers, prioritizing cri
         }
         
         return true;
-      })
-      .map(component => ({
-        componentName: component.componentName.trim(),
-        issue: component.issue.trim(),
-        explanation: component.explanation?.trim() || 'No detailed explanation provided',
-        relevantHtml: component.relevantHtml || '',
-        correctedCode: component.correctedCode || '',
-        codeChangeSummary: component.codeChangeSummary || '',
-        impact: ['critical', 'serious', 'moderate', 'minor'].includes(component.impact) 
-          ? component.impact : 'moderate',
-        wcagRule: component.wcagRule && component.wcagRule !== 'unknown' 
-          ? component.wcagRule : 'General Accessibility'
-      }));
+      })      .map(component => {
+        console.log('🔍 Processing component from Gemini:', {
+          componentName: component.componentName,
+          wcagRule: component.wcagRule,
+          wcagUrl: component.wcagUrl,
+          hasWcagUrl: !!component.wcagUrl
+        });
+        
+        return {
+          componentName: component.componentName.trim(),
+          issue: component.issue.trim(),
+          explanation: component.explanation?.trim() || 'No detailed explanation provided',
+          relevantHtml: component.relevantHtml || '',
+          correctedCode: component.correctedCode || '',
+          codeChangeSummary: component.codeChangeSummary || '',
+          impact: ['critical', 'serious', 'moderate', 'minor'].includes(component.impact) 
+            ? component.impact : 'moderate',
+          wcagRule: component.wcagRule && component.wcagRule !== 'unknown' 
+            ? component.wcagRule : 'General Accessibility',
+          wcagUrl: component.wcagUrl || undefined
+        };
+      });
   }
   /**
    * Fallback text parsing when JSON parsing fails
