@@ -20,9 +20,11 @@ A React-based accessibility testing tool that records user interactions, replays
 git clone <repository-url>
 cd web-access-advisor
 
-# Install dependencies (automatically installs Playwright browsers)
+# Install dependencies (triggers automatic browser download)
 npm install
 ```
+
+> **Note**: The `postinstall` script automatically downloads Playwright browsers (~100MB) after `npm install` completes. This ensures consistent testing across all environments and CI/CD pipelines.
 
 ### Required Build Steps
 
@@ -71,7 +73,6 @@ npm run build:cli     # Build CLI tool
 # Other
 npm run preview       # Preview production build
 npm run cli           # Run CLI tool
-npm run setup         # Install Playwright browsers (if needed)
 ```
 
 ## 🏗️ Architecture
@@ -102,6 +103,13 @@ The system uses Google Gemini for intelligent accessibility analysis:
 
 ## 🔧 Environment Setup
 
+### Automatic Setup
+Playwright browsers are automatically installed during `npm install` via the `postinstall` script. This ensures:
+- ✅ Consistent browser versions across environments
+- ✅ Reliable CI/CD pipeline execution  
+- ✅ No manual browser installation steps
+
+### Environment Variables
 Create a `.env` file in the root directory:
 
 ```env

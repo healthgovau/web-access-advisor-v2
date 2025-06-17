@@ -17,8 +17,7 @@
     "build:server": "tsc --project server/tsconfig.json",
     "preview": "vite preview",
     "cli": "node packages/cli/dist/cli.js",
-    "postinstall": "playwright install",
-    "setup": "playwright install"
+    "postinstall": "playwright install"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

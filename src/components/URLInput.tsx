@@ -7,17 +7,36 @@ import { useState } from 'react';
 const URLInput = ({ url, onUrlChange, onNavigate, isLoading }) => {
   const [inputValue, setInputValue] = useState(url || '');
 
+  const normalizeUrl = (input) => {
+    const trimmed = input.trim();
+    if (!trimmed) return '';
+    
+    // Add https:// if no protocol specified
+    if (!trimmed.match(/^https?:\/\//)) {
+      return `https://${trimmed}`;
+    }
+    return trimmed;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (inputValue.trim()) {
-      onUrlChange(inputValue.trim());
-      onNavigate(inputValue.trim());
+      const normalizedUrl = normalizeUrl(inputValue);
+      onUrlChange(normalizedUrl);
+      onNavigate();
     }
   };
 
   const handleInputChange = (e) => {
-    setInputValue(e.target.value);
-    onUrlChange(e.target.value);
+    const value = e.target.value;
+    setInputValue(value);
+    
+    if (value.trim()) {
+      const normalizedUrl = normalizeUrl(value);
+      onUrlChange(normalizedUrl);
+    } else {
+      onUrlChange('');
+    }
   };
 
   return (
@@ -26,13 +45,12 @@ const URLInput = ({ url, onUrlChange, onNavigate, isLoading }) => {
         Website URL to Test
       </label>
       
-      <form onSubmit={handleSubmit} className="flex space-x-2">
-        <input
+      <form onSubmit={handleSubmit} className="flex space-x-2">        <input
           id="url-input"
-          type="url"
+          type="text"
           value={inputValue}
           onChange={handleInputChange}
-          placeholder="https://example.com"
+          placeholder="www.example.com or https://example.com"
           className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           disabled={isLoading}
           required

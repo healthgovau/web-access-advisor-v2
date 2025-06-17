@@ -94,15 +94,16 @@ export interface AnalysisOptions {
 }
 
 // Frontend-specific types
+export type AppMode = 'setup' | 'recording' | 'analyzing' | 'results';
+
 export interface AppState {
-  mode: 'manual' | 'auto';
-  currentUrl: string;
-  isRecording: boolean;
-  isReplaying: boolean;
+  mode: AppMode;
+  url: string;
+  sessionName: string;
+  sessionId?: string;
   actions: UserAction[];
-  snapshots: SnapshotData[];
-  analysisResults: AnalysisResult | null;
-  error: string | null;
+  analysisResult?: AnalysisResult;
+  error?: string;
   loading: boolean;
 }
 
