@@ -205,36 +205,51 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
               {/* Component Issues */}
               {analysisData.analysis.components && analysisData.analysis.components.length > 0 && (<div className="mb-6">
                   
-                  {/* Issue Count Summary */}
-                  {(() => {
+                  {/* Issue Count Summary */}                  {(() => {
                     const counts = filteredComponents.reduce((acc, component) => {
                       acc[component.impact] = (acc[component.impact] || 0) + 1;
                       return acc;
                     }, {} as Record<string, number>);
+                    
+                    // Color scheme for severity levels
+                    const getSeverityColors = (severity: string, isActive: boolean) => {
+                      const baseClasses = {
+                        critical: isActive 
+                          ? 'bg-red-50 border-red-300 text-red-800' 
+                          : 'bg-red-100 border-red-200 text-red-700 opacity-60',
+                        serious: isActive 
+                          ? 'bg-orange-50 border-orange-300 text-orange-800' 
+                          : 'bg-orange-100 border-orange-200 text-orange-700 opacity-60',
+                        moderate: isActive 
+                          ? 'bg-yellow-50 border-yellow-300 text-yellow-800' 
+                          : 'bg-yellow-100 border-yellow-200 text-yellow-700 opacity-60',
+                        minor: isActive 
+                          ? 'bg-blue-50 border-blue-300 text-blue-800' 
+                          : 'bg-blue-100 border-blue-200 text-blue-700 opacity-60'
+                      };
+                      return baseClasses[severity as keyof typeof baseClasses] || baseClasses.minor;
+                    };
                         return (
                       <>
                         <div className="w-full flex justify-center mb-4">
                           <div className="inline-grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {['critical', 'serious', 'moderate', 'minor'].map(impact => (
-                              <button
+                            {['critical', 'serious', 'moderate', 'minor'].map(impact => (                              <button
                                 key={impact}
                                 onClick={() => handleSeverityFilterChange(impact, !severityFilters[impact])}
-                                className={`relative text-center p-3 border rounded-lg transition-all hover:scale-105 ${
-                                  severityFilters[impact] 
-                                    ? 'bg-gray-50 border-gray-300 shadow-sm' 
-                                    : 'bg-gray-100 border-gray-200 opacity-60'
-                                }`}
+                                className={`relative text-center p-3 border rounded-lg transition-all hover:scale-105 ${getSeverityColors(impact, severityFilters[impact])}`}
                                 title={`${severityFilters[impact] ? 'Hide' : 'Show'} ${impact} issues`}
-                              >
-                                {/* Checkbox in top-right corner */}
+                              >                                {/* Checkbox in top-right corner */}
                                 <div className="absolute top-1 right-1">
-                                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                  <div className={`w-4 h-4 rounded border flex items-center justify-center ${
                                     severityFilters[impact]
-                                      ? 'bg-blue-500 border-blue-500'
+                                      ? impact === 'critical' ? 'bg-white border-red-300' :
+                                        impact === 'serious' ? 'bg-white border-orange-300' :
+                                        impact === 'moderate' ? 'bg-white border-yellow-300' :
+                                        'bg-white border-blue-300'
                                       : 'bg-white border-gray-300'
                                   }`}>
                                     {severityFilters[impact] && (
-                                      <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <svg className="w-2.5 h-2.5 text-black" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                       </svg>
                                     )}
@@ -244,10 +259,9 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                                 <div className="text-lg font-bold text-gray-900">{counts[impact] || 0}</div>
                                 <div className="text-xs font-medium text-gray-600 uppercase">{impact}</div>
                               </button>
-                            ))}
-                          </div>
+                            ))}                          </div>
                         </div>
-                        <p className="text-xs text-gray-500 text-center mb-6">Click boxes above to toggle filter</p>
+                        <p className="text-xs text-gray-500 text-center mb-10">Click boxes above to toggle filter</p>
                       </>
                     );
                   })()}
@@ -255,22 +269,19 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                     {filteredComponents.length > 0 ? (
                       filteredComponents.map((component, index) => (                      <div key={index} className="bg-white border border-gray-300 rounded-lg overflow-hidden">                        {/* Header Section with Subtle Background */}
                         <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
-                              <p className="text-sm text-gray-500 mt-2 mb-1">
-                                URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{analysisData.manifest?.url || 'Unknown'}</code>
-                              </p>
-                            </div>
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ml-4 ${
                               component.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
                               component.impact === 'serious' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
                               component.impact === 'moderate' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
                               'bg-blue-100 text-blue-800 border border-blue-300'
                             }`}>
                               {component.impact.toUpperCase()} IMPACT
-                            </span>
-                          </div>
+                            </span>                          </div>
+                          <p className="text-sm text-gray-500 text-left">
+                            URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{analysisData.manifest?.url || 'Unknown'}</code>
+                          </p>
                         </div>
                         
                         {/* Content Section */}
@@ -282,13 +293,12 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                               {formatTextWithCodeTags(component.issue)}
                             </div>
                           </div>
-                          
-                          <div>
-                            <span className="text-base font-medium text-gray-700">Explanation: </span>
-                            <div className="text-base text-gray-600 mt-1" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
+                            <div>
+                            <span className="text-base font-medium text-gray-700">Explanation:</span>
+                            <div className="text-base text-gray-600 mt-2" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                               {formatTextWithCodeTags(component.explanation)}
                             </div>
-                          </div>                          {component.relevantHtml && (
+                          </div>{component.relevantHtml && (
                             <div>
                               <span className="text-base font-medium text-gray-700">Offending Code: </span>
                               <pre className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-sm text-gray-700 overflow-x-auto" style={{ fontFamily: 'Consolas, Monaco, monospace' }}>
@@ -297,9 +307,8 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                             </div>
                           )}
                             {component.correctedCode && (
-                            <div>
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-base font-medium text-gray-700">Recommended: </span>
+                            <div>                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-base font-medium text-gray-700">Recommended:</span>
                                 <button
                                   onClick={() => handleCopyCode(component.correctedCode, `recommended-${index}`)}
                                   className="flex items-center space-x-1 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded border border-green-300 transition-colors"
@@ -311,7 +320,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                                   <span>{copiedStates[`recommended-${index}`] ? 'Copied!' : 'Copy'}</span>
                                 </button>
                               </div>
-                              <div className="text-base text-gray-600 block mt-1" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
+                              <div className="text-base text-gray-600 block mt-2" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                                 {formatTextWithCodeTags(component.codeChangeSummary)}
                               </div>
                               <pre className="mt-2 p-3 bg-green-50 border border-green-200 rounded text-sm text-gray-700 overflow-x-auto" style={{ fontFamily: 'Consolas, Monaco, monospace' }}>

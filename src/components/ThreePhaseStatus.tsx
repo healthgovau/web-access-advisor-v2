@@ -30,25 +30,24 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
 }) => {
   
   // Determine phase statuses based on current stage
-  const getPhaseStatuses = (): PhaseStatus[] => {
-    const phases: PhaseStatus[] = [
+  const getPhaseStatuses = (): PhaseStatus[] => {    const phases: PhaseStatus[] = [
       {
         phase: 'recording',
         status: 'pending',
-        message: 'Record user interactions',
+        message: 'Ready to record',
         details: 'Navigate and interact with the website'
       },
       {
         phase: 'replay',
         status: 'pending', 
-        message: 'Replay & capture snapshots',
+        message: 'Ready to replay',
         details: 'Automated replay with accessibility scans'
       },
       {
         phase: 'ai',
         status: 'pending',
-        message: 'AI accessibility analysis',
-        details: 'Component-focused insights and recommendations'
+        message: 'Ready for analysis',
+        details: 'AI-powered accessibility insights'
       }
     ];
 
@@ -56,13 +55,14 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
     switch (currentStage) {
       case 'idle':
         break;
-        
-      case 'starting-browser':
+          case 'starting-browser':
       case 'recording':
         phases[0].status = 'active';
-        phases[0].message = currentStage === 'starting-browser' ? 'Launching browser...' : 'Recording in progress';
+        phases[0].message = currentStage === 'starting-browser' ? 'Launching browser...' : 'Recording in progress...';
         phases[0].details = `${actionCount} actions captured`;
-        break;        case 'stopping-recording':
+        break;
+        
+      case 'stopping-recording':
         phases[0].status = 'completed';
         phases[0].message = 'Recording complete';
         phases[0].details = `${actionCount} actions captured`;
@@ -72,7 +72,6 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
         phases[0].status = 'completed';
         phases[0].message = 'Recording complete';
         phases[0].details = `${actionCount} actions captured`;
-        // Keep other phases as pending until analysis starts
         break;
           case 'preparing-analysis':
       case 'replaying-actions':
@@ -81,15 +80,14 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
         phases[0].status = 'completed';
         phases[0].message = 'Recording complete';
         phases[0].details = `${actionCount} actions captured`;
-        
-        phases[1].status = 'active';
-        phases[1].message = currentStage === 'preparing-analysis' ? 'Preparing analysis...' :
+          phases[1].status = 'active';
+        phases[1].message = currentStage === 'preparing-analysis' ? 'Preparing replay...' :
                            currentStage === 'replaying-actions' ? 'Replaying actions...' :
                            currentStage === 'capturing-snapshots' ? 'Capturing snapshots...' :
                            'Running accessibility checks...';
         phases[1].details = snapshotCount > 0 ? 
           `${snapshotCount} snapshots captured` : 
-          'Processing user interactions';
+          'Processing interactions';
         break;
           case 'processing-with-ai':
       case 'generating-report':
@@ -100,12 +98,11 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
         phases[1].status = 'completed';
         phases[1].message = 'Replay complete';
         phases[1].details = `${snapshotCount} snapshots captured`;
-        
-        phases[2].status = 'active';
-        phases[2].message = currentStage === 'processing-with-ai' ? 'AI analyzing flow...' : 'Finalizing results...';
+          phases[2].status = 'active';
+        phases[2].message = currentStage === 'processing-with-ai' ? 'Analyzing with AI...' : 'Generating report...';
         phases[2].details = snapshotCount > 0 ? 
-          `Analyzing ${snapshotCount} snapshots with AI` : 
-          'Processing accessibility data';
+          `Processing ${snapshotCount} snapshots` : 
+          'Analyzing accessibility data';
         break;
           case 'completed':
         phases[0].status = 'completed';
@@ -195,28 +192,30 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
       {/* Compact horizontal layout */}
       <div className="grid grid-cols-3 gap-3 mb-3">
         {phases.map((phase) => (
-          <div key={phase.phase} className={`border rounded p-3 transition-all duration-300 ${getStatusColor(phase.status)}`}>
-            <div className="flex items-center space-x-2 mb-1">              <span className="text-lg flex-shrink-0">
-                {phase.status === 'active' ? (
-                  <div className={phase.phase === 'replay' ? 'animate-spin-reverse' : ''}>
-                    {getStatusIcon(phase.status, phase.phase)}
-                  </div>
-                ) : (
-                  getStatusIcon(phase.status, phase.phase)
-                )}
-              </span>
+          <div key={phase.phase} className={`border rounded p-3 transition-all duration-300 ${getStatusColor(phase.status)}`}>            <div className="mb-1">
+              {/* Status icon above the heading */}
+              <div className="flex justify-center mb-2">
+                <span className="text-lg">
+                  {phase.status === 'active' ? (
+                    <div className={phase.phase === 'replay' ? 'animate-spin-reverse' : ''}>
+                      {getStatusIcon(phase.status, phase.phase)}
+                    </div>
+                  ) : (
+                    getStatusIcon(phase.status, phase.phase)
+                  )}
+                </span>
+              </div>
               
-              <div className="flex-1 min-w-0">
-                <h4 className="text-xs font-medium uppercase tracking-wide">
+              <div className="text-center">
+                <h4 className="text-sm font-medium uppercase tracking-wide">
                   {phase.phase === 'ai' ? 'AI Analysis' : phase.phase}
                 </h4>
               </div>
-            </div>
-            
-            <p className="text-xs opacity-90 mb-1">{phase.message}</p>
+            </div>            
+            <p className="text-xs opacity-90 mb-1 text-center">{phase.message}</p>
             
             {phase.details && (
-              <p className="text-xs opacity-75">{phase.details}</p>
+              <p className="text-xs opacity-75 text-center">{phase.details}</p>
             )}
             
             {phase.error && (
