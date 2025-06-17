@@ -30,11 +30,12 @@ export class AccessibilityAnalyzer {
   private geminiService: GeminiService | null = null;
   private domChangeDetector: DOMChangeDetector = new DOMChangeDetector();
   private previousHtmlState: string | null = null;
-
   /**
    * Initialize the analyzer
    */
   async initialize(geminiApiKey?: string): Promise<void> {
+    console.log(`🔍 Analyzer init: geminiApiKey provided = ${geminiApiKey ? 'Yes (' + geminiApiKey.substring(0, 10) + '...)' : 'No'}`);
+    
     this.browser = await chromium.launch({ headless: true });
     this.context = await this.browser.newContext();
     this.page = await this.context.newPage();
@@ -42,6 +43,9 @@ export class AccessibilityAnalyzer {
     // Initialize Gemini if API key provided
     if (geminiApiKey) {
       this.geminiService = new GeminiService(geminiApiKey);
+      console.log(`✅ Gemini service initialized successfully`);
+    } else {
+      console.log(`❌ Gemini service NOT initialized - no API key provided`);
     }
   }
 
@@ -70,16 +74,39 @@ export class AccessibilityAnalyzer {
     try {
       if (!this.page) {
         throw new Error('Analyzer not initialized');
-      }      console.log(`Starting analysis session: ${sessionId}`);
+      }      console.log(`🎬 PHASE 1: Starting analysis session: ${sessionId}`);
+      console.log(`📋 Actions to replay: ${actions.length}`);
+      
+      if (actions.length === 0) {
+        console.log(`⚠️ No actions to replay - analysis will be limited`);
+        
+        // Generate metadata manifest for empty session
+        const manifest = await this.generateManifest(sessionId, actions, snapshots);
+        await writeFile(
+          path.join(sessionDir, 'manifest.json'),
+          JSON.stringify(manifest, null, 2)
+        );
+
+        return {
+          success: true,
+          sessionId,
+          snapshotCount: 0,
+          snapshots: [],
+          manifest,
+          warnings: ['No actions were recorded - analysis skipped']
+        };
+      }
       
       // Reset DOM change detector and HTML state for new session
       this.domChangeDetector.reset();
       this.previousHtmlState = null;
 
+      console.log(`🔄 PHASE 2: Replaying actions and capturing snapshots...`);
+
       // Replay each action and capture snapshots
       for (let i = 0; i < actions.length; i++) {
         const action = actions[i];
-        console.log(`Processing step ${i + 1}: ${action.type}`);
+        console.log(`  📱 Processing step ${i + 1}/${actions.length}: ${action.type}`);
 
         // Execute the action
         await this.executeAction(this.page, action);
@@ -91,34 +118,46 @@ export class AccessibilityAnalyzer {
 
         // Detect DOM changes
         const domChangeDetails = await this.domChangeDetector.detectChanges(this.page, action);
-        console.log(`  DOM Change: ${domChangeDetails.type} - ${domChangeDetails.description}`);        // Only capture snapshot if changes are significant or it's a navigation
+        console.log(`    🔍 DOM Change: ${domChangeDetails.type} - ${domChangeDetails.description}`);        // Only capture snapshot if changes are significant or it's a navigation
         const shouldSnapshot = domChangeDetails.significant || 
                               domChangeDetails.type === 'navigation' ||
                               i === 0; // Always snapshot first step
 
+        console.log(`    📋 Should snapshot: ${shouldSnapshot} (significant: ${domChangeDetails.significant}, isNavigation: ${domChangeDetails.type === 'navigation'}, isFirstStep: ${i === 0})`);
+
         if (shouldSnapshot) {
-          console.log(`  Capturing snapshot for significant ${domChangeDetails.type} change`);
-          const snapshot = await this.captureSnapshot(
-            this.page, 
-            i + 1, 
-            action,
-            domChangeDetails,
-            sessionDir,
-            captureScreenshots
-          );
-          snapshots.push(snapshot);
-            // Store current HTML for next iteration's before/after comparison
-          this.previousHtmlState = snapshot.html;
+          console.log(`    📸 Capturing snapshot for significant ${domChangeDetails.type} change`);
+          try {
+            const snapshot = await this.captureSnapshot(
+              this.page, 
+              i + 1, 
+              action,
+              domChangeDetails,
+              sessionDir,
+              captureScreenshots
+            );
+            snapshots.push(snapshot);
+            console.log(`    ✅ Snapshot ${i + 1} captured successfully`);
+              // Store current HTML for next iteration's before/after comparison
+            this.previousHtmlState = snapshot.html;
+          } catch (error) {
+            console.error(`    ❌ Failed to capture snapshot ${i + 1}:`, error);
+          }
         } else {
-          console.log(`  Skipping snapshot - no significant changes`);
+          console.log(`    ⏭️ Skipping snapshot - no significant changes`);
         }
-      }
+      }      console.log(`✅ PHASE 2 Complete: Captured ${snapshots.length} snapshots`);
+
+      let warnings: string[] = [];
 
       // Perform Gemini analysis if enabled and service available
       if (analyzeWithGemini && this.geminiService && snapshots.length > 0) {
-        console.log('Running Gemini accessibility analysis...');
+        console.log(`🤖 PHASE 3: Running Gemini AI accessibility analysis...`);
         try {
-          const lastSnapshot = snapshots[snapshots.length - 1];          geminiAnalysis = await this.geminiService.analyzeAccessibility(
+          const lastSnapshot = snapshots[snapshots.length - 1];          console.log(`  📊 Analyzing ${lastSnapshot.axeResults?.length || 0} Axe violations with AI`);
+          console.log(`  🧠 Sending HTML content (${Math.round(lastSnapshot.html.length / 1024)}KB) to Gemini...`);
+          
+          geminiAnalysis = await this.geminiService.analyzeAccessibility(
             lastSnapshot.html,
             lastSnapshot.axeResults,
             {
@@ -129,9 +168,25 @@ export class AccessibilityAnalyzer {
             },
             this.previousHtmlState || undefined
           );
+          
+          console.log(`✅ PHASE 3 Complete: AI analysis finished`);
+          console.log(`  📈 Analysis Score: ${geminiAnalysis.score}/100`);
+          console.log(`  🔧 Components Analyzed: ${geminiAnalysis.components?.length || 0}`);
+          console.log(`  💡 Recommendations: ${geminiAnalysis.recommendations?.length || 0}`);
         } catch (error) {
-          console.warn('Gemini analysis failed:', error);
-          // Continue without Gemini analysis
+          console.error(`❌ PHASE 3 Failed: Gemini analysis error:`, error);
+          warnings.push(`AI analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      } else {
+        if (!analyzeWithGemini) {
+          console.log(`⏭️ PHASE 3 Skipped: Gemini analysis disabled`);
+          warnings.push('AI analysis disabled in configuration');
+        } else if (!this.geminiService) {
+          console.log(`⚠️ PHASE 3 Skipped: Gemini service not available (no API key?)`);
+          warnings.push('AI analysis unavailable - Gemini API key not configured');
+        } else if (snapshots.length === 0) {
+          console.log(`⚠️ PHASE 3 Skipped: No snapshots to analyze`);
+          warnings.push('AI analysis skipped - no snapshots captured');
         }
       }
 
@@ -146,7 +201,8 @@ export class AccessibilityAnalyzer {
         snapshotCount: snapshots.length,
         snapshots,
         manifest,
-        analysis: geminiAnalysis
+        analysis: geminiAnalysis,
+        warnings: warnings.length > 0 ? warnings : undefined
       };
 
     } catch (error) {
@@ -160,49 +216,73 @@ export class AccessibilityAnalyzer {
       };
     }
   }
-
   /**
-   * Execute a user action
+   * Execute a user action with error handling and timeouts
    */
   private async executeAction(page: Page, action: UserAction): Promise<void> {
-    switch (action.type) {
-      case 'navigate':
-        if (action.url) {
-          await page.goto(action.url);
-        }
-        break;
-      case 'click':
-        if (action.selector) {
-          await page.click(action.selector);
-        }
-        break;
-      case 'fill':
-        if (action.selector && action.value) {
-          await page.fill(action.selector, action.value);
-        }
-        break;
-      case 'select':
-        if (action.selector && action.value) {
-          await page.selectOption(action.selector, action.value);
-        }
-        break;
-      case 'scroll':
-        await page.evaluate(() => window.scrollBy(0, 300));
-        break;
-      case 'hover':
-        if (action.selector) {
-          await page.hover(action.selector);
-        }
-        break;
-      case 'key':
-        if (action.value) {
-          await page.keyboard.press(action.value);
-        }
-        break;
-      default:
-        console.warn(`Unknown action type: ${action.type}`);
+    try {
+      switch (action.type) {
+        case 'navigate':
+          if (action.url) {
+            await page.goto(action.url, { timeout: 10000 });
+          }
+          break;
+        case 'click':
+          if (action.selector) {
+            // Wait for the element to be available, but don't fail if it's not
+            try {
+              await page.waitForSelector(action.selector, { timeout: 3000 });
+              await page.click(action.selector, { timeout: 3000 });
+            } catch (error) {
+              console.log(`    ⚠️ Click failed for selector "${action.selector}" - element may not exist during replay`);
+            }
+          }
+          break;
+        case 'fill':
+          if (action.selector && action.value) {
+            try {
+              await page.waitForSelector(action.selector, { timeout: 3000 });
+              await page.fill(action.selector, action.value, { timeout: 3000 });
+            } catch (error) {
+              console.log(`    ⚠️ Fill failed for selector "${action.selector}" - element may not exist during replay`);
+            }
+          }
+          break;
+        case 'select':
+          if (action.selector && action.value) {
+            try {
+              await page.waitForSelector(action.selector, { timeout: 3000 });
+              await page.selectOption(action.selector, action.value, { timeout: 3000 });
+            } catch (error) {
+              console.log(`    ⚠️ Select failed for selector "${action.selector}" - element may not exist during replay`);
+            }
+          }
+          break;
+        case 'scroll':
+          await page.evaluate(() => window.scrollBy(0, 300));
+          break;
+        case 'hover':
+          if (action.selector) {
+            try {
+              await page.waitForSelector(action.selector, { timeout: 3000 });
+              await page.hover(action.selector, { timeout: 3000 });
+            } catch (error) {
+              console.log(`    ⚠️ Hover failed for selector "${action.selector}" - element may not exist during replay`);
+            }
+          }
+          break;
+        case 'key':
+          if (action.value) {
+            await page.keyboard.press(action.value);
+          }
+          break;
+        default:
+          console.warn(`Unknown action type: ${action.type}`);
+      }
+    } catch (error) {
+      console.log(`    ⚠️ Action execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }  /**
+  }/**
    * Capture accessibility snapshot
    */
   private async captureSnapshot(
@@ -237,18 +317,27 @@ export class AccessibilityAnalyzer {
     const htmlFile = path.join(stepDir, 'snapshot.html');
     await writeFile(htmlFile, htmlContent);
     snapshot.html = htmlContent;
-    snapshot.files.html = htmlFile;
-
-    // Run axe accessibility analysis
+    snapshot.files.html = htmlFile;    // Run axe accessibility analysis
+    console.log(`      🔍 Running Axe accessibility scan...`);
     try {
       const axeResults = await new AxeBuilder({ page }).analyze();
+      
+      // Store only violations for LLM analysis (violations are the actionable issues)
       snapshot.axeResults = axeResults.violations || [];
       
+      const violationCount = axeResults.violations?.length || 0;
+      const passCount = axeResults.passes?.length || 0;
+      const incompleteCount = axeResults.incomplete?.length || 0;
+      
+      console.log(`      ✅ Axe scan complete: ${violationCount} violations, ${passCount} passes, ${incompleteCount} incomplete`);
+      console.log(`      📋 Sending ${violationCount} violations to LLM for analysis`);
+      
+      // Save full results to file for debugging/reference
       const axeResultsFile = path.join(stepDir, 'axe_results.json');
       await writeFile(axeResultsFile, JSON.stringify(axeResults, null, 2));
       snapshot.files.axeResults = axeResultsFile;
     } catch (error) {
-      console.warn('Axe analysis failed:', error);
+      console.warn(`      ❌ Axe analysis failed:`, error);
       snapshot.axeResults = [];
     }
 

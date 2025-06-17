@@ -12,8 +12,7 @@ export class GeminiService {
 
   constructor(apiKey: string) {
     this.genAI = new GoogleGenerativeAI(apiKey);
-  }
-  /**
+  }  /**
    * Analyzes accessibility issues using Gemini AI with before/after state comparison
    * 
    * @param htmlContent - The current HTML content to analyze
@@ -38,7 +37,13 @@ export class GeminiService {
 
       const prompt = this.buildComponentAnalysisPrompt(htmlContent, axeResults, context, previousHtml);
       
-      const result = await model.generateContent(prompt);
+      // Set up timeout for Gemini API call (2 minutes)
+      const geminiPromise = model.generateContent(prompt);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Gemini API timeout after 2 minutes')), 2 * 60 * 1000);
+      });
+
+      const result = await Promise.race([geminiPromise, timeoutPromise]);
       const response = await result.response;
       const text = response.text();
 

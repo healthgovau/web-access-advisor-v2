@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "dev:cli": "npm run dev --workspace=packages/cli",
-    "dev:server": "node server/dist/server/index.js",
+    "dev:server": "set API_PORT=3002 && node server/dist/server/index.js",
     "dev:full": "concurrently \"npm run dev:server\" \"npm run dev\"",
     "build": "npm run build --workspaces && vite build",
     "build:core": "npm run build --workspace=packages/core",

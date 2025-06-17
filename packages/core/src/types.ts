@@ -100,6 +100,7 @@ export interface AnalysisResult {
   snapshots: SnapshotData[];
   manifest: SessionManifest;
   analysis?: GeminiAnalysis;
+  warnings?: string[];
   error?: string;
 }
 

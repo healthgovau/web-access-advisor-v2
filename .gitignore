@@ -30,6 +30,10 @@ dist-ssr
 .env.test.local
 .env.production.local
 
+# Server-specific environment files
+server/.env.local
+server/.env.production
+
 # Playwright
 test-results/
 playwright-report/
@@ -49,3 +53,7 @@ ehthumbs.db
 
 # Tailwind CSS output (if using CLI)
 /src/styles/tailwind.css
+
+# Recordings
+/recordings/*
+/snapshots/*

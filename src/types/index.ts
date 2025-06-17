@@ -43,6 +43,7 @@ export interface AnalysisResult {
   snapshots: SnapshotData[];
   manifest: SessionManifest;
   analysis?: GeminiAnalysis;
+  warnings?: string[];
   error?: string;
 }
 
@@ -72,9 +73,20 @@ export interface StepDetail {
 
 export interface GeminiAnalysis {
   summary: string;
-  issues: AccessibilityIssue[];
+  components: ComponentAccessibilityIssue[];
   recommendations: string[];
   score: number;
+}
+
+export interface ComponentAccessibilityIssue {
+  componentName: string;
+  issue: string;
+  explanation: string;
+  relevantHtml: string;
+  correctedCode: string;
+  codeChangeSummary: string;
+  impact: 'critical' | 'serious' | 'moderate' | 'minor';
+  wcagRule: string;
 }
 
 export interface AccessibilityIssue {
@@ -96,15 +108,38 @@ export interface AnalysisOptions {
 // Frontend-specific types
 export type AppMode = 'setup' | 'recording' | 'analyzing' | 'results';
 
+export type ProgressStage = 
+  | 'idle'
+  | 'starting-browser'
+  | 'recording'
+  | 'stopping-recording'
+  | 'recording-complete'
+  | 'preparing-analysis'
+  | 'replaying-actions'
+  | 'capturing-snapshots'
+  | 'running-accessibility-checks'
+  | 'processing-with-ai'
+  | 'generating-report'
+  | 'completed'
+  | 'error';
+
+export interface ProgressState {
+  stage: ProgressStage;
+  message: string;
+  progress?: number;
+  details?: string;
+  error?: string;
+}
+
 export interface AppState {
   mode: AppMode;
   url: string;
-  sessionName: string;
   sessionId?: string;
   actions: UserAction[];
   analysisResult?: AnalysisResult;
   error?: string;
   loading: boolean;
+  progress: ProgressState;
 }
 
 export interface ComponentProps {

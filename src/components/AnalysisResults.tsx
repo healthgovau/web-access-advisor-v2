@@ -1,26 +1,22 @@
 /**
- * Display Gemini analysis results and accessibility findings
+ * Display accessibility analysis results with warnings support
  */
 
-import { useState } from 'react';
+import type { AnalysisResult } from '../types';
 
-const AnalysisResults = ({ analysisData, isLoading, error }) => {
-  const [activeFlow, setActiveFlow] = useState(0);
-  const [expandedSections, setExpandedSections] = useState({});
+interface AnalysisResultsProps {
+  analysisData: AnalysisResult | null;
+  isLoading: boolean;
+  error: string | null;
+}
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
-
+const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoading, error }) => {
   if (isLoading) {
     return (
       <div className="p-6 bg-white border border-gray-200 rounded-lg">
         <div className="flex items-center justify-center space-x-3">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="text-gray-600">Analyzing accessibility with Gemini AI...</span>
+          <span className="text-gray-600">Analyzing accessibility...</span>
         </div>
       </div>
     );
@@ -40,7 +36,7 @@ const AnalysisResults = ({ analysisData, isLoading, error }) => {
     );
   }
 
-  if (!analysisData || analysisData.length === 0) {
+  if (!analysisData) {
     return (
       <div className="p-6 bg-gray-50 border border-gray-200 rounded-lg">
         <h3 className="text-lg font-medium text-gray-900 mb-2">Analysis Results</h3>
@@ -51,164 +47,144 @@ const AnalysisResults = ({ analysisData, isLoading, error }) => {
     );
   }
 
+  // Handle warnings (e.g., Gemini not available)
+  const hasWarnings = analysisData.warnings && analysisData.warnings.length > 0;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-gray-900">
-          Accessibility Analysis Results
-        </h3>
-        <span className="text-sm text-gray-500">
-          {analysisData.length} flow{analysisData.length !== 1 ? 's' : ''} analyzed
-        </span>
-      </div>
-
-      {/* Flow Tabs */}
-      {analysisData.length > 1 && (
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8">
-            {analysisData.map((flow, index) => (
-              <button
-                key={index}
-                onClick={() => setActiveFlow(index)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeFlow === index
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                {flow.flowName || `Flow ${index + 1}`}
-              </button>
-            ))}
-          </nav>
+      {/* Warnings Display */}
+      {hasWarnings && (
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-2 mb-2">
+              <span className="text-yellow-500 text-xl">⚠️</span>
+              <h3 className="text-sm font-medium text-yellow-800">Analysis Limitations</h3>
+            </div>
+            <ul className="text-yellow-700 text-sm space-y-1">
+              {analysisData.warnings?.map((warning, index) => (
+                <li key={index}>• {warning}</li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
 
-      {/* Active Flow Content */}
-      {analysisData[activeFlow] && (
-        <div className="space-y-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h4 className="text-lg font-medium text-gray-900">
-                  {analysisData[activeFlow].flowName || `Flow ${activeFlow + 1}`}
-                </h4>
-                <p className="text-sm text-gray-500 mt-1">
-                  {analysisData[activeFlow].stepCount} steps analyzed
-                </p>
-              </div>
-              <span className="text-xs text-gray-400 font-mono">
-                {analysisData[activeFlow].timestamp}
-              </span>
-            </div>
-
-            {/* Summary Section */}
-            <div className="mb-6">
-              <button
-                onClick={() => toggleSection(`summary-${activeFlow}`)}
-                className="flex items-center justify-between w-full text-left"
-              >
-                <h5 className="text-md font-medium text-gray-800">Summary</h5>
-                <span className="text-gray-400">
-                  {expandedSections[`summary-${activeFlow}`] ? '−' : '+'}
-                </span>
-              </button>
-              
-              {expandedSections[`summary-${activeFlow}`] && (
-                <div className="mt-3 p-4 bg-gray-50 rounded-md">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                    {analysisData[activeFlow].summary}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Issues Section */}
-            {analysisData[activeFlow].issues && analysisData[activeFlow].issues.length > 0 && (
-              <div className="mb-6">
-                <button
-                  onClick={() => toggleSection(`issues-${activeFlow}`)}
-                  className="flex items-center justify-between w-full text-left"
-                >
-                  <h5 className="text-md font-medium text-gray-800">
-                    Issues Found ({analysisData[activeFlow].issues.length})
-                  </h5>
-                  <span className="text-gray-400">
-                    {expandedSections[`issues-${activeFlow}`] ? '−' : '+'}
-                  </span>
-                </button>
-                
-                {expandedSections[`issues-${activeFlow}`] && (
-                  <div className="mt-3 space-y-3">
-                    {analysisData[activeFlow].issues.map((issue, index) => (
-                      <div key={index} className="p-4 border border-gray-200 rounded-md">
-                        <div className="flex items-start justify-between mb-2">
-                          <h6 className="font-medium text-gray-900">{issue.title}</h6>
-                          <span className={`px-2 py-1 text-xs rounded ${
-                            issue.severity === 'high' ? 'bg-red-100 text-red-800' :
-                            issue.severity === 'medium' ? 'bg-amber-100 text-amber-800' :
-                            'bg-blue-100 text-blue-800'
-                          }`}>
-                            {issue.severity}
-                          </span>
+      {/* Basic Analysis Results */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="text-center mb-6">
+          <p className="text-sm text-gray-500">
+            {analysisData.snapshotCount} snapshots analyzed • Session: {analysisData.sessionId}
+          </p>
+        </div>        {/* Gemini Analysis Results */}
+        {analysisData.analysis ? (
+          <div className="space-y-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              {/* Component Issues */}
+              {analysisData.analysis.components && analysisData.analysis.components.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-xl font-medium text-gray-900 mb-6 text-center">Issues Identified</h3>
+                  
+                  {/* Issue Count Summary */}
+                  {(() => {
+                    const counts = analysisData.analysis.components.reduce((acc, component) => {
+                      acc[component.impact] = (acc[component.impact] || 0) + 1;
+                      return acc;
+                    }, {} as Record<string, number>);
+                      
+                    return (                      <div className="w-full flex justify-center mb-8">
+                        <div className="inline-grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {['critical', 'serious', 'moderate', 'minor'].map(impact => (
+                            <div key={impact} className="text-center p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                              <div className="text-lg font-bold text-gray-900">{counts[impact] || 0}</div>
+                              <div className="text-xs font-medium text-gray-600 uppercase">{impact}</div>
+                            </div>
+                          ))}
                         </div>
-                        <p className="text-sm text-gray-700 mb-2">{issue.description}</p>
-                        {issue.recommendation && (
-                          <div className="text-sm">
-                            <span className="font-medium text-green-700">Recommendation: </span>
-                            <span className="text-gray-700">{issue.recommendation}</span>
+                      </div>
+                    );
+                  })()}
+                  <div className="space-y-4">
+                    {analysisData.analysis.components.map((component, index) => (
+                      <div key={index} className="bg-white border border-gray-300 rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                            component.impact === 'critical' ? 'bg-gray-100 text-gray-800 border border-gray-300' :
+                            component.impact === 'serious' ? 'bg-gray-100 text-gray-800 border border-gray-300' :
+                            component.impact === 'moderate' ? 'bg-gray-100 text-gray-800 border border-gray-300' :
+                            'bg-gray-100 text-gray-800 border border-gray-300'
+                          }`}>
+                            {component.impact.toUpperCase()} IMPACT
+                          </span>
+                        </div>                        <div className="space-y-3 text-left">
+                          <div>
+                            <span className="text-sm font-medium text-gray-700">Issue: </span>
+                            <span className="text-sm text-gray-600" style={{ fontWeight: 'normal' }}>{component.issue}</span>
                           </div>
-                        )}
+                          
+                          <div>
+                            <span className="text-sm font-medium text-gray-700">Explanation: </span>
+                            <span className="text-sm text-gray-600" style={{ fontWeight: 'normal' }}>{component.explanation}</span>
+                          </div>
+                          
+                          {component.correctedCode && (
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">Recommended Solution: </span>
+                              <span className="text-sm text-gray-600" style={{ fontWeight: 'normal' }}>{component.codeChangeSummary}</span>
+                              <pre className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded text-xs text-gray-600 overflow-x-auto" style={{ fontWeight: 'normal' }}>
+                                <code style={{ fontWeight: 'normal' }}>{component.correctedCode}</code>
+                              </pre>
+                            </div>
+                          )}
+                          
+                          {component.wcagRule && (
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">WCAG Guideline: </span>
+                              <a 
+                                href={`https://www.w3.org/WAI/WCAG21/Understanding/${component.wcagRule.toLowerCase().replace(/\s+/g, '-')}.html`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 hover:text-blue-800 underline"
+                                style={{ fontWeight: 'normal' }}
+                              >
+                                {component.wcagRule}
+                              </a>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* Recommendations Section */}
-            <div className="mb-6">
-              <button
-                onClick={() => toggleSection(`recommendations-${activeFlow}`)}
-                className="flex items-center justify-between w-full text-left"
-              >
-                <h5 className="text-md font-medium text-gray-800">Recommendations</h5>
-                <span className="text-gray-400">
-                  {expandedSections[`recommendations-${activeFlow}`] ? '−' : '+'}
-                </span>
-              </button>
-              
-              {expandedSections[`recommendations-${activeFlow}`] && (
-                <div className="mt-3 p-4 bg-green-50 rounded-md">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                    {analysisData[activeFlow].recommendations}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Raw Analysis */}
-            <div>
-              <button
-                onClick={() => toggleSection(`raw-${activeFlow}`)}
-                className="flex items-center justify-between w-full text-left"
-              >
-                <h5 className="text-md font-medium text-gray-800">Full Analysis</h5>
-                <span className="text-gray-400">
-                  {expandedSections[`raw-${activeFlow}`] ? '−' : '+'}
-                </span>
-              </button>
-              
-              {expandedSections[`raw-${activeFlow}`] && (
-                <div className="mt-3 p-4 bg-gray-50 rounded-md">
-                  <pre className="text-xs text-gray-700 whitespace-pre-wrap overflow-x-auto">
-                    {analysisData[activeFlow].rawAnalysis}
-                  </pre>
                 </div>
               )}
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-center py-8">
+            <span className="text-gray-400 text-4xl">
+              {analysisData.snapshotCount === 0 ? '⚠️' : '🔍'}
+            </span>
+            <h5 className="text-gray-600 font-medium mt-2">
+              {analysisData.snapshotCount === 0 ? 'No Analysis Performed' : 'Basic Accessibility Scan Complete'}
+            </h5>
+            <p className="text-gray-500 text-sm mt-1">
+              {analysisData.snapshotCount === 0 ? (
+                'No user actions were recorded, so no snapshots could be analyzed.'
+              ) : (
+                <>
+                  {hasWarnings ? 'AI analysis was unavailable. ' : ''}
+                  Axe accessibility scans have been completed for all captured snapshots.
+                </>
+              )}
+            </p>
+            {analysisData.snapshotCount === 0 && (
+              <p className="text-blue-600 text-sm mt-2">
+                Try recording some interactions with the website before running analysis.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -8,10 +8,12 @@ import { QueryProvider } from './services/queryClient';
 import URLInput from './components/URLInput';
 import RecordingControls from './components/RecordingControls';
 import ActionList from './components/ActionList';
-import ProgressIndicator from './components/ProgressIndicator';
+import ThreePhaseStatus from './components/ThreePhaseStatus';
 import AnalysisResults from './components/AnalysisResults';
+import AnalysisControls from './components/AnalysisControls';
+import ErrorDisplay from './components/ErrorDisplay';
 import * as recordingApi from './services/recordingApi';
-import type { AppState } from './types';
+import type { AppState, ProgressStage } from './types';
 import './App.css';
 
 function App() {
@@ -19,9 +21,12 @@ function App() {
   const [state, setState] = useState<AppState>({
     mode: 'setup',
     url: '',
-    sessionName: '',
     actions: [],
-    loading: false
+    loading: false,
+    progress: {
+      stage: 'idle',
+      message: 'Ready to start accessibility testing'
+    }
   });
 
   // Polling interval reference
@@ -31,15 +36,9 @@ function App() {
   const updateState = (updates: Partial<AppState>) => {
     setState(prev => ({ ...prev, ...updates }));
   };
-
   // Handle URL changes
   const handleUrlChange = (url: string) => {
     updateState({ url });
-  };
-
-  // Handle session name changes  
-  const handleSessionNameChange = (name: string) => {
-    updateState({ sessionName: name });
   };
 
   // Start action polling during recording
@@ -64,26 +63,23 @@ function App() {
       clearInterval(pollingInterval.current);
       pollingInterval.current = null;
     }
-  };
-
-  // Handle navigate & start recording
+  };  // Handle navigate & start recording
   const handleNavigateAndRecord = async () => {
     try {
-      updateState({ loading: true, error: undefined });
+      updateState({ loading: true, error: undefined }); updateProgress('starting-browser', 'Initializing browser environment', 10);
 
       if (!state.url.trim()) {
         throw new Error('Please enter a URL to test');
       }
 
-      if (!state.sessionName.trim()) {
-        updateState({ sessionName: `Session ${new Date().toLocaleString()}` });
-      }
+      updateProgress('starting-browser', 'Launching browser session');
 
       // Start recording session
       const response = await recordingApi.startRecordingSession({
-        url: state.url,
-        name: state.sessionName || `Session ${new Date().toLocaleString()}`
+        url: state.url
       });
+
+      updateProgress('recording', 'Browser ready - interact with the website to record actions');
 
       updateState({
         mode: 'recording',
@@ -94,35 +90,37 @@ function App() {
 
       // Start polling for actions
       startActionPolling(response.sessionId);
-
     } catch (error) {
+      updateProgress('error', 'Failed to start recording', undefined, undefined, error instanceof Error ? error.message : 'Unknown error');
       updateState({
         error: error instanceof Error ? error.message : 'Failed to start recording',
         loading: false
       });
     }
   };
-
   // Handle recording stop
   const handleStopRecording = async () => {
     if (!state.sessionId) return;
 
     try {
-      updateState({ loading: true });
-      
+      updateState({ loading: true }); updateProgress('stopping-recording', 'Saving recorded actions');
+
       // Stop polling first
       stopActionPolling();
 
-      // Stop the recording session
+      updateProgress('stopping-recording', 'Completing recording session');      // Stop the recording session
       await recordingApi.stopRecordingSession(state.sessionId);
 
-      updateState({ 
+      updateProgress('recording-complete', `Recording complete: ${state.actions.length} actions captured`, undefined, 'Ready for accessibility analysis');
+
+      updateState({
         mode: 'results',
-        loading: false 
+        loading: false
       });
 
       console.log(`Recording stopped. Captured ${state.actions.length} actions`);
     } catch (error) {
+      updateProgress('error', 'Failed to stop recording', undefined, undefined, error instanceof Error ? error.message : 'Unknown error');
       updateState({
         error: error instanceof Error ? error.message : 'Failed to stop recording',
         loading: false
@@ -132,77 +130,124 @@ function App() {
 
   // Handle analysis start
   const handleStartAnalysis = async () => {
-    if (!state.sessionId) return;
-
-    try {
-      updateState({ 
+    if (!state.sessionId) return; try {
+      updateState({
         mode: 'analyzing',
-        loading: true, 
-        error: undefined 
-      });
-      
+        loading: true,
+        error: undefined      }); updateProgress('preparing-analysis', 'Initializing accessibility analysis');
+
       if (state.actions.length === 0) {
         throw new Error('No actions to analyze');
-      }
+      } console.log(`Starting analysis of ${state.actions.length} actions`);
 
-      console.log(`Starting analysis of ${state.actions.length} actions`);
+      updateProgress('replaying-actions', 'Replaying actions in headless browser');
       
+      // Brief delay to show the replaying phase
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
+      
+      // Brief delay to show the capturing phase
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      updateProgress('processing-with-ai', 'Processing with AI accessibility analysis');
+
       // Start the analysis
-      const response = await recordingApi.analyzeSession(state.sessionId);
-      
-      if (response.status === 'completed' && response.result) {
-        updateState({ 
+      const response = await recordingApi.analyzeSession(state.sessionId);if (response.status === 'completed' && response.result) {        // Check for warnings (e.g., Gemini not available)
+        if (response.result.warnings && response.result.warnings.length > 0) {
+          const warningMessage = response.result.warnings[0];
+          if (warningMessage.includes('Gemini') || warningMessage.includes('AI analysis unavailable')) {
+            updateProgress('completed', 'Analysis complete', undefined, 'AI analysis unavailable - Gemini API not configured');
+          } else {
+            updateProgress('completed', 'Analysis complete', undefined, `Warning: ${warningMessage}`);
+          }
+        } else {
+          updateProgress('completed', 'Analysis complete', undefined, 'Report generated successfully');
+        }
+        updateState({
           mode: 'results',
           analysisResult: response.result,
-          loading: false 
+          loading: false
         });
       } else {
-        // Poll for analysis completion
+        // Poll for analysis completion with progress updates
+        updateProgress('replaying-actions', 'Replaying actions in headless browser');
+
         const pollAnalysis = async () => {
           try {
             const statusResponse = await recordingApi.getAnalysisStatus(response.analysisId);
+
+            // Update progress based on analysis stage
+            if (statusResponse.status === 'analyzing') {
+              updateProgress('processing-with-ai', 'Processing with AI accessibility analysis');
+            }
+
             if (statusResponse.status === 'completed' && statusResponse.result) {
-              updateState({ 
+              // Check for warnings in the final result
+              if (statusResponse.result.warnings && statusResponse.result.warnings.length > 0) {
+                const warningMessage = statusResponse.result.warnings[0];
+                if (warningMessage.includes('Gemini') || warningMessage.includes('AI analysis unavailable')) {
+                  updateProgress('completed', 'Analysis complete', undefined, 'AI analysis unavailable - Gemini API not configured');
+                } else {
+                  updateProgress('completed', 'Analysis complete', undefined, `Warning: ${warningMessage}`);
+                }
+              } else {
+                updateProgress('completed', 'Analysis complete', undefined, 'Report generated successfully');
+              }
+
+              updateState({
                 mode: 'results',
                 analysisResult: statusResponse.result,
-                loading: false 
+                loading: false
               });
             } else {
               setTimeout(pollAnalysis, 2000); // Check every 2 seconds
             }
           } catch (error) {
+            updateProgress('error', 'Analysis failed', undefined, undefined, error instanceof Error ? error.message : 'Unknown error');
             updateState({
               error: error instanceof Error ? error.message : 'Analysis failed',
               loading: false,
               mode: 'results'
             });
           }
-        };
-        
-        setTimeout(pollAnalysis, 2000);
+        }; setTimeout(pollAnalysis, 2000);
       }
 
     } catch (error) {
-      updateState({ 
-        error: error instanceof Error ? error.message : 'Failed to start analysis',
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start analysis';      // Handle specific error types
+      if (errorMessage.includes('token') || errorMessage.includes('limit')) {
+        updateProgress('error', 'AI processing limit reached', undefined, 'Try reducing the number of actions or try again later', errorMessage);
+      } else if (errorMessage.includes('Gemini') || errorMessage.includes('API key') || errorMessage.includes('service not available')) {
+        updateProgress('error', 'AI analysis unavailable', undefined, 'Gemini AI service is not configured. Analysis completed with basic accessibility scan only.', errorMessage);
+      } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        updateProgress('error', 'Network connection error', undefined, 'Check your internet connection and try again', errorMessage);
+      } else {
+        updateProgress('error', 'Analysis failed', undefined, 'An unexpected error occurred', errorMessage);
+      }
+
+      updateState({
+        error: errorMessage,
         loading: false,
         mode: 'results'
       });
     }
   };
-
   // Reset to start over
   const handleReset = () => {
     stopActionPolling();
     updateState({
       mode: 'setup',
       url: '',
-      sessionName: '',
       sessionId: undefined,
       actions: [],
       analysisResult: undefined,
       error: undefined,
-      loading: false
+      loading: false,
+      progress: {
+        stage: 'idle',
+        message: 'Ready to start accessibility testing'
+      }
     });
   };
 
@@ -222,72 +267,62 @@ function App() {
       stopActionPolling();
     };
   }, []);
+
+  // Update progress helper
+  const updateProgress = (stage: ProgressStage, message: string, progress?: number, details?: string, error?: string) => {
+    setState(prev => ({
+      ...prev,
+      progress: { stage, message, progress, details, error }
+    }));
+  };
+
   return (
     <QueryProvider>
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Web Access Advisor
-                </h1>
-                <p className="text-sm text-gray-600 mt-1">
-                  AI-powered accessibility testing and analysis
-                </p>
-              </div>
-              <div className="text-sm text-gray-500">
-                Mode: <span className="font-medium capitalize">{state.mode}</span>
-              </div>
+      <div className="min-h-screen bg-gray-50">        <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="text-left">
+              <h1 className="text-2xl font-bold text-gray-900">
+                Web Access Advisor
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">
+                AI-powered accessibility testing and analysis
+              </p>
+            </div>
+            <div className="text-sm text-gray-500">
+              Mode: <span className="font-medium capitalize">{state.mode}</span>
             </div>
           </div>
-        </header>
-
+        </div>
+      </header>
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="space-y-8">
-            {/* Error Display */}
-            {state.error && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                <div className="flex">
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-800">
-                      Error
-                    </h3>
-                    <div className="mt-2 text-sm text-red-700">
-                      {state.error}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Setup Mode */}
+          <div className="space-y-6">
+            {/* URL Input - Always visible at top */}
             {state.mode === 'setup' && (
-              <>
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    Website to Test
-                  </h2>                  <URLInput
-                    url={state.url}
-                    onUrlChange={handleUrlChange}
-                    onNavigate={handleNavigateAndRecord}
-                    isLoading={state.loading}
-                  />
-                  <div className="mt-4">
-                    <label htmlFor="sessionName" className="block text-sm font-medium text-gray-700">
-                      Session Name (optional)
-                    </label>
-                    <input
-                      type="text"
-                      id="sessionName"
-                      value={state.sessionName}
-                      onChange={(e) => handleSessionNameChange(e.target.value)}
-                      placeholder="Enter a name for this test session"
-                      className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                </div>
-              </>
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-medium text-gray-900 mb-6">
+                  Website to Test
+                </h2>
+                <URLInput
+                  url={state.url}
+                  onUrlChange={handleUrlChange}
+                  onNavigate={handleNavigateAndRecord}
+                  isLoading={state.loading}
+                />
+              </div>
+            )}            {/* Three-Phase Status - Always visible */}
+            <ThreePhaseStatus
+              currentStage={state.progress.stage}
+              message={state.progress.message}
+              details={state.progress.details}
+              error={state.progress.error}
+              actionCount={state.actions.length}
+              snapshotCount={state.analysisResult?.snapshotCount || 0}
+              warnings={state.analysisResult?.warnings || []}
+            />{/* Error Display */}
+            {state.error && <ErrorDisplay error={state.error} />}{/* Setup Mode - URL input moved above */}
+            {state.mode === 'setup' && (
+              <></>
             )}
 
             {/* Recording Mode */}
@@ -311,75 +346,50 @@ function App() {
                 {/* Actions List */}
                 {state.actions.length > 0 && (
                   <div className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-lg font-medium text-gray-900 mb-4">                      Recorded Actions ({state.actions.length})
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">
+                      Recorded Actions ({state.actions.length})
                     </h2>
-                    <ActionList 
-                      actions={state.actions} 
-                      isRecording={state.mode === 'recording'} 
+                    <ActionList
+                      actions={state.actions}
+                      isRecording={state.mode === 'recording'}
                     />
                   </div>
                 )}
               </>
-            )}
-
-            {/* Analyzing Mode */}
+            )}            {/* Analyzing Mode */}
             {state.mode === 'analyzing' && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">
-                  Analyzing Accessibility
-                </h2>                <ProgressIndicator
-                  progress={50}
-                  title="Analyzing"
-                  message="Analyzing accessibility issues..."
-                  isVisible={true}
-                />
-                <div className="mt-4 text-sm text-gray-600">
+              <div className="bg-white rounded-lg shadow p-6">                <h2 className="text-lg font-medium text-gray-900 mb-4">
+                Analyzing Accessibility
+              </h2>
+                <div className="text-sm text-gray-600">
                   Analyzing {state.actions.length} recorded actions for accessibility issues.
                 </div>
               </div>
             )}
 
-            {/* Results Mode */}
-            {state.mode === 'results' && (
+            {/* Results Mode */}            {state.mode === 'results' && (
               <>
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    Session Complete
-                  </h2>
-                  <div className="flex justify-between items-center">
-                    <div className="text-sm text-gray-600">
-                      Recorded {state.actions.length} actions
-                      {state.sessionId && (
-                        <span className="ml-2">• Session ID: {state.sessionId}</span>
-                      )}
-                    </div>
-                    <div className="space-x-3">
-                      {!state.analysisResult && state.actions.length > 0 && (
-                        <button
-                          onClick={handleStartAnalysis}
-                          disabled={state.loading}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                        >
-                          {state.loading ? 'Analyzing...' : 'Start Analysis'}
-                        </button>
-                      )}
-                      <button
-                        onClick={handleReset}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                      >
-                        Start New Test
-                      </button>
-                    </div>
-                  </div>
-                </div>                {/* Actions List */}
+                <AnalysisControls
+                  hasActions={state.actions.length > 0}
+                  hasAnalysisResult={!!state.analysisResult}
+                  isLoading={state.loading}
+                  onStartAnalysis={handleStartAnalysis}
+                  onReset={handleReset}
+                />                {/* Actions List */}
                 {state.actions.length > 0 && (
                   <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-lg font-medium text-gray-900 mb-4">
-                      Recorded Actions ({state.actions.length})
+                      Recorded Actions
                     </h2>
-                    <ActionList 
-                      actions={state.actions} 
-                      isRecording={false} 
+                    {/* Session info below heading */}
+                    {state.sessionId && (
+                      <div className="text-xs text-gray-500 mb-4">
+                        Session ID: {state.sessionId}
+                      </div>
+                    )}
+                    <ActionList
+                      actions={state.actions}
+                      isRecording={false}
                     />
                   </div>
                 )}
@@ -393,44 +403,17 @@ function App() {
                       analysisData={state.analysisResult}
                       isLoading={state.loading}
                       error={state.error || null}
-                    />
-                  </div>
+                    />                  </div>
                 )}
               </>
-            )}            {/* Global Progress Indicator */}
-            <ProgressIndicator
-              progress={state.loading ? 50 : 0}
-              title={
-                state.mode === 'recording' 
-                  ? 'Recording' 
-                  : state.mode === 'analyzing'
-                    ? 'Analyzing'
-                    : 'Ready'
-              }
-              message={
-                state.mode === 'recording' 
-                  ? 'Recording user actions...' 
-                  : state.mode === 'analyzing'
-                    ? 'Analyzing accessibility...'
-                    : 'Ready'
-              }
-              isVisible={state.loading}
-            />
+            )}
           </div>
         </main>
 
         <footer className="bg-white border-t mt-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="text-center text-sm text-gray-500">
-              <p>Web Access Advisor v2.0 - AI-Powered Accessibility Testing</p>
-              <p className="mt-1">
-                Status: <span className="font-medium capitalize">{state.mode}</span>
-                {state.actions.length > 0 && (
-                  <span className="ml-4">
-                    Actions: <span className="font-medium">{state.actions.length}</span>
-                  </span>
-                )}
-              </p>
+              <p>Web Access Advisor v2.0</p>
             </div>
           </div>
         </footer>

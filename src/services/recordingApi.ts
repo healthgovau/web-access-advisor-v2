@@ -5,11 +5,10 @@
 
 import type { UserAction, AnalysisResult } from '../types';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'http://localhost:3002/api';
 
 export interface StartSessionRequest {
   url: string;
-  name: string;
 }
 
 export interface StartSessionResponse {
@@ -38,24 +37,38 @@ export interface AnalyzeSessionResponse {
  * Start a new recording session
  */
 export async function startRecordingSession(request: StartSessionRequest): Promise<StartSessionResponse> {
-  const response = await fetch(`${API_BASE}/sessions/start`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request)
-  });
+  try {
+    console.log('Starting recording session for URL:', request.url);
+    console.log('API endpoint:', `${API_BASE}/record/start`);
+    
+    const response = await fetch(`${API_BASE}/record/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: request.url })
+    });
 
-  if (!response.ok) {
-    throw new Error(`Failed to start session: ${response.statusText}`);
+    console.log('Response status:', response.status, response.statusText);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error Response:', errorText);
+      throw new Error(`Failed to start session: ${response.statusText} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('Session started successfully:', result);
+    return result;
+  } catch (error) {
+    console.error('Network error in startRecordingSession:', error);
+    throw error;
   }
-
-  return response.json();
 }
 
 /**
  * Get recorded actions for a session
  */
 export async function getSessionActions(sessionId: string): Promise<SessionActionsResponse> {
-  const response = await fetch(`${API_BASE}/sessions/${sessionId}/actions`);
+  const response = await fetch(`${API_BASE}/record/${sessionId}/actions`);
 
   if (!response.ok) {
     throw new Error(`Failed to get session actions: ${response.statusText}`);
@@ -68,8 +81,10 @@ export async function getSessionActions(sessionId: string): Promise<SessionActio
  * Stop recording session
  */
 export async function stopRecordingSession(sessionId: string): Promise<StopSessionResponse> {
-  const response = await fetch(`${API_BASE}/sessions/${sessionId}/stop`, {
-    method: 'POST'
+  const response = await fetch(`${API_BASE}/record/stop`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId })
   });
 
   if (!response.ok) {

@@ -2,24 +2,21 @@
  * Recording controls for starting/stopping interaction recording
  */
 
-import { useState } from 'react';
+interface RecordingControlsProps {
+  isRecording: boolean;
+  onStartRecording: () => void;
+  onStopRecording: () => void;
+  hasActions: boolean;
+  isNavigated: boolean;
+}
 
-const RecordingControls = ({ 
+const RecordingControls: React.FC<RecordingControlsProps> = ({ 
   isRecording, 
   onStartRecording, 
   onStopRecording, 
-  hasActions,
   isNavigated 
 }) => {
-  const [recordingName, setRecordingName] = useState('');
-
-  const handleStartRecording = () => {
-    const name = recordingName.trim() || `Recording ${new Date().toLocaleString()}`;
-    onStartRecording(name);
-  };
-
-  const canStartRecording = isNavigated && !isRecording && recordingName.trim();
-  const canStopRecording = isRecording;
+  const canStartRecording = isNavigated && !isRecording;
 
   return (
     <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
@@ -36,22 +33,8 @@ const RecordingControls = ({
 
       {!isRecording && (
         <div className="space-y-3">
-          <div>
-            <label htmlFor="recording-name" className="block text-sm font-medium text-gray-700 mb-1">
-              Recording Name
-            </label>
-            <input
-              id="recording-name"
-              type="text"
-              value={recordingName}
-              onChange={(e) => setRecordingName(e.target.value)}
-              placeholder="Enter a name for this recording..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          
           <button
-            onClick={handleStartRecording}
+            onClick={onStartRecording}
             disabled={!canStartRecording}
             className="w-full px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >

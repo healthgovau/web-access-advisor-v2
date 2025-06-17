@@ -4,13 +4,24 @@
 
 import { useState } from 'react';
 
-const URLInput = ({ url, onUrlChange, onNavigate, isLoading }) => {
+interface URLInputProps {
+  url: string;
+  onUrlChange: (url: string) => void;
+  onNavigate: () => void;
+  isLoading: boolean;
+}
+
+const URLInput: React.FC<URLInputProps> = ({ url, onUrlChange, onNavigate, isLoading }) => {
   const [inputValue, setInputValue] = useState(url || '');
 
-  const normalizeUrl = (input) => {
+  interface NormalizeUrlFn {
+    (input: string): string;
+  }
+
+  const normalizeUrl: NormalizeUrlFn = (input) => {
     const trimmed = input.trim();
     if (!trimmed) return '';
-    
+
     // Add https:// if no protocol specified
     if (!trimmed.match(/^https?:\/\//)) {
       return `https://${trimmed}`;
@@ -18,7 +29,9 @@ const URLInput = ({ url, onUrlChange, onNavigate, isLoading }) => {
     return trimmed;
   };
 
-  const handleSubmit = (e) => {
+  interface HandleSubmitEvent extends React.FormEvent<HTMLFormElement> { }
+
+  const handleSubmit = (e: HandleSubmitEvent): void => {
     e.preventDefault();
     if (inputValue.trim()) {
       const normalizedUrl = normalizeUrl(inputValue);
@@ -26,11 +39,10 @@ const URLInput = ({ url, onUrlChange, onNavigate, isLoading }) => {
       onNavigate();
     }
   };
-
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInputValue(value);
-    
+
     if (value.trim()) {
       const normalizedUrl = normalizeUrl(value);
       onUrlChange(normalizedUrl);
@@ -40,22 +52,23 @@ const URLInput = ({ url, onUrlChange, onNavigate, isLoading }) => {
   };
 
   return (
-    <div className="space-y-2">
-      <label htmlFor="url-input" className="block text-sm font-medium text-gray-700">
-        Website URL to Test
+    <div className="space-y-4">
+      <label htmlFor="url-input" className="block text-med font-medium text-gray-700 text-left">
+        Website Start URL
       </label>
-      
-      <form onSubmit={handleSubmit} className="flex space-x-2">        <input
+
+      <form onSubmit={handleSubmit} className="flex space-x-2">
+        <input
           id="url-input"
           type="text"
           value={inputValue}
           onChange={handleInputChange}
-          placeholder="www.example.com or https://example.com"
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          placeholder="URL"
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-left"
           disabled={isLoading}
           required
         />
-        
+
         <button
           type="submit"
           disabled={isLoading || !inputValue.trim()}
@@ -64,12 +77,6 @@ const URLInput = ({ url, onUrlChange, onNavigate, isLoading }) => {
           {isLoading ? 'Loading...' : 'Navigate'}
         </button>
       </form>
-      
-      {url && (
-        <p className="text-xs text-gray-500">
-          Current: <span className="font-mono">{url}</span>
-        </p>
-      )}
     </div>
   );
 };
