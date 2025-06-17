@@ -74,6 +74,12 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
   const resultsRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
+  const [severityFilters, setSeverityFilters] = useState<Record<string, boolean>>({
+    critical: true,
+    serious: true,
+    moderate: true,
+    minor: true
+  });
 
   const handleCopyCode = async (code: string, id: string) => {
     try {
@@ -88,6 +94,18 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
       console.error('Failed to copy code:', error);
     }
   };
+
+  const handleSeverityFilterChange = (severity: string, checked: boolean) => {
+    setSeverityFilters(prev => ({
+      ...prev,
+      [severity]: checked
+    }));
+  };
+
+  // Filter components based on selected severities
+  const filteredComponents = analysisData?.analysis?.components.filter(component => 
+    severityFilters[component.impact]
+  ) || [];
 
   const handleExportPDF = async () => {
     if (!analysisData) return;
@@ -179,54 +197,85 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
               {isExporting ? 'Generating PDF...' : 'Export PDF'}
             </span>
           </button>
-        </div>{/* Gemini Analysis Results */}
+        </div>        {/* Gemini Analysis Results */}
         {analysisData.analysis ? (
           <div className="space-y-6">
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-6">              <h3 className="text-xl font-medium text-gray-900 mb-6 text-center">Issues Identified</h3>
+              
               {/* Component Issues */}
-              {analysisData.analysis.components && analysisData.analysis.components.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-xl font-medium text-gray-900 mb-6 text-center">Issues Identified</h3>
+              {analysisData.analysis.components && analysisData.analysis.components.length > 0 && (<div className="mb-6">
                   
                   {/* Issue Count Summary */}
                   {(() => {
-                    const counts = analysisData.analysis.components.reduce((acc, component) => {
+                    const counts = filteredComponents.reduce((acc, component) => {
                       acc[component.impact] = (acc[component.impact] || 0) + 1;
                       return acc;
                     }, {} as Record<string, number>);
-                      
-                    return (                      <div className="w-full flex justify-center mb-8">
-                        <div className="inline-grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {['critical', 'serious', 'moderate', 'minor'].map(impact => (
-                            <div key={impact} className="text-center p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                              <div className="text-lg font-bold text-gray-900">{counts[impact] || 0}</div>
-                              <div className="text-xs font-medium text-gray-600 uppercase">{impact}</div>
-                            </div>
-                          ))}
+                        return (
+                      <>
+                        <div className="w-full flex justify-center mb-4">
+                          <div className="inline-grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {['critical', 'serious', 'moderate', 'minor'].map(impact => (
+                              <button
+                                key={impact}
+                                onClick={() => handleSeverityFilterChange(impact, !severityFilters[impact])}
+                                className={`relative text-center p-3 border rounded-lg transition-all hover:scale-105 ${
+                                  severityFilters[impact] 
+                                    ? 'bg-gray-50 border-gray-300 shadow-sm' 
+                                    : 'bg-gray-100 border-gray-200 opacity-60'
+                                }`}
+                                title={`${severityFilters[impact] ? 'Hide' : 'Show'} ${impact} issues`}
+                              >
+                                {/* Checkbox in top-right corner */}
+                                <div className="absolute top-1 right-1">
+                                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                    severityFilters[impact]
+                                      ? 'bg-blue-500 border-blue-500'
+                                      : 'bg-white border-gray-300'
+                                  }`}>
+                                    {severityFilters[impact] && (
+                                      <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="text-lg font-bold text-gray-900">{counts[impact] || 0}</div>
+                                <div className="text-xs font-medium text-gray-600 uppercase">{impact}</div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                        <p className="text-xs text-gray-500 text-center mb-6">Click boxes above to toggle filter</p>
+                      </>
                     );
                   })()}
-                  <div className="space-y-4">                    {analysisData.analysis.components.map((component, index) => (
-                      <div key={index} className="bg-white border border-gray-300 rounded-lg p-4">
-                        <div className="mb-3">
+                  <div className="space-y-4">
+                    {filteredComponents.length > 0 ? (
+                      filteredComponents.map((component, index) => (                      <div key={index} className="bg-white border border-gray-300 rounded-lg overflow-hidden">                        {/* Header Section with Subtle Background */}
+                        <div className="bg-gray-50/30 border-b border-gray-200 px-4 py-4">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
-                              <p className="text-sm text-gray-500 mt-1">
-                                URL: <code className="px-1 py-0.5 bg-gray-100 text-gray-800 rounded text-sm font-mono">{analysisData.manifest?.url || 'Unknown'}</code>
+                              <p className="text-sm text-gray-500 mt-2 mb-1">
+                                URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{analysisData.manifest?.url || 'Unknown'}</code>
                               </p>
                             </div>
                             <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                              component.impact === 'critical' ? 'bg-gray-100 text-gray-800 border border-gray-300' :
-                              component.impact === 'serious' ? 'bg-gray-100 text-gray-800 border border-gray-300' :
-                              component.impact === 'moderate' ? 'bg-gray-100 text-gray-800 border border-gray-300' :
-                              'bg-gray-100 text-gray-800 border border-gray-300'
+                              component.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
+                              component.impact === 'serious' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
+                              component.impact === 'moderate' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
+                              'bg-blue-100 text-blue-800 border border-blue-300'
                             }`}>
                               {component.impact.toUpperCase()} IMPACT
                             </span>
                           </div>
-                        </div><div className="space-y-6 text-left">
+                        </div>
+                        
+                        {/* Content Section */}
+                        <div className="p-4">
+                          <div className="space-y-6 text-left">
                           <div>
                             <span className="text-base font-medium text-gray-700">Issue: </span>
                             <div className="text-base text-gray-600 mt-1" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
@@ -281,13 +330,22 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                                 className="text-base text-blue-600 hover:text-blue-800 underline"
                                 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}
                               >
-                                {component.wcagRule}
-                              </a>
+                                {component.wcagRule}                              </a>
                             </div>
                           )}
+                          </div>
                         </div>
                       </div>
-                    ))}
+                    ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <span className="text-gray-400 text-4xl">🔍</span>
+                        <h5 className="text-gray-600 font-medium mt-2">No Issues Match Current Filter</h5>
+                        <p className="text-gray-500 text-sm mt-1">
+                          Try adjusting your severity filter selections above.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
