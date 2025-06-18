@@ -557,14 +557,22 @@ export class AccessibilityAnalyzer {
     if (this.geminiService && violations.length > 0) {
       try {
         console.log(`🤖 Generating LLM recommendations for ${violations.length} axe violations...`);
+        console.log(`🔍 Sample violation:`, violations[0]?.id, violations[0]?.help);
         const recommendations = await this.geminiService.generateAxeRecommendations(violations);
+        console.log(`📊 Received ${recommendations.size} recommendations from LLM`);
         
         // Add recommendations to violations
         violations.forEach(violation => {
           const result = recommendations.get(violation.id);
           if (result) {
+            console.log(`✅ Adding LLM content for ${violation.id}:`, {
+              hasExplanation: !!result.explanation,
+              hasRecommendation: !!result.recommendation
+            });
             violation.explanation = result.explanation;
             violation.recommendation = result.recommendation;
+          } else {
+            console.log(`❌ No LLM content found for ${violation.id}`);
           }
         });
         
@@ -572,6 +580,8 @@ export class AccessibilityAnalyzer {
       } catch (error) {
         console.warn('Failed to generate LLM recommendations for axe violations:', error);
       }
+    } else {
+      console.log(`⚠️ Skipping LLM recommendations: geminiService=${!!this.geminiService}, violations=${violations.length}`);
     }
 
     // Return consolidated violations sorted by impact

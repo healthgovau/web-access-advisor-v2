@@ -139,6 +139,7 @@ export interface ComponentAccessibilityIssue {
   impact: 'critical' | 'serious' | 'moderate' | 'minor';
   wcagRule: string;
   wcagUrl?: string;
+  selector?: string; // CSS selector for the problematic element
 }
 
 export interface AccessibilityIssue {

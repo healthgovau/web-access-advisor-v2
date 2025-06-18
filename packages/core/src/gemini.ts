@@ -227,7 +227,8 @@ Respond with a JSON object with this exact structure:
       "codeChangeSummary": "Brief summary of the fix (e.g., 'Added aria-label to button', 'Changed div to semantic heading')",
       "impact": "critical|serious|moderate|minor",
       "wcagRule": "WCAG 2.1 guideline reference (e.g., 4.1.2 Name, Role, Value)",
-      "wcagUrl": "Complete URL to the specific WCAG Understanding document (e.g., 'https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html')"
+      "wcagUrl": "Complete URL to the specific WCAG Understanding document (e.g., 'https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html')",
+      "selector": "CSS selector to identify the problematic element (e.g., '.nav-menu button', '#search-input', 'main .content h1')"
     }
   ],
   "recommendations": ["actionable recommendations"],
@@ -254,6 +255,10 @@ Respond with a JSON object with this exact structure:
 - If the issue is "missing main landmark", show the container where <main> should be added
 - If the issue is "missing h1", show the section/div where the h1 should be placed
 - correctedCode should show the minimal fix for the exact same element(s) shown in relevantHtml
+- selector must be a valid CSS selector that uniquely identifies the problematic element(s)
+- For missing elements (like missing h1 or main), provide a selector for where the element should be added
+- Examples: ".header button", "#search-form input", "nav .menu-item", ".content > div:first-child", "body > .page-wrapper"
+- Use classes, IDs, and structural selectors to create precise, targetable selectors
 - Provide concrete HTML fixes when possible
 - Focus on real accessibility barriers found in the captured snapshots
 - If no significant issues are found, return an empty components array
@@ -265,7 +270,7 @@ GOOD: relevantHtml shows <div class="content"> and correctedCode shows <div clas
 BAD: relevantHtml shows <html> but issue is missing main landmark  
 GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode shows <body><main><div class="page-content">
 
-**Important**: Report ONLY components with identified screen reader accessibility issues. Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
+**Important**: Report ONLY components with identified screen reader accessibility issues.Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
 
 **🎯 SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
 `;
@@ -354,7 +359,8 @@ Respond with a JSON object with this exact structure:
       "correctedCode": "Fixed HTML showing the exact same element(s) with proper accessibility attributes",
       "codeChangeSummary": "Brief summary of the fix (e.g., 'Added aria-label to button', 'Changed div to semantic heading')",      "impact": "critical|serious|moderate|minor",
       "wcagRule": "WCAG 2.1 guideline reference (e.g., 1.3.1 Info and Relationships)",
-      "wcagUrl": "Complete URL to the specific WCAG Understanding document (e.g., 'https://www.w3.org/WAI/WCAG21/Understanding/info-and-relationships.html')"
+      "wcagUrl": "Complete URL to the specific WCAG Understanding document (e.g., 'https://www.w3.org/WAI/WCAG21/Understanding/info-and-relationships.html')",
+      "selector": "CSS selector to identify the problematic element (e.g., '.nav-menu button', '#search-input', 'main .content h1')"
     }
   ],
   "recommendations": [
@@ -386,6 +392,10 @@ Respond with a JSON object with this exact structure:
 - If the issue is "missing main landmark", show the container where <main> should be added
 - If the issue is "missing h1", show the section/div where the h1 should be placed
 - correctedCode should show the minimal fix for the exact same element(s) shown in relevantHtml
+- selector must be a valid CSS selector that uniquely identifies the problematic element(s)
+- For missing elements (like missing h1 or main), provide a selector for where the element should be added
+- Examples: ".header button", "#search-form input", "nav .menu-item", ".content > div:first-child", "body > .page-wrapper"
+- Use classes, IDs, and structural selectors to create precise, targetable selectors
 - Provide concrete HTML fixes when possible
 - Focus on real accessibility barriers found in the captured snapshots
 - If no significant issues are found, return an empty components array
@@ -532,15 +542,15 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
         }
         
         return true;
-      })      .map(component => {
-        console.log('🔍 Processing component from Gemini:', {
+      })      .map(component => {        console.log('🔍 Processing component from Gemini:', {
           componentName: component.componentName,
           wcagRule: component.wcagRule,
           wcagUrl: component.wcagUrl,
-          hasWcagUrl: !!component.wcagUrl
+          hasWcagUrl: !!component.wcagUrl,
+          selector: component.selector,
+          hasSelector: !!component.selector
         });
-        
-        return {
+          return {
           componentName: component.componentName.trim(),
           issue: component.issue.trim(),
           explanation: component.explanation?.trim() || 'No detailed explanation provided',
@@ -551,7 +561,8 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
             ? component.impact : 'moderate',
           wcagRule: component.wcagRule && component.wcagRule !== 'unknown' 
             ? component.wcagRule : 'General Accessibility',
-          wcagUrl: component.wcagUrl || undefined
+          wcagUrl: component.wcagUrl || undefined,
+          selector: component.selector?.trim() || undefined
         };
       });
   }
@@ -579,11 +590,15 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
     };  }
   /**
    * Generate explanations and actionable recommendations for specific axe violations
-   */
-  async generateAxeRecommendations(violations: any[]): Promise<Map<string, { explanation: string; recommendation: string }>> {
+   */  async generateAxeRecommendations(violations: any[]): Promise<Map<string, { explanation: string; recommendation: string }>> {
+    console.log(`🤖 generateAxeRecommendations called with ${violations?.length || 0} violations`);
+    
     if (!violations || violations.length === 0) {
+      console.log('🔍 No violations provided to generateAxeRecommendations');
       return new Map();
     }
+
+    console.log(`🔧 Processing violations:`, violations.map(v => v.id));
 
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
@@ -593,17 +608,24 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
       const batchSize = 3;
       for (let i = 0; i < violations.length; i += batchSize) {
         const batch = violations.slice(i, i + batchSize);
+        console.log(`📝 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(violations.length/batchSize)} with violations: ${batch.map(v => v.id).join(', ')}`);
         
         const prompt = this.buildAxeRecommendationPrompt(batch);
         
         try {
+          console.log(`📤 Sending prompt to LLM (${prompt.length} chars)...`);
           const result = await model.generateContent(prompt);
           const response = await result.response;
           const text = response.text();
+          console.log(`📥 Received LLM response (${text.length} chars)`);
           
           // Parse the response to extract explanations and recommendations
           const parsed = this.parseAxeRecommendations(text, batch);
-          parsed.forEach((data, id) => results.set(id, data));
+          console.log(`🔧 Parsed ${parsed.size} results from batch`);
+          parsed.forEach((data, id) => {
+            console.log(`✅ Adding content for ${id}: explanation=${!!data.explanation}, recommendation=${!!data.recommendation}`);
+            results.set(id, data);
+          });
           
         } catch (error) {
           console.warn(`Failed to generate recommendations for batch starting at ${i}:`, error);

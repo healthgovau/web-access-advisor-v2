@@ -280,13 +280,23 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                             <div className="text-base text-gray-600 mt-1" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                               {formatTextWithCodeTags(component.issue)}
                             </div>
-                          </div>
-                          <div>
+                          </div>                          <div>
                             <span className="text-base font-medium text-gray-700">Explanation:</span>
                             <div className="text-base text-gray-600 mt-2" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                               {formatTextWithCodeTags(component.explanation)}
                             </div>
-                          </div>{component.relevantHtml && (
+                          </div>
+
+                          {component.selector && (
+                            <div>
+                              <span className="text-base font-medium text-gray-700">Selector: </span>
+                              <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">
+                                {component.selector}
+                              </code>
+                            </div>
+                          )}
+
+                          {component.relevantHtml && (
                             <div>
                               <span className="text-base font-medium text-gray-700">Offending Code: </span>
                               <pre className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-sm text-gray-700 overflow-x-auto" style={{ fontFamily: 'Consolas, Monaco, monospace' }}>
