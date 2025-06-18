@@ -2,247 +2,443 @@
  * PDF export utilities for accessibility analysis reports
  */
 
-import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import type { AnalysisResult } from '../types';
 
 /**
- * Generate PDF from analysis results
+ * Add a styled header with background color
+ */
+function addStyledHeader(pdf: jsPDF, text: string, y: number, margin: number, pageWidth: number, size: number = 16): number {
+  // Add background rectangle
+  pdf.setFillColor(45, 55, 72); // Dark gray background
+  pdf.rect(margin, y - 5, pageWidth - 2 * margin, size + 4, 'F');
+  
+  // Add white text
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(size);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(text, margin + 5, y + size - 8);
+  
+  // Reset to black text
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont('helvetica', 'normal');
+  
+  return y + size + 8;
+}
+
+/**
+ * Add a section divider line
+ */
+function addSectionDivider(pdf: jsPDF, y: number, margin: number, pageWidth: number): number {
+  pdf.setDrawColor(200, 200, 200);
+  pdf.setLineWidth(0.5);
+  pdf.line(margin, y, pageWidth - margin, y);
+  return y + 8;
+}
+
+/**
+ * Get impact level styling
+ */
+function getImpactStyling(impact: string): { color: [number, number, number], text: string } {
+  switch (impact.toLowerCase()) {
+    case 'critical':
+      return { color: [220, 38, 127], text: '🔴 CRITICAL' };
+    case 'serious':
+      return { color: [234, 88, 12], text: '🟠 SERIOUS' };
+    case 'moderate':
+      return { color: [202, 138, 4], text: '🟡 MODERATE' };
+    case 'minor':
+      return { color: [37, 99, 235], text: '🔵 MINOR' };
+    default:
+      return { color: [107, 114, 128], text: '⚫ UNKNOWN' };
+  }
+}
+
+/**
+ * Add a professional summary table
+ */
+function addSummaryTable(pdf: jsPDF, counts: Record<string, number>, title: string, y: number, margin: number, pageWidth: number): number {
+  const tableWidth = pageWidth - 2 * margin;
+  const cellHeight = 8;
+  let currentY = y;
+
+  // Table header
+  pdf.setFillColor(248, 250, 252);
+  pdf.rect(margin, currentY, tableWidth, cellHeight, 'F');
+  pdf.setDrawColor(226, 232, 240);
+  pdf.rect(margin, currentY, tableWidth, cellHeight, 'S');
+  
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(11);
+  pdf.text(title, margin + 5, currentY + 6);
+  currentY += cellHeight;
+
+  // Table rows
+  ['critical', 'serious', 'moderate', 'minor'].forEach((impact, index) => {
+    const styling = getImpactStyling(impact);
+    const count = counts[impact] || 0;
+    
+    // Alternating row colors
+    if (index % 2 === 0) {
+      pdf.setFillColor(249, 250, 251);
+      pdf.rect(margin, currentY, tableWidth, cellHeight, 'F');
+    }
+    
+    pdf.rect(margin, currentY, tableWidth, cellHeight, 'S');
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text(styling.text, margin + 5, currentY + 6);
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(count.toString(), pageWidth - margin - 15, currentY + 6);
+    
+    currentY += cellHeight;
+  });
+
+  return currentY + 5;
+}
+
+/**
+ * Generate comprehensive PDF from analysis results
  */
 export async function exportAnalysisToPDF(
   analysisData: AnalysisResult,
   elementToCapture?: HTMLElement
 ): Promise<void> {
   try {
-    // Create PDF document
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 20;
     let currentY = margin;
 
-    // Add title and metadata
-    pdf.setFontSize(20);
-    pdf.text('Web Accessibility Analysis Report', margin, currentY);
-    currentY += 15;
+    // ===== COVER PAGE =====
+    // Main title
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(24);
+    pdf.setTextColor(45, 55, 72);
+    const titleLines = pdf.splitTextToSize('Web Accessibility Analysis Report', pageWidth - 2 * margin);
+    pdf.text(titleLines, margin, currentY);
+    currentY += titleLines.length * 12 + 20;
 
-    pdf.setFontSize(10);
-    pdf.text(`Session ID: ${analysisData.sessionId}`, margin, currentY);
-    currentY += 6;
-    pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, currentY);
-    currentY += 6;
-    pdf.text(`Snapshots Analyzed: ${analysisData.snapshotCount}`, margin, currentY);
-    currentY += 15;
+    // Report metadata box
+    pdf.setDrawColor(226, 232, 240);
+    pdf.setFillColor(248, 250, 252);
+    const metadataBoxHeight = 50;
+    pdf.rect(margin, currentY, pageWidth - 2 * margin, metadataBoxHeight, 'FD');
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    
+    const metadata = [
+      `Session ID: ${analysisData.sessionId}`,
+      `Website URL: ${analysisData.manifest?.url || 'Not specified'}`,
+      `Generated: ${new Date().toLocaleString()}`,
+      `Snapshots Analyzed: ${analysisData.snapshotCount}`,
+      `Total Issues Found: ${(analysisData.analysis?.components?.length || 0) + (analysisData.axeResults?.length || 0)}`
+    ];
+    
+    metadata.forEach((line, index) => {
+      pdf.text(line, margin + 5, currentY + 8 + (index * 8));
+    });
+    
+    currentY += metadataBoxHeight + 20;
 
-    // Add summary if analysis exists
-    if (analysisData.analysis?.components) {
-      const counts = analysisData.analysis.components.reduce((acc, component) => {
+    // Executive Summary
+    if (analysisData.analysis?.components || analysisData.axeResults) {
+      currentY = addStyledHeader(pdf, 'EXECUTIVE SUMMARY', currentY, margin, pageWidth, 14);
+      
+      let totalIssues = 0;
+      let criticalCount = 0;
+      
+      if (analysisData.analysis?.components) {
+        totalIssues += analysisData.analysis.components.length;
+        criticalCount += analysisData.analysis.components.filter(c => c.impact === 'critical').length;
+      }
+      
+      if (analysisData.axeResults) {
+        totalIssues += analysisData.axeResults.length;
+        criticalCount += analysisData.axeResults.filter(v => v.impact === 'critical').length;
+      }
+
+      pdf.setFontSize(11);
+      const summaryText = [
+        `This accessibility analysis identified ${totalIssues} issues across the tested website.`,
+        `${criticalCount} critical issues require immediate attention to ensure WCAG compliance.`,
+        `This report combines AI-powered screen reader analysis with automated axe-core scanning`,
+        `to provide comprehensive accessibility insights for development teams.`
+      ];
+      
+      summaryText.forEach(line => {
+        const lines = pdf.splitTextToSize(line, pageWidth - 2 * margin);
+        pdf.text(lines, margin, currentY);
+        currentY += lines.length * 6 + 3;
+      });
+      
+      currentY += 15;
+    }
+
+    // ===== SCREEN READER ACCESSIBILITY ISSUES =====
+    if (analysisData.analysis?.components && analysisData.analysis.components.length > 0) {
+      currentY = addStyledHeader(pdf, 'SCREEN READER ACCESSIBILITY ISSUES', currentY, margin, pageWidth);
+      
+      // Summary table
+      const llmCounts = analysisData.analysis.components.reduce((acc, component) => {
         acc[component.impact] = (acc[component.impact] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
-
-      pdf.setFontSize(14);
-      pdf.text('Issues Summary', margin, currentY);
+      
+      currentY = addSummaryTable(pdf, llmCounts, 'AI Analysis Summary', currentY, margin, pageWidth);
       currentY += 10;
 
-      pdf.setFontSize(10);
-      ['critical', 'serious', 'moderate', 'minor'].forEach(impact => {
-        pdf.text(`${impact.charAt(0).toUpperCase() + impact.slice(1)}: ${counts[impact] || 0}`, margin, currentY);
-        currentY += 6;
-      });
-      currentY += 10;
-
-      // Add detailed findings
-      pdf.setFontSize(14);
-      pdf.text('Detailed Findings', margin, currentY);
+      // Detailed findings
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.text('Detailed Analysis', margin, currentY);
       currentY += 10;
 
       analysisData.analysis.components.forEach((component, index) => {
         // Check if we need a new page
-        if (currentY > pageHeight - 50) {
+        if (currentY > pageHeight - 80) {
           pdf.addPage();
           currentY = margin;
         }
 
+        // Issue header with styling
+        const styling = getImpactStyling(component.impact);
+        
+        pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(12);
+        pdf.setTextColor(styling.color[0], styling.color[1], styling.color[2]);
         pdf.text(`${index + 1}. ${component.componentName}`, margin, currentY);
-        currentY += 8;
-
+        
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
-        pdf.text(`Impact: ${component.impact.toUpperCase()}`, margin, currentY);
-        currentY += 6;
+        pdf.text(styling.text, pageWidth - margin - 30, currentY);
+        currentY += 10;
 
-        // Issue description
-        const issueLines = pdf.splitTextToSize(`Issue: ${component.issue}`, pageWidth - 2 * margin);
-        pdf.text(issueLines, margin, currentY);
-        currentY += issueLines.length * 4 + 3;
+        // Issue details in structured format
+        const sections = [
+          { label: 'ISSUE DESCRIPTION', content: component.issue },
+          { label: 'TECHNICAL EXPLANATION', content: component.explanation }
+        ];
 
-        // Explanation
-        const explanationLines = pdf.splitTextToSize(`Explanation: ${component.explanation}`, pageWidth - 2 * margin);
-        pdf.text(explanationLines, margin, currentY);
-        currentY += explanationLines.length * 4 + 3;
-
-        // WCAG Reference
-        if (component.wcagRule) {
-          pdf.text(`WCAG Guideline: ${component.wcagRule}`, margin, currentY);
-          currentY += 6;
-        }
-
-        // Code sections
-        if (component.relevantHtml) {
-          pdf.text('Offending Code:', margin, currentY);
+        sections.forEach(section => {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(9);
+          pdf.text(section.label + ':', margin, currentY);
           currentY += 5;
-          pdf.setFont('courier');
-          const codeLines = pdf.splitTextToSize(component.relevantHtml, pageWidth - 2 * margin);
-          pdf.text(codeLines, margin, currentY);
-          currentY += codeLines.length * 3 + 3;
-          pdf.setFont('helvetica');
+          
+          pdf.setFont('helvetica', 'normal');
+          const lines = pdf.splitTextToSize(section.content, pageWidth - 2 * margin);
+          pdf.text(lines, margin, currentY);
+          currentY += lines.length * 4 + 5;
+        });
+
+        // Code sections with proper formatting
+        if (component.relevantHtml) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(9);
+          pdf.text('PROBLEMATIC CODE:', margin, currentY);
+          currentY += 5;
+          
+          // Code background
+          const codeLines = pdf.splitTextToSize(component.relevantHtml, pageWidth - 2 * margin - 10);
+          const codeHeight = codeLines.length * 3 + 6;
+          pdf.setFillColor(254, 242, 242);
+          pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, codeHeight, 'F');
+          
+          pdf.setFont('courier', 'normal');
+          pdf.setFontSize(8);
+          pdf.text(codeLines, margin + 5, currentY + 2);
+          pdf.setFont('helvetica', 'normal');
+          currentY += codeHeight + 5;
         }
 
         if (component.correctedCode) {
-          pdf.text('Recommended Code:', margin, currentY);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(9);
+          pdf.text('RECOMMENDED SOLUTION:', margin, currentY);
           currentY += 5;
-          pdf.setFont('courier');
-          const fixedCodeLines = pdf.splitTextToSize(component.correctedCode, pageWidth - 2 * margin);
-          pdf.text(fixedCodeLines, margin, currentY);
-          currentY += fixedCodeLines.length * 3 + 8;
-          pdf.setFont('helvetica');
-        }        currentY += 5; // Space between components
+          
+          if (component.codeChangeSummary) {
+            pdf.setFont('helvetica', 'normal');
+            const summaryLines = pdf.splitTextToSize(component.codeChangeSummary, pageWidth - 2 * margin);
+            pdf.text(summaryLines, margin, currentY);
+            currentY += summaryLines.length * 4 + 3;
+          }
+          
+          // Solution code background
+          const solutionLines = pdf.splitTextToSize(component.correctedCode, pageWidth - 2 * margin - 10);
+          const solutionHeight = solutionLines.length * 3 + 6;
+          pdf.setFillColor(240, 253, 244);
+          pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, solutionHeight, 'F');
+          
+          pdf.setFont('courier', 'normal');
+          pdf.setFontSize(8);
+          pdf.text(solutionLines, margin + 5, currentY + 2);
+          pdf.setFont('helvetica', 'normal');
+          currentY += solutionHeight + 5;
+        }
+
+        // WCAG Reference
+        if (component.wcagRule) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(9);
+          pdf.text('WCAG GUIDELINE:', margin, currentY);
+          
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(component.wcagRule, margin + 35, currentY);
+          currentY += 8;
+        }
+
+        currentY = addSectionDivider(pdf, currentY, margin, pageWidth);
       });
     }
 
-    // Add Axe Results Section
+    // ===== AUTOMATED ACCESSIBILITY SCAN (AXE RESULTS) =====
     if (analysisData.axeResults && analysisData.axeResults.length > 0) {
-      // Check if we need a new page
-      if (currentY > pageHeight - 50) {
-        pdf.addPage();
-        currentY = margin;
-      } else {
-        currentY += 10;
-      }
+      // New page for axe results
+      pdf.addPage();
+      currentY = margin;
+      
+      currentY = addStyledHeader(pdf, 'AUTOMATED ACCESSIBILITY SCAN (AXE-CORE)', currentY, margin, pageWidth);
 
-      pdf.setFontSize(16);
-      pdf.text('Automated Accessibility Scan (Axe Results)', margin, currentY);
-      currentY += 15;
-
-      // Axe summary
+      // Axe summary table
       const axeCounts = analysisData.axeResults.reduce((acc, violation) => {
         acc[violation.impact] = (acc[violation.impact] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
-
-      pdf.setFontSize(12);
-      pdf.text('Axe Issues Summary', margin, currentY);
-      currentY += 8;
-
-      pdf.setFontSize(10);
-      ['critical', 'serious', 'moderate', 'minor'].forEach(impact => {
-        pdf.text(`${impact.charAt(0).toUpperCase() + impact.slice(1)}: ${axeCounts[impact] || 0}`, margin, currentY);
-        currentY += 6;
-      });
+      
+      currentY = addSummaryTable(pdf, axeCounts, 'Automated Scan Summary', currentY, margin, pageWidth);
       currentY += 10;
 
       // Detailed axe findings
+      pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(12);
-      pdf.text('Detailed Axe Findings', margin, currentY);
+      pdf.text('Detailed Scan Results', margin, currentY);
       currentY += 10;
 
       analysisData.axeResults.forEach((violation, index) => {
         // Check if we need a new page
-        if (currentY > pageHeight - 60) {
+        if (currentY > pageHeight - 80) {
           pdf.addPage();
           currentY = margin;
         }
 
-        pdf.setFontSize(11);
+        // Violation header
+        const styling = getImpactStyling(violation.impact);
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.setTextColor(styling.color[0], styling.color[1], styling.color[2]);
         pdf.text(`${index + 1}. ${violation.help}`, margin, currentY);
+        
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.text(styling.text, pageWidth - margin - 30, currentY);
         currentY += 8;
 
+        // Rule ID
+        pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(9);
-        pdf.text(`Impact: ${violation.impact.toUpperCase()}`, margin, currentY);
-        currentY += 5;
-        pdf.text(`Rule ID: ${violation.id}`, margin, currentY);
-        currentY += 6;
+        pdf.text('RULE ID:', margin, currentY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(violation.id, margin + 20, currentY);
+        currentY += 8;
 
         // Description
-        const descLines = pdf.splitTextToSize(`Description: ${violation.description}`, pageWidth - 2 * margin);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('DESCRIPTION:', margin, currentY);
+        currentY += 5;
+        
+        pdf.setFont('helvetica', 'normal');
+        const descLines = pdf.splitTextToSize(violation.description, pageWidth - 2 * margin);
         pdf.text(descLines, margin, currentY);
-        currentY += descLines.length * 4 + 3;
+        currentY += descLines.length * 4 + 8;
 
-        // WCAG Tags
-        if (violation.tags && violation.tags.length > 0) {
-          const tagsText = `WCAG Tags: ${violation.tags.join(', ')}`;
-          const tagLines = pdf.splitTextToSize(tagsText, pageWidth - 2 * margin);
-          pdf.text(tagLines, margin, currentY);
-          currentY += tagLines.length * 4 + 3;
-        }
-
-        // Affected elements (show first 3)
+        // Affected elements with better formatting
         if (violation.nodes && violation.nodes.length > 0) {
-          pdf.text(`Affected Elements (${violation.nodes.length} total):`, margin, currentY);
-          currentY += 5;
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(`AFFECTED ELEMENTS (${violation.nodes.length} total):`, margin, currentY);
+          currentY += 8;
 
-          violation.nodes.slice(0, 3).forEach((node, nodeIndex) => {
-            pdf.setFont('courier');
+          violation.nodes.slice(0, 5).forEach((node, nodeIndex) => {
+            // Element background
+            pdf.setFillColor(249, 250, 251);
+            pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, 12, 'F');
+            
+            pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(8);
+            pdf.text(`Element ${nodeIndex + 1}:`, margin + 2, currentY + 3);
+            
+            pdf.setFont('courier', 'normal');
             const selectorText = Array.isArray(node.target) ? node.target.join(' > ') : node.target;
-            const selectorLines = pdf.splitTextToSize(`${nodeIndex + 1}. ${selectorText}`, pageWidth - 2 * margin - 5);
-            pdf.text(selectorLines, margin + 5, currentY);
-            currentY += selectorLines.length * 3 + 2;
-            pdf.setFont('helvetica');
-            pdf.setFontSize(9);
+            const shortSelector = selectorText.length > 80 ? selectorText.substring(0, 80) + '...' : selectorText;
+            pdf.text(shortSelector, margin + 2, currentY + 8);
+            
+            currentY += 15;
           });
 
-          if (violation.nodes.length > 3) {
-            pdf.text(`... and ${violation.nodes.length - 3} more elements`, margin + 5, currentY);
-            currentY += 5;
+          if (violation.nodes.length > 5) {
+            pdf.setFont('helvetica', 'italic');
+            pdf.setFontSize(9);
+            pdf.text(`... and ${violation.nodes.length - 5} more elements`, margin + 5, currentY);
+            currentY += 8;
           }
         }
 
-        currentY += 8; // Space between violations
+        currentY = addSectionDivider(pdf, currentY, margin, pageWidth);
       });
     }
 
-    // If element provided, also capture visual representation
-    if (elementToCapture) {
-      try {
-        pdf.addPage();
-        pdf.setFontSize(14);
-        pdf.text('Visual Report', margin, margin);
-        
-        const canvas = await html2canvas(elementToCapture, {
-          scale: 1,
-          useCORS: true,
-          allowTaint: false
-        });
-
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = pageWidth - 2 * margin;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        pdf.addImage(imgData, 'PNG', margin, margin + 10, imgWidth, imgHeight);
-      } catch (error) {
-        console.warn('Failed to capture visual representation:', error);
-      }
-    }
+    // ===== RECOMMENDATIONS SUMMARY =====
+    pdf.addPage();
+    currentY = margin;
+    
+    currentY = addStyledHeader(pdf, 'IMPLEMENTATION RECOMMENDATIONS', currentY, margin, pageWidth);
+    
+    const recommendations = [
+      '1. PRIORITIZE CRITICAL ISSUES: Address all critical accessibility violations first',
+      '2. IMPLEMENT SYSTEMATIC FIXES: Use the provided code recommendations',
+      '3. TEST WITH SCREEN READERS: Validate fixes with actual assistive technology',
+      '4. ESTABLISH ACCESSIBILITY TESTING: Integrate automated scanning into CI/CD',
+      '5. TEAM TRAINING: Ensure developers understand accessibility best practices',
+      '6. REGULAR AUDITS: Schedule periodic accessibility reviews'
+    ];
+    
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(11);
+    
+    recommendations.forEach(rec => {
+      const lines = pdf.splitTextToSize(rec, pageWidth - 2 * margin);
+      pdf.text(lines, margin, currentY);
+      currentY += lines.length * 6 + 5;
+    });
 
     // Add warnings if any
     if (analysisData.warnings && analysisData.warnings.length > 0) {
-      pdf.addPage();
-      pdf.setFontSize(14);
-      pdf.text('Warnings & Limitations', margin, margin);
-      currentY = margin + 10;
-
+      currentY += 20;
+      currentY = addStyledHeader(pdf, 'ANALYSIS LIMITATIONS', currentY, margin, pageWidth, 12);
+      
+      pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(10);
       analysisData.warnings.forEach(warning => {
         const warningLines = pdf.splitTextToSize(`• ${warning}`, pageWidth - 2 * margin);
         pdf.text(warningLines, margin, currentY);
-        currentY += warningLines.length * 4 + 3;
+        currentY += warningLines.length * 5 + 3;
       });
     }
 
-    // Save the PDF
-    const filename = `accessibility-report-${analysisData.sessionId}-${new Date().toISOString().split('T')[0]}.pdf`;
+    // Save with descriptive filename
+    const date = new Date().toISOString().split('T')[0];
+    const domain = analysisData.manifest?.url ? new URL(analysisData.manifest.url).hostname : 'unknown';
+    const filename = `accessibility-audit-${domain}-${date}-${analysisData.sessionId.slice(-8)}.pdf`;
+    
     pdf.save(filename);
 
   } catch (error) {
