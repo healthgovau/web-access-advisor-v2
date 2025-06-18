@@ -147,9 +147,11 @@ export class GeminiService {
     previousHtml?: string
   ): string {
     const hasBeforeAfter = previousHtml && previousHtml !== htmlContent;
-    
-    return `
-Your task is to analyze the provided DOM snapshot(s) and the corresponding Axe Accessibility Report. The goal is to identify and report accessibility issues in the implementation of specific interactive components, with a focus on screen reader and accessibility requirements.
+      return `
+Your task is to analyze the provided DOM snapshot(s) and corresponding Axe Accessibility Report(s) with a PRIMARY FOCUS on screen reader (ARIA) accessibility and assistive technology compatibility. This tool is specifically designed to ensure interactive components work correctly with screen readers and other assistive technologies.
+
+**🎯 PRIMARY OBJECTIVE: SCREEN READER ACCESSIBILITY**
+The main requirement for this analysis is to ensure all interactive components are fully accessible to screen reader users through proper ARIA implementation, semantic HTML, and correct assistive technology behavior.
 
 **Context:**
 - URL: ${context.url}
@@ -166,35 +168,50 @@ ${this.truncateHtml(previousHtml)}` : ''}
 **Axe-core Accessibility Report:**
 ${JSON.stringify(axeResults, null, 2)}
 
-**Analysis Instructions:**
+**SCREEN READER FOCUSED ANALYSIS INSTRUCTIONS:**
 
-1. **Identify Relevant Components**: Scan the provided DOM snapshot(s) to locate instances of interactive components:
-   - Expandable/Collapsible Content
-   - Dropdown Menus
-   - Tab Panels  
-   - Modal Dialogs
-   - Autocomplete/Suggestion Lists
-   - Error Handling
-   - Dynamic Content Updates
-   - Keyboard Navigation indicators
-   - Carousels/Sliders
-   - Tree Views
-   - Data Tables
-   - Sortable Tables
-   - Tooltips/Popovers
-   - Context Menus
-   - Validation Messages
-   - Live Regions
+1. **Identify Screen Reader Critical Components**: Prioritize components that directly impact screen reader navigation and interaction:
+   - Expandable/Collapsible Content (aria-expanded, aria-controls)
+   - Dropdown Menus (role="menu", aria-haspopup, aria-expanded)
+   - Tab Panels (role="tablist", aria-selected, aria-controls)
+   - Modal Dialogs (role="dialog", aria-modal, focus management)
+   - Autocomplete/Suggestion Lists (aria-autocomplete, aria-activedescendant)
+   - Error Handling (aria-invalid, aria-describedby)
+   - Dynamic Content Updates (aria-live regions)
+   - Keyboard Navigation indicators (focus management, tabindex)
+   - Carousels/Sliders (aria-roledescription, aria-live)
+   - Tree Views (role="tree", aria-expanded, aria-selected)
+   - Data Tables (proper header associations, scope)
+   - Sortable Tables (aria-sort attributes)
+   - Tooltips/Popovers (role="tooltip", aria-describedby)
+   - Context Menus (role="menu", keyboard navigation)
+   - Validation Messages (aria-describedby, error announcements)
+   - Live Regions (aria-live, aria-atomic)
 
-2. **Analyze Component Implementation**: For each identified component, examine its HTML structure and accessibility attributes (aria-expanded, role, aria-controls, aria-selected, aria-hidden, aria-live, aria-invalid, aria-describedby, aria-labelledby, aria-sort, etc.).
+2. **ARIA Implementation Analysis**: For each identified component, examine CRITICAL screen reader attributes:
+   - **Roles**: Ensure proper semantic roles (button, menu, dialog, etc.)
+   - **States**: Check aria-expanded, aria-selected, aria-checked, aria-pressed
+   - **Properties**: Verify aria-label, aria-labelledby, aria-describedby
+   - **Relationships**: Confirm aria-controls, aria-owns, aria-activedescendant
+   - **Live Regions**: Validate aria-live, aria-atomic for dynamic content
+   - **Keyboard Support**: Ensure proper tabindex and focus management
 
-${hasBeforeAfter ? `3. **Compare States**: Since both before and after snapshots are provided, analyze how attributes/structure change during interaction. Identify if attributes fail to update correctly between states.` : `3. **Single State Analysis**: Analyze the component's implementation in the current state for correct roles, states, and properties.`}
+${hasBeforeAfter ? `3. **Screen Reader State Changes**: Since both before and after snapshots are provided, focus on how ARIA attributes change during interaction from a screen reader perspective:
+   - Does aria-expanded correctly update when dropdowns open/close?
+   - Do aria-selected attributes change when tabs are activated?
+   - Are aria-live regions properly announcing dynamic content changes?
+   - Is focus management working correctly for screen readers?` : `3. **Screen Reader State Analysis**: Analyze the component's ARIA implementation for screen reader compatibility in the current state.`}
 
-4. **Identify Accessibility Issues**: Determine if components exhibit accessibility problems including:
-   - Missing required roles, states, or properties
-   - Incorrect or inappropriate usage of attributes
-   - Failure of attributes to update correctly between states (if applicable)
-   - Relevant Axe violations
+4. **Screen Reader Accessibility Issues**: Identify problems that specifically impact screen reader users:
+   - Missing or incorrect ARIA roles that prevent proper component identification
+   - Missing ARIA states/properties that hide component functionality from screen readers
+   - Incorrect ARIA relationships that break screen reader navigation
+   - Missing aria-live regions for dynamic content announcements
+   - Poor focus management that traps or loses screen reader focus
+   - Missing semantic structure (headings, landmarks, lists)
+   - Inadequate labeling that leaves screen reader users without context
+   - Failed ARIA attribute updates during state changes
+   - Relevant Axe violations that impact screen reader functionality
 
 **Output Format:**
 Respond with a JSON object with this exact structure:
@@ -248,7 +265,9 @@ GOOD: relevantHtml shows <div class="content"> and correctedCode shows <div clas
 BAD: relevantHtml shows <html> but issue is missing main landmark  
 GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode shows <body><main><div class="page-content">
 
-**Important**: Report ONLY components with identified accessibility issues. Do not report on components where no accessibility issue was found. Focus on actionable insights and practical fixes for screen reader compatibility.
+**Important**: Report ONLY components with identified screen reader accessibility issues. Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
+
+**🎯 SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
 `;
   }
   /**
@@ -262,9 +281,11 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
   ): string {
     // Group snapshots by flow context
     const flowGroups = this.groupSnapshotsByFlow(snapshots, manifest);
-    
-    return `
-Your task is to analyze a complete user interaction flow consisting of ${context.totalSteps} steps captured during accessibility testing. Each step represents a user action and the resulting DOM state, with parent-child relationships indicating interaction branching (e.g., modals, sub-flows).
+      return `
+Your task is to analyze a complete user interaction flow consisting of ${context.totalSteps} steps captured during accessibility testing, with a PRIMARY FOCUS on screen reader (ARIA) accessibility and assistive technology compatibility. This analysis ensures that interaction sequences work correctly for screen reader users through proper ARIA implementation and state management.
+
+**🎯 PRIMARY OBJECTIVE: SCREEN READER ACCESSIBILITY FLOW ANALYSIS**
+The main requirement is to ensure the entire interaction flow maintains proper screen reader accessibility, with correct ARIA state transitions, focus management, and assistive technology announcements throughout the user journey.
 
 **Session Context:**
 - URL: ${context.url}
@@ -272,7 +293,7 @@ Your task is to analyze a complete user interaction flow consisting of ${context
 - Total Steps: ${context.totalSteps}
 - Flow Groups: ${Object.keys(flowGroups).join(', ')}
 
-**Interaction Flow Analysis:**
+**Screen Reader Focused Interaction Flow Analysis:**
 
 ${Object.entries(flowGroups).map(([flowType, steps]: [string, any[]]) => {
   return `
@@ -298,26 +319,29 @@ ${JSON.stringify(step.axeResults || [], null, 2)}
 
 **Analysis Instructions:**
 
-1. **Flow Relationship Analysis**: 
-   - Examine parent-child relationships between steps
-   - Identify main flow vs. sub-flows (modals, forms, navigation)
-   - Assess how state changes cascade through related steps
+1. **Screen Reader Flow Relationship Analysis**: 
+   - Examine parent-child relationships between steps from a screen reader perspective
+   - Identify main flow vs. sub-flows (modals, forms, navigation) and their ARIA implications
+   - Assess how ARIA state changes cascade through related steps for screen reader users
 
-2. **Component Accessibility Assessment**:
-   - Focus on interactive components across the flow
-   - Analyze state management (expanded/collapsed, selected/unselected, etc.)
-   - Evaluate keyboard navigation and focus management
-   - Check ARIA attributes and role consistency
+2. **Screen Reader Component Accessibility Assessment**:
+   - Focus on interactive components and their screen reader accessibility across the flow
+   - Analyze ARIA state management (aria-expanded/collapsed, aria-selected/unselected, etc.)
+   - Evaluate keyboard navigation and focus management for screen reader users
+   - Check ARIA attributes and role consistency throughout the interaction sequence
+   - Verify proper screen reader announcements during state transitions
 
-3. **Before/After State Comparison**:
-   - Compare DOM states between related steps
-   - Identify missing or incorrect attribute updates
-   - Assess dynamic content announcements
+3. **Screen Reader Before/After State Comparison**:
+   - Compare DOM states between related steps focusing on ARIA attribute changes
+   - Identify missing or incorrect ARIA attribute updates that affect screen reader users
+   - Assess dynamic content announcements through aria-live regions
+   - Verify focus management maintains screen reader context
 
-4. **Flow-Specific Issues**:
-   - Modal flows: Focus management, escape handling, backdrop behavior
-   - Form flows: Validation, error states, progress indication
-   - Navigation flows: Landmarks, headings, breadcrumbs
+4. **Screen Reader Flow-Specific Issues**:
+   - Modal flows: Focus management, escape handling, backdrop behavior for screen readers
+   - Form flows: Validation announcements, error state communication, progress indication
+   - Navigation flows: Landmark navigation, heading hierarchy, breadcrumb accessibility
+   - Dynamic content: Proper aria-live announcements and screen reader feedback
 
 **Output Format:**
 Respond with a JSON object with this exact structure:
@@ -373,7 +397,9 @@ GOOD: relevantHtml shows <div class="content"> and correctedCode shows <div clas
 BAD: relevantHtml shows <html> but issue is missing main landmark  
 GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode shows <body><main><div class="page-content">
 
-Focus on actionable issues that can be addressed by developers, prioritizing critical accessibility barriers.
+Focus on actionable screen reader accessibility issues that can be addressed by developers, prioritizing critical ARIA barriers that impact assistive technology users.
+
+**🎯 SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
 `;
   }
 
