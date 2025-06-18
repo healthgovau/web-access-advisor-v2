@@ -45,6 +45,7 @@ export interface AxeViolation {
   helpUrl: string;
   nodes: AxeNode[];
   tags: string[];
+  recommendation?: string; // LLM-generated actionable fix recommendation
 }
 
 export interface AxeNode {

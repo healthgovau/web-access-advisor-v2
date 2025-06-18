@@ -203,7 +203,7 @@ export class AccessibilityAnalyzer {
       onProgress?.('generating-report', 'Generating final accessibility report...', undefined, undefined, snapshots.length);
       
       // Aggregate axe results from all snapshots
-      const consolidatedAxeResults = this.consolidateAxeResults(snapshots);
+      const consolidatedAxeResults = await this.consolidateAxeResults(snapshots);
       
       // Generate metadata manifest
       const manifest = await this.generateManifest(sessionId, actions, snapshots);
@@ -513,9 +513,9 @@ export class AccessibilityAnalyzer {
   }
 
   /**
-   * Consolidate axe results from all snapshots, removing duplicates
+   * Consolidate axe results from all snapshots, removing duplicates and adding LLM recommendations
    */
-  private consolidateAxeResults(snapshots: SnapshotData[]): any[] {
+  private async consolidateAxeResults(snapshots: SnapshotData[]): Promise<any[]> {
     const violationMap = new Map<string, any>();
 
     snapshots.forEach(snapshot => {
@@ -551,9 +551,31 @@ export class AccessibilityAnalyzer {
       }
     });
 
+    const violations = Array.from(violationMap.values());
+    
+    // Generate LLM recommendations if Gemini is available
+    if (this.geminiService && violations.length > 0) {
+      try {
+        console.log(`🤖 Generating LLM recommendations for ${violations.length} axe violations...`);
+        const recommendations = await this.geminiService.generateAxeRecommendations(violations);
+        
+        // Add recommendations to violations
+        violations.forEach(violation => {
+          const recommendation = recommendations.get(violation.id);
+          if (recommendation) {
+            violation.recommendation = recommendation;
+          }
+        });
+        
+        console.log(`✅ Generated recommendations for ${recommendations.size}/${violations.length} violations`);
+      } catch (error) {
+        console.warn('Failed to generate LLM recommendations for axe violations:', error);
+      }
+    }
+
     // Return consolidated violations sorted by impact
     const impactOrder = { critical: 0, serious: 1, moderate: 2, minor: 3 };
-    return Array.from(violationMap.values()).sort((a, b) => {
+    return violations.sort((a, b) => {
       const aOrder = impactOrder[a.impact as keyof typeof impactOrder] ?? 4;
       const bOrder = impactOrder[b.impact as keyof typeof impactOrder] ?? 4;
       return aOrder - bOrder;

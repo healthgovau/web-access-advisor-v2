@@ -227,12 +227,23 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                                     </div>
                                   )}                                </div>
                               </div>
-                            ))}
-                            {violation.nodes.length > 5 && (
+                            ))}                            {violation.nodes.length > 5 && (
                               <div className="text-sm text-gray-500 italic text-center py-2">
                                 ... and {violation.nodes.length - 5} more elements
                               </div>
                             )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* LLM-generated recommendation */}
+                      {violation.recommendation && (
+                        <div>
+                          <span className="text-base font-medium text-gray-700">How to Fix (AI Recommendation): </span>
+                          <div className="mt-2 p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="text-base text-gray-700 whitespace-pre-line" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
+                              {violation.recommendation}
+                            </div>
                           </div>
                         </div>
                       )}

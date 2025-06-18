@@ -12,40 +12,98 @@ function cleanTextForPDF(text: string): string {
   if (!text) return '';
   
   return text
-    // Decode common HTML entities first
+    // First pass - decode HTML entities
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
-    .replace(/&nbsp;/g, ' ')    // Decode numeric HTML entities
+    .replace(/&nbsp;/g, ' ')
+    // Decode numeric HTML entities
     .replace(/&#(\d+);/g, (_, num) => {
       const code = parseInt(num, 10);
-      // Only allow safe ASCII characters
       return (code >= 32 && code <= 126) ? String.fromCharCode(code) : '';
     })
     .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
       const code = parseInt(hex, 16);
-      // Only allow safe ASCII characters
       return (code >= 32 && code <= 126) ? String.fromCharCode(code) : '';
     })
-    // Remove any HTML tags
+    // Remove HTML tags
     .replace(/<[^>]*>/g, '')
-    // Replace smart quotes and special punctuation
-    .replace(/[\u2018\u2019]/g, "'")
-    .replace(/[\u201C\u201D]/g, '"')
-    .replace(/[\u2013\u2014]/g, '-')
-    .replace(/[\u2026]/g, '...')
-    .replace(/[\u00A0]/g, ' ') // Non-breaking space
-    // Remove control characters and non-printable characters
+    // Convert common Unicode characters to ASCII equivalents
+    .replace(/[\u2018\u2019]/g, "'")  // Smart quotes
+    .replace(/[\u201C\u201D]/g, '"')  // Smart double quotes
+    .replace(/[\u2013\u2014]/g, '-')  // En/em dashes
+    .replace(/[\u2026]/g, '...')      // Ellipsis
+    .replace(/[\u00A0]/g, ' ')        // Non-breaking space
+    // More aggressive character replacements
+    .replace(/[àáâãäå]/g, 'a')
+    .replace(/[èéêë]/g, 'e')
+    .replace(/[ìíîï]/g, 'i')
+    .replace(/[òóôõö]/g, 'o')
+    .replace(/[ùúûü]/g, 'u')
+    .replace(/[ñ]/g, 'n')
+    .replace(/[ç]/g, 'c')
+    .replace(/[ß]/g, 'ss')
+    .replace(/[Ø]/g, 'O')
+    // Remove control characters
     .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
-    // Remove all Unicode characters above basic Latin + Latin-1 supplement
-    // This is more restrictive but prevents encoding issues
-    .replace(/[^\u0020-\u007E\u00A1-\u00FF]/g, '')
-    // Clean up multiple spaces
+    // Ultra-aggressive: only allow basic printable ASCII
+    .replace(/[^\u0020-\u007E]/g, '')
+    // Clean up whitespace
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Add text with clickable links to PDF
+ */
+function addTextWithLinks(pdf: jsPDF, text: string, x: number, y: number, maxWidth: number): number {
+  // Combined regex for URLs and WCAG references
+  const linkRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|WCAG\s+\d+\.\d+(?:\.\d+)?(?:\s+\([^)]+\))?)/gi;
+  
+  let currentY = y;
+  const lines = pdf.splitTextToSize(text, maxWidth);
+  
+  lines.forEach((line: string) => {
+    let parts = line.split(linkRegex);
+    let currentX = x;
+    
+    parts.forEach((part) => {
+      if (/https?:\/\//.test(part)) {
+        // This is a URL - add as clickable link
+        pdf.setTextColor(0, 0, 255); // Blue color for links
+        pdf.text(part, currentX, currentY);
+        
+        const textWidth = pdf.getTextWidth(part);
+        pdf.link(currentX, currentY - 3, textWidth, 4, { url: part });
+        
+        currentX += textWidth;
+        pdf.setTextColor(0, 0, 0); // Reset to black
+      } else if (/WCAG\s+\d+\.\d+/i.test(part)) {
+        // This is a WCAG reference - make it a link to WCAG guidelines
+        const wcagUrl = `https://www.w3.org/WAI/WCAG21/Understanding/`;
+        
+        pdf.setTextColor(0, 0, 255); // Blue color for links
+        pdf.text(part, currentX, currentY);
+        
+        const textWidth = pdf.getTextWidth(part);
+        pdf.link(currentX, currentY - 3, textWidth, 4, { url: wcagUrl });
+        
+        currentX += textWidth;
+        pdf.setTextColor(0, 0, 0); // Reset to black
+      } else if (part.trim()) {
+        // Regular text
+        pdf.text(part, currentX, currentY);
+        currentX += pdf.getTextWidth(part);
+      }
+    });
+    
+    currentY += 4; // Line height
+  });
+  
+  return currentY;
 }
 
 /**
@@ -219,9 +277,7 @@ export async function exportAnalysisToPDF(
       });
       
       currentY += 15;
-    }
-
-    // ===== SCREEN READER ACCESSIBILITY ISSUES =====
+    }    // ===== SCREEN READER ACCESSIBILITY ISSUES =====
     if (analysisData.analysis?.components && analysisData.analysis.components.length > 0) {
       currentY = addStyledHeader(pdf, 'SCREEN READER ACCESSIBILITY ISSUES', currentY, margin, pageWidth);
       
@@ -265,18 +321,16 @@ export async function exportAnalysisToPDF(
         const sections = [
           { label: 'ISSUE DESCRIPTION', content: component.issue },
           { label: 'TECHNICAL EXPLANATION', content: component.explanation }
-        ];
-
-        sections.forEach(section => {
+        ];        sections.forEach(section => {
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(9);
           pdf.text(section.label + ':', margin, currentY);
           currentY += 5;
           
           pdf.setFont('helvetica', 'normal');
-          const lines = pdf.splitTextToSize(section.content, pageWidth - 2 * margin);
-          pdf.text(lines, margin, currentY);
-          currentY += lines.length * 4 + 5;
+          pdf.setFontSize(9);
+          currentY = addTextWithLinks(pdf, cleanTextForPDF(section.content), margin, currentY, pageWidth - 2 * margin);
+          currentY += 5;
         });
 
         // Code sections with proper formatting
@@ -304,12 +358,11 @@ export async function exportAnalysisToPDF(
           pdf.setFontSize(9);
           pdf.text('RECOMMENDED SOLUTION:', margin, currentY);
           currentY += 5;
-          
-          if (component.codeChangeSummary) {
+            if (component.codeChangeSummary) {
             pdf.setFont('helvetica', 'normal');
-            const summaryLines = pdf.splitTextToSize(component.codeChangeSummary, pageWidth - 2 * margin);
-            pdf.text(summaryLines, margin, currentY);
-            currentY += summaryLines.length * 4 + 3;
+            pdf.setFontSize(9);
+            currentY = addTextWithLinks(pdf, cleanTextForPDF(component.codeChangeSummary), margin, currentY, pageWidth - 2 * margin);
+            currentY += 3;
           }
           
           // Solution code background
@@ -346,7 +399,7 @@ export async function exportAnalysisToPDF(
       pdf.addPage();
       currentY = margin;
       
-      currentY = addStyledHeader(pdf, 'AUTOMATED ACCESSIBILITY SCAN (AXE-CORE)', currentY, margin, pageWidth);
+      currentY = addStyledHeader(pdf, 'AXE ACCESSIBILITY ISSUES', currentY, margin, pageWidth);
 
       // Axe summary table
       const axeCounts = analysisData.axeResults.reduce((acc, violation) => {
@@ -390,17 +443,15 @@ export async function exportAnalysisToPDF(
         pdf.text('RULE ID:', margin, currentY);
         pdf.setFont('helvetica', 'normal');
         pdf.text(violation.id, margin + 20, currentY);
-        currentY += 8;
-
-        // Description
+        currentY += 8;        // Description
         pdf.setFont('helvetica', 'bold');
         pdf.text('DESCRIPTION:', margin, currentY);
         currentY += 5;
         
         pdf.setFont('helvetica', 'normal');
-        const descLines = pdf.splitTextToSize(violation.description, pageWidth - 2 * margin);
-        pdf.text(descLines, margin, currentY);
-        currentY += descLines.length * 4 + 8;
+        pdf.setFontSize(9);
+        currentY = addTextWithLinks(pdf, cleanTextForPDF(violation.description), margin, currentY, pageWidth - 2 * margin);
+        currentY += 8;
 
         // Affected elements with better formatting
         if (violation.nodes && violation.nodes.length > 0) {
@@ -423,14 +474,31 @@ export async function exportAnalysisToPDF(
             pdf.text(shortSelector, margin + 2, currentY + 8);
             
             currentY += 15;
-          });
-
-          if (violation.nodes.length > 5) {
+          });          if (violation.nodes.length > 5) {
             pdf.setFont('helvetica', 'italic');
             pdf.setFontSize(9);
             pdf.text(`... and ${violation.nodes.length - 5} more elements`, margin + 5, currentY);
             currentY += 8;
           }
+        }
+
+        // LLM-generated recommendation
+        if (violation.recommendation) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(9);
+          pdf.text('HOW TO FIX (AI RECOMMENDATION):', margin, currentY);
+          currentY += 5;
+          
+          // Recommendation background
+          const recLines = pdf.splitTextToSize(cleanTextForPDF(violation.recommendation), pageWidth - 2 * margin - 10);
+          const recHeight = recLines.length * 4 + 6;
+          pdf.setFillColor(240, 253, 244); // Light green background
+          pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, recHeight, 'F');
+          
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(9);
+          currentY = addTextWithLinks(pdf, cleanTextForPDF(violation.recommendation), margin + 5, currentY + 2, pageWidth - 2 * margin - 10);
+          currentY += 8;
         }
 
         currentY = addSectionDivider(pdf, currentY, margin, pageWidth);

@@ -576,6 +576,117 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
       components: [], // Would need more sophisticated parsing for components
       recommendations,
       score: scoreMatch ? parseInt(scoreMatch[1]) : 50
-    };
+    };  }
+
+  /**
+   * Generate actionable recommendations for specific axe violations
+   */
+  async generateAxeRecommendations(violations: any[]): Promise<Map<string, string>> {
+    if (!violations || violations.length === 0) {
+      return new Map();
+    }
+
+    try {
+      const model = this.genAI.getGenerativeModel({ model: this.modelName });
+      const recommendations = new Map<string, string>();
+
+      // Process violations in batches to avoid token limits
+      const batchSize = 3;
+      for (let i = 0; i < violations.length; i += batchSize) {
+        const batch = violations.slice(i, i + batchSize);
+        
+        const prompt = this.buildAxeRecommendationPrompt(batch);
+        
+        try {
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          const text = response.text();
+          
+          // Parse the response to extract recommendations
+          const parsed = this.parseAxeRecommendations(text, batch);
+          parsed.forEach((rec, id) => recommendations.set(id, rec));
+          
+        } catch (error) {
+          console.warn(`Failed to generate recommendations for batch starting at ${i}:`, error);
+          // Add fallback recommendations
+          batch.forEach(violation => {
+            recommendations.set(violation.id, `Review and fix: ${violation.help}`);
+          });
+        }
+      }
+
+      return recommendations;
+    } catch (error) {
+      console.error('Failed to generate axe recommendations:', error);
+      return new Map();
+    }
+  }
+
+  /**
+   * Build prompt for axe violation recommendations
+   */
+  private buildAxeRecommendationPrompt(violations: any[]): string {
+    return `You are an accessibility expert. Generate specific, actionable recommendations for fixing these axe-core violations.
+
+For each violation, provide:
+1. A clear explanation of what's wrong
+2. Specific steps to fix it
+3. Code examples if relevant
+4. Testing instructions
+
+Violations to analyze:
+${violations.map((v, i) => `
+VIOLATION ${i + 1}:
+- ID: ${v.id}
+- Impact: ${v.impact}
+- Description: ${v.description}
+- Help: ${v.help}
+- Sample HTML: ${v.nodes?.[0]?.html || 'Not available'}
+`).join('\n')}
+
+Format your response as:
+VIOLATION_ID: [violation-id]
+RECOMMENDATION: [specific actionable steps]
+
+VIOLATION_ID: [next-violation-id]  
+RECOMMENDATION: [specific actionable steps]
+
+Focus on practical, implementable solutions that developers can apply immediately.`;
+  }
+
+  /**
+   * Parse axe recommendations from LLM response
+   */
+  private parseAxeRecommendations(text: string, violations: any[]): Map<string, string> {
+    const recommendations = new Map<string, string>();
+    
+    // Try to parse structured format
+    const violationBlocks = text.split(/VIOLATION_ID:\s*/i);
+    
+    violationBlocks.forEach(block => {
+      const lines = block.trim().split('\n');
+      if (lines.length >= 2) {
+        const idLine = lines[0].trim();
+        const recIndex = lines.findIndex(line => line.toLowerCase().includes('recommendation:'));
+        
+        if (recIndex >= 0) {
+          const recommendation = lines.slice(recIndex + 1).join('\n').trim();
+          // Find matching violation
+          const violation = violations.find(v => idLine.includes(v.id));
+          if (violation && recommendation) {
+            recommendations.set(violation.id, recommendation);
+          }
+        }
+      }
+    });
+    
+    // Fallback: if parsing failed, generate basic recommendations
+    if (recommendations.size === 0) {
+      violations.forEach(violation => {
+        recommendations.set(violation.id, `Fix accessibility issue: ${violation.help}. See: ${violation.helpUrl}`);
+      });
+    }
+    
+    return recommendations;
   }
 }
