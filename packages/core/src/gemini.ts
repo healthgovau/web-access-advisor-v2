@@ -646,28 +646,44 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
     }  }
   /**
    * Build prompt for axe violation recommendations
-   */
-  private buildAxeRecommendationPrompt(violations: any[]): string {
+   */  private buildAxeRecommendationPrompt(violations: any[]): string {
     return `You are an accessibility expert. For each axe-core violation, provide both an explanation and specific, actionable recommendations with concrete code examples.
 
 For each violation, respond in this exact format:
 
 VIOLATION_ID: [violation.id]
 EXPLANATION: [Clear explanation of why this is an accessibility problem and how it affects users with disabilities - focus on user impact]
-RECOMMENDATION: [Specific, actionable steps to fix the issue with concrete code examples based on the actual HTML provided]
+RECOMMENDATION: [Start with a brief overview, then provide detailed Recommended section with specific code fixes]
 
 CRITICAL GUIDELINES FOR RECOMMENDATIONS:
 - ALWAYS examine the actual HTML provided for each violation
-- Provide SPECIFIC code corrections using the exact HTML context (e.g., if you see an input without a label, suggest the exact label text based on surrounding context)
-- For aria-label issues, suggest meaningful labels based on the element's purpose and surrounding text
+- Structure your RECOMMENDATION with this exact format:
+
+  Brief overview of what needs to be fixed.
+  
+  Recommended:
+  [Provide specific, actionable steps with code examples. If you can analyze the actual HTML context provided, give SPECIFIC code fixes with BEFORE/AFTER examples. If the HTML context is insufficient, provide general but detailed guidance with documentation links.]
+  
+  Code Example: (only if you have specific code to show)
+  BEFORE:
+  [exact problematic HTML]
+  
+  AFTER:
+  [corrected HTML with accessibility fixes]
+  
+  Testing:
+  [How to verify the fix works with screen readers/accessibility tools]
+
+- For aria-label issues, suggest meaningful labels based on the element's purpose and surrounding context
 - For heading hierarchy problems, specify the exact heading level change needed (h3 to h2, etc.)
 - For form elements, suggest appropriate label associations using the actual element structure
-- When HTML context is insufficient, provide general guidance and include documentation links
+- When providing documentation links, put them on separate lines after "See:"
+- Make the "Recommended" section actionable and specific, not generic advice
 
 FORMATTING RULES:
 - Use plain text only, NO markdown formatting
-- For code examples, use "BEFORE:" and "AFTER:" labels to show the fix
-- Use simple numbered lists (1. 2. 3.) for multi-step instructions
+- Use the exact section headers: "Recommended:", "Code Example:", "Testing:"
+- Use simple numbered lists (1. 2. 3.) for multi-step instructions within sections
 - Put documentation links on separate lines after "See:"
 - Be very specific with code examples - show exactly what HTML/attributes to change
 
@@ -686,12 +702,13 @@ VIOLATION ${i + 1}:
 `).join('\n')}
 
 Remember: 
-- Use the actual HTML context to provide SPECIFIC code suggestions
+- Use the actual HTML context to provide SPECIFIC code suggestions in the "Recommended" section
 - If you see specific text or context clues, incorporate them into your recommendations
 - For aria-label suggestions, make them descriptive and meaningful based on the element's context
-- Give concrete BEFORE/AFTER code examples
+- Always include a "Recommended:" section with concrete steps
+- Give concrete BEFORE/AFTER code examples when possible
 - Make explanations user-impact focused (how this affects people with disabilities)
-- Provide implementable solutions, not just general advice`;
+- Provide implementable solutions in the "Recommended" section, not just general advice`;
   }
 
   /**
@@ -734,7 +751,7 @@ Remember:
       violations.forEach(violation => {
         results.set(violation.id, {
           explanation: `This violation occurs when ${violation.description.toLowerCase()}. This affects accessibility because it prevents users with disabilities from properly accessing or understanding the content.`,
-          recommendation: `Fix accessibility issue: ${violation.help}. See: ${violation.helpUrl}`
+          recommendation: `${violation.help}. See: ${violation.helpUrl}`
         });
       });
     }
