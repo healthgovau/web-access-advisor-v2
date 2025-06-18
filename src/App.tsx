@@ -363,13 +363,29 @@ function App() {
               </>
             )}            {/* Analyzing Mode */}
             {state.mode === 'analyzing' && (
-              <div className="bg-white rounded-lg shadow p-6">                <h2 className="text-lg font-medium text-gray-900 mb-4">
-                Analyzing Accessibility
-              </h2>
-                <div className="text-sm text-gray-600">
-                  Analyzing {state.actions.length} recorded actions for accessibility issues.
+              <>
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-lg font-medium text-gray-900 mb-4">
+                    Analyzing Accessibility
+                  </h2>
+                  <div className="text-sm text-gray-600">
+                    Analyzing {state.actions.length} recorded actions for accessibility issues.
+                  </div>
                 </div>
-              </div>
+
+                {/* Actions List - Keep visible during analysis for consistency */}
+                {state.actions.length > 0 && (
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">
+                      Recorded Actions ({state.actions.length})
+                    </h2>
+                    <ActionList
+                      actions={state.actions}
+                      isRecording={false}
+                    />
+                  </div>
+                )}
+              </>
             )}
 
             {/* Results Mode */}            {state.mode === 'results' && (
