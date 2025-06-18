@@ -7,9 +7,10 @@ import type { AxeViolation } from '../types';
 
 interface AxeResultsProps {
   axeResults: AxeViolation[];
+  url?: string;
 }
 
-const AxeResults: React.FC<AxeResultsProps> = ({ axeResults }) => {
+const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [severityFilters, setSeverityFilters] = useState<Record<string, boolean>>({
     critical: true,
@@ -142,8 +143,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults }) => {
               filteredViolations.map((violation, index) => (
                 <div key={`${violation.id}-${index}`} className="bg-white border border-gray-300 rounded-lg overflow-hidden">
                   {/* Header Section with Subtle Background */}
-                  <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">
-                    <div className="flex items-start justify-between mb-2">
+                  <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">                    <div className="flex items-start justify-between mb-2">
                       <h4 className="text-base font-medium text-gray-900">{violation.help}</h4>
                       <span className={`text-xs font-medium px-2 py-1 rounded-full ml-4 ${
                         violation.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
@@ -155,7 +155,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults }) => {
                       </span>
                     </div>
                     <p className="text-sm text-gray-500 text-left">
-                      Rule ID: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{violation.id}</code>
+                      URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{url || 'Unknown'}</code>
                     </p>
                   </div>
 
@@ -184,31 +184,56 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults }) => {
 
                       {violation.nodes && violation.nodes.length > 0 && (
                         <div>
-                          <span className="text-base font-medium text-gray-700">Affected Elements ({violation.nodes.length}): </span>
-                          <div className="mt-2 space-y-3">
+                          <span className="text-base font-medium text-gray-700">Affected Elements ({violation.nodes.length}): </span>                          <div className="mt-2 space-y-4">
                             {violation.nodes.slice(0, 5).map((node, nodeIndex) => (
                               <div key={nodeIndex} className="bg-gray-50 border border-gray-200 rounded p-3">
-                                <div className="text-sm font-medium text-gray-700 mb-2">
-                                  Selector: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">
-                                    {Array.isArray(node.target) ? node.target.join(' > ') : node.target}
-                                  </code>
-                                </div>
-                                {node.html && (
+                                <div className="space-y-6">
                                   <div>
-                                    <span className="text-sm font-medium text-gray-700">HTML: </span>
-                                    <pre className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-xs text-gray-700 overflow-x-auto" style={{ fontFamily: 'Consolas, Monaco, monospace' }}>
-                                      <code>{node.html}</code>
-                                    </pre>
+                                    <span className="text-sm font-medium text-gray-700">Selector: </span>
+                                    <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">
+                                      {Array.isArray(node.target) ? node.target.join(' > ') : node.target}
+                                    </code>
                                   </div>
-                                )}
-                                {node.failureSummary && (
-                                  <div className="mt-2">
-                                    <span className="text-sm font-medium text-gray-700">Failure: </span>
-                                    <div className="text-sm text-red-600 mt-1" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
-                                      {node.failureSummary}
+                                  {node.html && (
+                                    <div>
+                                      <span className="text-sm font-medium text-gray-700">HTML: </span>
+                                      <pre className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-gray-700 overflow-x-auto" style={{ fontFamily: 'Consolas, Monaco, monospace' }}>
+                                        <code>{node.html}</code>
+                                      </pre>
                                     </div>
-                                  </div>
-                                )}
+                                  )}
+                                  {node.failureSummary && (
+                                    <div>
+                                      <span className="text-sm font-medium text-gray-700">How to Fix: </span>
+                                      <div className="text-sm text-gray-600 mt-2" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
+                                        {(() => {
+                                          // Generate helpful recommendations based on violation type
+                                          const ruleId = violation.id;
+                                          const cleanFailure = node.failureSummary.replace(/^Fix all of the following:\s*/i, '').replace(/^Fix any of the following:\s*/i, '');
+                                          
+                                          // Common rule recommendations
+                                          if (ruleId.includes('heading') || ruleId.includes('h1')) {
+                                            return 'Add an <h1> element to provide a main heading for the page content.';
+                                          } else if (ruleId.includes('color-contrast')) {
+                                            return 'Increase the contrast ratio between text and background colors to meet WCAG standards.';
+                                          } else if (ruleId.includes('alt-text') || ruleId.includes('image-alt')) {
+                                            return 'Add descriptive alt text to images for screen reader users.';
+                                          } else if (ruleId.includes('label') || ruleId.includes('form')) {
+                                            return 'Associate form inputs with descriptive labels using the for/id attributes.';
+                                          } else if (ruleId.includes('aria')) {
+                                            return 'Fix ARIA attributes to ensure they are properly implemented and accessible.';
+                                          } else if (ruleId.includes('landmark') || ruleId.includes('region')) {
+                                            return 'Add proper landmark elements or ARIA roles to structure the page content.';
+                                          } else if (ruleId.includes('focus') || ruleId.includes('keyboard')) {
+                                            return 'Ensure all interactive elements are keyboard accessible and have visible focus indicators.';
+                                          } else {
+                                            // Fallback to cleaned failure summary
+                                            return cleanFailure;
+                                          }
+                                        })()}
+                                      </div>
+                                    </div>
+                                  )}                                </div>
                               </div>
                             ))}
                             {violation.nodes.length > 5 && (
@@ -216,22 +241,6 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults }) => {
                                 ... and {violation.nodes.length - 5} more elements
                               </div>
                             )}
-                          </div>
-                        </div>
-                      )}
-
-                      {violation.tags && violation.tags.length > 0 && (
-                        <div>
-                          <span className="text-base font-medium text-gray-700">WCAG Tags: </span>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {violation.tags.map((tag, tagIndex) => (
-                              <span
-                                key={tagIndex}
-                                className="px-2 py-1 bg-blue-50 border border-blue-200 text-blue-800 text-xs rounded font-mono"
-                              >
-                                {tag}
-                              </span>
-                            ))}
                           </div>
                         </div>
                       )}

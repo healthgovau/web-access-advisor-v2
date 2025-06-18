@@ -107,9 +107,99 @@ export async function exportAnalysisToPDF(
           pdf.text(fixedCodeLines, margin, currentY);
           currentY += fixedCodeLines.length * 3 + 8;
           pdf.setFont('helvetica');
+        }        currentY += 5; // Space between components
+      });
+    }
+
+    // Add Axe Results Section
+    if (analysisData.axeResults && analysisData.axeResults.length > 0) {
+      // Check if we need a new page
+      if (currentY > pageHeight - 50) {
+        pdf.addPage();
+        currentY = margin;
+      } else {
+        currentY += 10;
+      }
+
+      pdf.setFontSize(16);
+      pdf.text('Automated Accessibility Scan (Axe Results)', margin, currentY);
+      currentY += 15;
+
+      // Axe summary
+      const axeCounts = analysisData.axeResults.reduce((acc, violation) => {
+        acc[violation.impact] = (acc[violation.impact] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      pdf.setFontSize(12);
+      pdf.text('Axe Issues Summary', margin, currentY);
+      currentY += 8;
+
+      pdf.setFontSize(10);
+      ['critical', 'serious', 'moderate', 'minor'].forEach(impact => {
+        pdf.text(`${impact.charAt(0).toUpperCase() + impact.slice(1)}: ${axeCounts[impact] || 0}`, margin, currentY);
+        currentY += 6;
+      });
+      currentY += 10;
+
+      // Detailed axe findings
+      pdf.setFontSize(12);
+      pdf.text('Detailed Axe Findings', margin, currentY);
+      currentY += 10;
+
+      analysisData.axeResults.forEach((violation, index) => {
+        // Check if we need a new page
+        if (currentY > pageHeight - 60) {
+          pdf.addPage();
+          currentY = margin;
         }
 
-        currentY += 5; // Space between components
+        pdf.setFontSize(11);
+        pdf.text(`${index + 1}. ${violation.help}`, margin, currentY);
+        currentY += 8;
+
+        pdf.setFontSize(9);
+        pdf.text(`Impact: ${violation.impact.toUpperCase()}`, margin, currentY);
+        currentY += 5;
+        pdf.text(`Rule ID: ${violation.id}`, margin, currentY);
+        currentY += 6;
+
+        // Description
+        const descLines = pdf.splitTextToSize(`Description: ${violation.description}`, pageWidth - 2 * margin);
+        pdf.text(descLines, margin, currentY);
+        currentY += descLines.length * 4 + 3;
+
+        // WCAG Tags
+        if (violation.tags && violation.tags.length > 0) {
+          const tagsText = `WCAG Tags: ${violation.tags.join(', ')}`;
+          const tagLines = pdf.splitTextToSize(tagsText, pageWidth - 2 * margin);
+          pdf.text(tagLines, margin, currentY);
+          currentY += tagLines.length * 4 + 3;
+        }
+
+        // Affected elements (show first 3)
+        if (violation.nodes && violation.nodes.length > 0) {
+          pdf.text(`Affected Elements (${violation.nodes.length} total):`, margin, currentY);
+          currentY += 5;
+
+          violation.nodes.slice(0, 3).forEach((node, nodeIndex) => {
+            pdf.setFont('courier');
+            pdf.setFontSize(8);
+            const selectorText = Array.isArray(node.target) ? node.target.join(' > ') : node.target;
+            const selectorLines = pdf.splitTextToSize(`${nodeIndex + 1}. ${selectorText}`, pageWidth - 2 * margin - 5);
+            pdf.text(selectorLines, margin + 5, currentY);
+            currentY += selectorLines.length * 3 + 2;
+            pdf.setFont('helvetica');
+            pdf.setFontSize(9);
+          });
+
+          if (violation.nodes.length > 3) {
+            pdf.text(`... and ${violation.nodes.length - 3} more elements`, margin + 5, currentY);
+            currentY += 5;
+          }
+        }
+
+        currentY += 8; // Space between violations
       });
     }
 

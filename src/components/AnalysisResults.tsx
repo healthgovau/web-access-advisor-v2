@@ -231,16 +231,14 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                 <div className="space-y-4">
                   {filteredComponents.length > 0 ? (
                     filteredComponents.map((component, index) => (<div key={index} className="bg-white border border-gray-300 rounded-lg overflow-hidden">                        {/* Header Section with Subtle Background */}
-                      <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
+                      <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">                        <div className="flex items-start justify-between mb-2">                          <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
                           <span className={`text-xs font-medium px-2 py-1 rounded-full ml-4 ${component.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
                             component.impact === 'serious' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
                               component.impact === 'moderate' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
                                 'bg-blue-100 text-blue-800 border border-blue-300'
                             }`}>
                             {component.impact.toUpperCase()} IMPACT
-                          </span>                          </div>
+                          </span></div>
                         <p className="text-sm text-gray-500 text-left">
                           URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{analysisData.manifest?.url || 'Unknown'}</code>
                         </p>
@@ -348,7 +346,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
         )}
       </div>      {/* Automated Accessibility Scan Results */}
       {analysisData.axeResults && (
-        <AxeResults axeResults={analysisData.axeResults} />
+        <AxeResults axeResults={analysisData.axeResults} url={analysisData.manifest?.url} />
       )}
     </div>
   );
