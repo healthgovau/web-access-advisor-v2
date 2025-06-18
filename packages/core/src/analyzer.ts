@@ -57,6 +57,7 @@ export class AccessibilityAnalyzer {
     actions: UserAction[], 
     options: AnalysisOptions = {}
   ): Promise<AnalysisResult> {    const {
+      sessionId: providedSessionId,
       captureScreenshots = true,
       waitForStability = true,
       analyzeWithGemini = true,
@@ -64,7 +65,8 @@ export class AccessibilityAnalyzer {
       onProgress
     } = options;
 
-    const sessionId = this.generateSessionId();
+    // Use provided sessionId or generate a new one
+    const sessionId = providedSessionId || this.generateSessionId();
     const sessionDir = path.join(outputDir, sessionId);
     
     // Create session directory

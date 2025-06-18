@@ -206,7 +206,8 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
               {analysisData.analysis.components && analysisData.analysis.components.length > 0 && (<div className="mb-6">
                   
                   {/* Issue Count Summary */}                  {(() => {
-                    const counts = filteredComponents.reduce((acc, component) => {
+                    // Calculate counts from ALL components, not just filtered ones
+                    const counts = (analysisData.analysis?.components || []).reduce((acc, component) => {
                       acc[component.impact] = (acc[component.impact] || 0) + 1;
                       return acc;
                     }, {} as Record<string, number>);

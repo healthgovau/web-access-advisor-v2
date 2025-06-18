@@ -54,6 +54,5 @@ ehthumbs.db
 # Tailwind CSS output (if using CLI)
 /src/styles/tailwind.css
 
-# Recordings
-/recordings/*
+# Snapshots (contains recordings, DOM snapshots, axe analysis, etc.)
 /snapshots/*

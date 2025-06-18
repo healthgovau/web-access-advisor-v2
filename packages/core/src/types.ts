@@ -87,6 +87,7 @@ export interface StepDetail {
 }
 
 export interface AnalysisOptions {
+  sessionId?: string;
   captureScreenshots?: boolean;
   waitForStability?: boolean;
   analyzeWithGemini?: boolean;

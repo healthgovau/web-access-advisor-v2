@@ -163,19 +163,19 @@ ${hasBeforeAfter ? `3. **Compare States**: Since both before and after snapshots
    - Relevant Axe violations
 
 **Output Format:**
-Respond with a JSON object:
+Respond with a JSON object with this exact structure:
 {
   "summary": "Brief overview of accessibility status",
   "components": [
     {
-      "componentName": "Component Type (e.g., Dropdown Menu)",
-      "issue": "Clearly state the problem",
-      "explanation": "Briefly explain the accessibility rule violated",
-      "relevantHtml": "Show relevant HTML snippet demonstrating the issue",
-      "correctedCode": "Show corrected HTML that resolves the issue",
-      "codeChangeSummary": "Brief description of the fix",
+      "componentName": "Specific component name (e.g., Search Button, Navigation Menu)",
+      "issue": "Clear description of the accessibility issue - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
+      "explanation": "Detailed explanation of why this is a problem - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
+      "relevantHtml": "EXACT HTML element(s) with the accessibility issue - show ONLY the specific problematic element, not <html>, <body>, or unrelated parent containers",
+      "correctedCode": "Fixed HTML showing the exact same element(s) with proper accessibility attributes",
+      "codeChangeSummary": "Brief summary of the fix (e.g., 'Added aria-label to button', 'Changed div to semantic heading')",
       "impact": "critical|serious|moderate|minor",
-      "wcagRule": "WCAG rule reference (e.g., '4.1.2 Name, Role, Value')",
+      "wcagRule": "WCAG 2.1 guideline reference (e.g., 4.1.2 Name, Role, Value)",
       "wcagUrl": "Complete URL to the specific WCAG Understanding document (e.g., 'https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html')"
     }
   ],
@@ -192,6 +192,27 @@ Respond with a JSON object:
   - 2.4.7 Focus Visible → https://www.w3.org/WAI/WCAG21/Understanding/focus-visible.html
   - 2.1.1 Keyboard → https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html
 - If unsure of the exact URL, use: https://www.w3.org/WAI/WCAG21/Understanding/
+
+**Requirements:**
+- Each component must have a specific, non-generic name
+- Issues must be actionable and specific
+- CRITICAL: ALWAYS wrap HTML element names in backticks in issue and explanation text
+- Examples: "page lacks a \`main\` landmark", "missing \`h1\` heading", "button needs \`aria-label\`", "\`div\` should be \`button\`"
+- NEVER write: "h1", "main", "button" - ALWAYS write: "\`h1\`", "\`main\`", "\`button\`"
+- relevantHtml must show ONLY the problematic element - NEVER show <html>, <body>, or unrelated parent containers
+- If the issue is "missing main landmark", show the container where <main> should be added
+- If the issue is "missing h1", show the section/div where the h1 should be placed
+- correctedCode should show the minimal fix for the exact same element(s) shown in relevantHtml
+- Provide concrete HTML fixes when possible
+- Focus on real accessibility barriers found in the captured snapshots
+- If no significant issues are found, return an empty components array
+
+Example of good relevantHtml vs correctedCode pairing:
+BAD: relevantHtml shows <html> but issue is missing heading
+GOOD: relevantHtml shows <div class="content"> and correctedCode shows <div class="content"><h1>Page Title</h1>
+
+BAD: relevantHtml shows <html> but issue is missing main landmark  
+GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode shows <body><main><div class="page-content">
 
 **Important**: Report ONLY components with identified accessibility issues. Do not report on components where no accessibility issue was found. Focus on actionable insights and practical fixes for screen reader compatibility.
 `;
@@ -354,13 +375,12 @@ Focus on actionable issues that can be addressed by developers, prioritizing cri
 
     return groups;
   }
-
   /**
    * Truncates HTML content for analysis while preserving important accessibility attributes
    */
   private truncateHtml(html: string): string {
-    // Keep HTML under 50KB for API limits, preserve accessibility attributes
-    const maxLength = 50000;
+    // Configurable HTML size limit via environment variable (default 1MB)
+    const maxLength = parseInt(process.env.GEMINI_HTML_MAX_SIZE || '1048576'); // 1MB default
     if (html.length <= maxLength) return html;
 
     // Try to truncate at element boundaries

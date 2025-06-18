@@ -49,6 +49,7 @@ export NODE_ENV=production
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `GEMINI_API_KEY` | Yes | - | Google Gemini API key for AI analysis |
+| `GEMINI_HTML_MAX_SIZE` | No | 1048576 | Maximum HTML size (bytes) sent to Gemini (1MB default) |
 | `API_PORT` | No | 3002 | Port for the API server |
 | `NODE_ENV` | No | development | Environment mode |
 | `PLAYWRIGHT_HEADLESS` | No | false | Run browser in headless mode |

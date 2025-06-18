@@ -166,8 +166,7 @@ const generateSessionId = () => {
  * 
  * @param {Object} recordingData - Complete recording data
  */
-const saveRecording = async (recordingData) => {
-  // TODO: Implement file system save using Node.js fs
-  // Save to /recordings/{sessionId}/recording.json
+const saveRecording = async (recordingData) => {  // TODO: Implement file system save using Node.js fs
+  // Save to /snapshots/{sessionId}/recording.json
   console.log('Saving recording:', recordingData.sessionId);
 };

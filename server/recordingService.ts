@@ -42,11 +42,8 @@ export class BrowserRecordingService {
   /**
    * Start a new recording session with a real browser
    */
-  async startRecording(url: string, name?: string): Promise<RecordingSession> {
-    // Generate human-readable timestamp-based session ID
-    const now = new Date();
-    const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19); // YYYY-MM-DDTHH-MM-SS
-    const sessionId = `session_${timestamp}`;
+  async startRecording(url: string, name?: string): Promise<RecordingSession> {    // Generate session ID consistent with analyzer format
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     // Launch browser with GUI for user interaction
     const browser = await chromium.launch({ 
@@ -54,12 +51,8 @@ export class BrowserRecordingService {
       slowMo: 50        // Slight delay to make interactions more visible
     });
     
-    const context = await browser.newContext({
-      recordVideo: {
-        dir: `./recordings/${sessionId}/`,
-        size: { width: 1280, height: 720 }
-      }
-    });
+    // Create context without video recording
+    const context = await browser.newContext();
     
     const page = await context.newPage();
     
@@ -216,11 +209,9 @@ export class BrowserRecordingService {
     // Close browser resources
     if (session.page) await session.page.close();
     if (session.context) await session.context.close();
-    if (session.browser) await session.browser.close();
+    if (session.browser) await session.browser.close();    console.log(`✓ Recording session ${sessionId} stopped - ${session.actions.length} actions captured`);
+    console.log(`✓ Recording saved to ./snapshots/${sessionId}/recording.json`);
 
-    console.log(`✓ Recording session ${sessionId} stopped - ${session.actions.length} actions captured`);
-    console.log(`✓ Recording saved to ./recordings/${sessionId}.json`);
-    
     return session;
   }
   /**
@@ -247,13 +238,11 @@ export class BrowserRecordingService {
           createdBy: 'Web Access Advisor',
           description: `Automated accessibility recording for ${session.url}`
         }
-      };
-
-      // Save recording.json in the session directory (consolidated with snapshots)
+      };      // Save recording.json in the session directory (consolidated with snapshots)
       const filePath = path.join(sessionDir, 'recording.json');
       await writeFile(filePath, JSON.stringify(savedRecording, null, 2), 'utf8');
 
-      console.log(`✓ Recording saved to consolidated structure: ${filePath}`);
+      console.log(`✓ Recording saved to: ${filePath}`);
     } catch (error) {
       console.error(`Failed to save recording for session ${session.sessionId}:`, error);
     }

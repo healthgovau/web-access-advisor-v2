@@ -116,6 +116,9 @@ Create a `.env` file in the root directory:
 # Gemini AI (for accessibility analysis)
 GEMINI_API_KEY=your_gemini_api_key_here
 
+# Optional: Gemini HTML size limit (bytes, default 1MB)
+GEMINI_HTML_MAX_SIZE=1048576
+
 # Optional: OpenAI (for auto-playwright)
 OPENAI_API_KEY=sk-proj-...
 

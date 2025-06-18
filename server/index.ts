@@ -481,6 +481,7 @@ async function processAnalysisAsync(sessionId: string, actions: UserAction[]) {
     
     // Run the actual analysis with real progress tracking
     const analysisPromise = currentAnalyzer.analyzeActions(actions, {
+      sessionId: sessionId, // Use the recording session ID
       captureScreenshots: true,
       analyzeWithGemini: true,
       waitForStability: true,
