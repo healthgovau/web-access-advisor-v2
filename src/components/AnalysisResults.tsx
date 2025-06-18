@@ -14,19 +14,37 @@ interface AnalysisResultsProps {
 }
 
 /**
- * Wraps HTML tags and attributes in code styling for better readability
+ * Wraps HTML tags, attributes, and URLs with appropriate styling and links
  */
 const formatTextWithCodeTags = (text: string): React.ReactElement => {
-  // Pattern to match HTML tags (with angle brackets), backtick code, attributes, and CSS selectors
-  const codePattern = /(`[^`]+`|<\/?[a-zA-Z][^>]*>|aria-[a-zA-Z-]+(?:="[^"]*")?|role="[^"]*"|class="[^"]*"|id="[^"]*"|\.[a-zA-Z_-]+|#[a-zA-Z_-]+)/g;
+  // First, put "See:" URLs on their own lines
+  const processedText = text.replace(/(\.\s+See:\s+)(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g, '.\n\nSee: $2');
+  
+  // Enhanced pattern to match URLs, HTML tags, attributes, CSS selectors, and backtick code
+  const pattern = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|`[^`]+`|<\/?[a-zA-Z0-9][^>]*>|&lt;\/?[a-zA-Z0-9][^&]*&gt;|aria-[a-zA-Z-]+(?:="[^"]*")?|role="[^"]*"|class="[^"]*"|id="[^"]*"|data-[a-zA-Z-]+="[^"]*"|\.[a-zA-Z_-][a-zA-Z0-9_-]*|#[a-zA-Z_-][a-zA-Z0-9_-]*)/g;
 
-  const parts = text.split(codePattern);
+  const parts = processedText.split(pattern);
 
   return (
     <>
       {parts.map((part, index) => {
+        // Check if this is a URL
+        if (/^https?:\/\//.test(part)) {
+          return (
+            <a
+              key={index}
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline break-words"
+            >
+              {part}
+            </a>
+          );
+        }
+        
         // Check if this part matches the code pattern (recreate regex to avoid global state)
-        const isCode = /(`[^`]+`|<\/?[a-zA-Z][^>]*>|aria-[a-zA-Z-]+(?:="[^"]*")?|role="[^"]*"|class="[^"]*"|id="[^"]*"|\.[a-zA-Z_-]+|#[a-zA-Z_-]+)/.test(part);
+        const isCode = /(`[^`]+`|<\/?[a-zA-Z0-9][^>]*>|&lt;\/?[a-zA-Z0-9][^&]*&gt;|aria-[a-zA-Z-]+(?:="[^"]*")?|role="[^"]*"|class="[^"]*"|id="[^"]*"|data-[a-zA-Z-]+="[^"]*"|\.[a-zA-Z_-][a-zA-Z0-9_-]*|#[a-zA-Z_-][a-zA-Z0-9_-]*)/.test(part);
 
         if (isCode && part.trim()) {
           // Remove backticks from display but keep the styling
@@ -38,9 +56,19 @@ const formatTextWithCodeTags = (text: string): React.ReactElement => {
             <code key={index} className="px-1 py-0.5 bg-gray-100 text-gray-800 rounded text-sm font-mono">
               {displayText}
             </code>
-          );
-        }
-        return <span key={index}>{part}</span>;
+          );        }
+        
+        // Handle line breaks in regular text
+        return (
+          <span key={index}>
+            {part.split('\n').map((line, lineIndex, lines) => (
+              <span key={lineIndex}>
+                {line}
+                {lineIndex < lines.length - 1 && <br />}
+              </span>
+            ))}
+          </span>
+        );
       })}
     </>
   );

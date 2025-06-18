@@ -622,26 +622,34 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
       console.error('Failed to generate axe recommendations:', error);
       return new Map();
     }  }
-
   /**
    * Build prompt for axe violation recommendations
    */
   private buildAxeRecommendationPrompt(violations: any[]): string {
-    return `You are an accessibility expert. For each axe-core violation, provide both an explanation and actionable recommendations.
+    return `You are an accessibility expert. For each axe-core violation, provide both an explanation and specific, actionable recommendations with concrete code examples.
 
 For each violation, respond in this exact format:
 
 VIOLATION_ID: [violation.id]
-EXPLANATION: [Clear explanation of why this is an accessibility problem and how it affects users with disabilities]
-RECOMMENDATION: [Specific, actionable steps to fix the issue]
+EXPLANATION: [Clear explanation of why this is an accessibility problem and how it affects users with disabilities - focus on user impact]
+RECOMMENDATION: [Specific, actionable steps to fix the issue with concrete code examples based on the actual HTML provided]
 
-IMPORTANT FORMATTING RULES:
+CRITICAL GUIDELINES FOR RECOMMENDATIONS:
+- ALWAYS examine the actual HTML provided for each violation
+- Provide SPECIFIC code corrections using the exact HTML context (e.g., if you see an input without a label, suggest the exact label text based on surrounding context)
+- For aria-label issues, suggest meaningful labels based on the element's purpose and surrounding text
+- For heading hierarchy problems, specify the exact heading level change needed (h3 to h2, etc.)
+- For form elements, suggest appropriate label associations using the actual element structure
+- When HTML context is insufficient, provide general guidance and include documentation links
+
+FORMATTING RULES:
 - Use plain text only, NO markdown formatting
-- NO asterisks (*), backticks (\`), or other markdown symbols
-- For code examples, put them after "CODE EXAMPLE:" label
-- Use simple numbered lists (1. 2. 3.)
-- Keep explanations concise but informative
-- Make recommendations actionable and specific
+- For code examples, use "BEFORE:" and "AFTER:" labels to show the fix
+- Use simple numbered lists (1. 2. 3.) for multi-step instructions
+- Put documentation links on separate lines after "See:"
+- Be very specific with code examples - show exactly what HTML/attributes to change
+
+Generate practical, implementable solutions with actual code that developers can copy and apply immediately.
 
 Violations to analyze:
 ${violations.map((v, i) => `
@@ -650,10 +658,18 @@ VIOLATION ${i + 1}:
 - Impact: ${v.impact}
 - Description: ${v.description}
 - Help: ${v.help}
-- Sample HTML: ${v.nodes?.[0]?.html || 'Not available'}
+- HTML Sample: ${v.nodes?.[0]?.html || 'Not available'}
+- Selector: ${Array.isArray(v.nodes?.[0]?.target) ? v.nodes[0].target.join(' > ') : v.nodes?.[0]?.target || 'Not available'}
+- Failure Details: ${v.nodes?.[0]?.failureSummary || 'Not available'}
 `).join('\n')}
 
-Remember: Respond with VIOLATION_ID, EXPLANATION, and RECOMMENDATION sections for each violation.`;
+Remember: 
+- Use the actual HTML context to provide SPECIFIC code suggestions
+- If you see specific text or context clues, incorporate them into your recommendations
+- For aria-label suggestions, make them descriptive and meaningful based on the element's context
+- Give concrete BEFORE/AFTER code examples
+- Make explanations user-impact focused (how this affects people with disabilities)
+- Provide implementable solutions, not just general advice`;
   }
 
   /**

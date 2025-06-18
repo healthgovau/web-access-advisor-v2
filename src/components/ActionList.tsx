@@ -79,37 +79,27 @@ const ActionList: React.FC<ActionListProps> = ({ actions, isRecording }) => {
             <div className="p-4 text-center text-sm text-gray-500">
               Recording started. Interact with the page to see actions here.
             </div>
-          )}
-          {actions.map((action: any, index: number) => (
+          )}          {actions.map((action: any, index: number) => (
             <div
               key={index}
-              className="flex items-start space-x-3 p-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
+              className="flex items-center space-x-4 p-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
             >
               <span className="text-lg flex-shrink-0">{getActionIcon(action.type)}</span>
 
-              <div className="flex-1 min-w-0 overflow-hidden">
-                <div className="text-sm font-medium text-gray-900 break-words">
+              <div className="flex-1 min-w-0 flex items-center justify-between">
+                <div className="text-sm font-medium text-gray-900 break-words flex-1 mr-4">
                   {formatActionDescription(action)}
                 </div>
 
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-gray-500 flex-shrink-0">
                   {new Date(action.timestamp).toLocaleTimeString()}
                 </div>
-
-                {action.selector && (
-                  <div className="text-xs text-gray-400 font-mono mt-1 break-all overflow-hidden">
-                    <span className="inline-block max-w-full truncate">
-                      {action.selector}
-                    </span>
-                  </div>
-                )}
               </div>
 
               <span className="text-xs text-gray-400 font-mono flex-shrink-0">
                 #{index + 1}
               </span>
-            </div>
-          ))}
+            </div>          ))}
         </div>
       )}
     </div>
