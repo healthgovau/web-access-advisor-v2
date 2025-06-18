@@ -10,6 +10,11 @@
 - ✅ **Fixed backend hanging issue** - Added proper error handling and timeouts to action execution in analyzer
 - ✅ **Enhanced action replay reliability** - Added selector validation and graceful failure handling for dynamic elements
 
+### Accessibility Features  
+- ✅ **Integrated Axe Results Display** - Added collapsible section in AnalysisResults to show automated accessibility scan findings after LLM analysis completes
+- ✅ **Styled Axe Results Component** - Created AxeResults.tsx with consistent styling, severity filtering, and detailed violation display
+- ✅ **Backend Axe Integration** - Analyzer now aggregates and returns consolidated axe violation data in API responses
+
 ### Technical Improvements
 - ✅ **Better error handling in action replay** - Actions that fail during replay (due to missing selectors) now log warnings but continue processing
 - ✅ **Timeout protection** - Added 3-second timeouts for DOM element interactions to prevent hanging

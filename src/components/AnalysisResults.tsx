@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { html as beautifyHtml } from 'js-beautify';
 import type { AnalysisResult } from '../types';
+import AxeResults from './AxeResults';
 
 interface AnalysisResultsProps {
   analysisData: AnalysisResult | null;
@@ -162,7 +163,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
       <div className="bg-white border border-gray-200 rounded-lg p-6">        {/* Gemini Analysis Results */}
         {analysisData.analysis ? (
           <div className="space-y-6">            <div className="p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 text-center">Issues Identified</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-6 text-center">Screen Reader Accessibility Issues</h3>
 
               {/* Component Issues */}
               {analysisData.analysis.components && analysisData.analysis.components.length > 0 && (<div className="mb-6">
@@ -343,10 +344,12 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
               <p className="text-blue-600 text-sm mt-2">
                 Try recording some interactions with the website before running analysis.
               </p>
-            )}
-          </div>
+            )}          </div>
         )}
-      </div>
+      </div>      {/* Automated Accessibility Scan Results */}
+      {analysisData.axeResults && (
+        <AxeResults axeResults={analysisData.axeResults} />
+      )}
     </div>
   );
 };

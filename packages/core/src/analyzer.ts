@@ -97,6 +97,7 @@ export class AccessibilityAnalyzer {
           snapshotCount: 0,
           snapshots: [],
           manifest,
+          axeResults: [],
           warnings: ['No actions were recorded - analysis skipped']
         };
       }
@@ -201,6 +202,9 @@ export class AccessibilityAnalyzer {
       // Generate final report
       onProgress?.('generating-report', 'Generating final accessibility report...', undefined, undefined, snapshots.length);
       
+      // Aggregate axe results from all snapshots
+      const consolidatedAxeResults = this.consolidateAxeResults(snapshots);
+      
       // Generate metadata manifest
       const manifest = await this.generateManifest(sessionId, actions, snapshots);
       await writeFile(
@@ -213,6 +217,7 @@ export class AccessibilityAnalyzer {
         snapshots,
         manifest,
         analysis: geminiAnalysis,
+        axeResults: consolidatedAxeResults,
         debug: {
           llmLogs: geminiAnalysis?.debug ? [geminiAnalysis.debug] : []
         }
@@ -225,6 +230,7 @@ export class AccessibilityAnalyzer {
         snapshotCount: 0,
         snapshots: [],
         manifest: {} as SessionManifest,
+        axeResults: [],
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
@@ -504,6 +510,54 @@ export class AccessibilityAnalyzer {
     }
     this.domChangeDetector.reset();
     this.previousHtmlState = null;
+  }
+
+  /**
+   * Consolidate axe results from all snapshots, removing duplicates
+   */
+  private consolidateAxeResults(snapshots: SnapshotData[]): any[] {
+    const violationMap = new Map<string, any>();
+
+    snapshots.forEach(snapshot => {
+      if (snapshot.axeResults && Array.isArray(snapshot.axeResults)) {
+        snapshot.axeResults.forEach(violation => {
+          if (violation && violation.id) {
+            const existingViolation = violationMap.get(violation.id);
+            
+            if (existingViolation) {
+              // Merge nodes from duplicate violations
+              const existingNodes = existingViolation.nodes || [];
+              const newNodes = violation.nodes || [];
+              
+              // Deduplicate nodes by target selector
+              const nodeMap = new Map();
+              [...existingNodes, ...newNodes].forEach(node => {
+                if (node && node.target) {
+                  const targetKey = Array.isArray(node.target) ? node.target.join('|') : String(node.target);
+                  nodeMap.set(targetKey, node);
+                }
+              });
+              
+              existingViolation.nodes = Array.from(nodeMap.values());
+            } else {
+              // First occurrence of this violation
+              violationMap.set(violation.id, {
+                ...violation,
+                nodes: violation.nodes || []
+              });
+            }
+          }
+        });
+      }
+    });
+
+    // Return consolidated violations sorted by impact
+    const impactOrder = { critical: 0, serious: 1, moderate: 2, minor: 3 };
+    return Array.from(violationMap.values()).sort((a, b) => {
+      const aOrder = impactOrder[a.impact as keyof typeof impactOrder] ?? 4;
+      const bOrder = impactOrder[b.impact as keyof typeof impactOrder] ?? 4;
+      return aOrder - bOrder;
+    });
   }
 }
 

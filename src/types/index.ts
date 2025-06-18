@@ -20,6 +20,7 @@ export interface SnapshotData {
   timestamp: string;
   html: string;
   axeContext: AxeContext;
+  axeResults?: any[];
   screenshot?: ArrayBuffer;
   files: {
     html: string;
@@ -36,6 +37,23 @@ export interface AxeContext {
   url: string;
 }
 
+export interface AxeViolation {
+  id: string;
+  impact: 'minor' | 'moderate' | 'serious' | 'critical';
+  description: string;
+  help: string;
+  helpUrl: string;
+  nodes: AxeNode[];
+  tags: string[];
+}
+
+export interface AxeNode {
+  html: string;
+  target: string[];
+  failureSummary?: string;
+  element?: any;
+}
+
 export interface AnalysisResult {
   success: boolean;
   sessionId: string;
@@ -43,6 +61,7 @@ export interface AnalysisResult {
   snapshots: SnapshotData[];
   manifest: SessionManifest;
   analysis?: GeminiAnalysis;
+  axeResults?: AxeViolation[];
   warnings?: string[];
   error?: string;
   debug?: {
