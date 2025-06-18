@@ -451,12 +451,10 @@ export async function exportAnalysisToPDF(
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
         currentY = addTextWithLinks(pdf, cleanTextForPDF(violation.description), margin, currentY, pageWidth - 2 * margin);
-        currentY += 8;
-
-        // Affected elements with better formatting
+        currentY += 8;        // Affected elements with better formatting
         if (violation.nodes && violation.nodes.length > 0) {
           pdf.setFont('helvetica', 'bold');
-          pdf.text(`AFFECTED ELEMENTS (${violation.nodes.length} total):`, margin, currentY);
+          pdf.text(`OFFENDING CODE (${violation.nodes.length} total):`, margin, currentY);
           currentY += 8;
 
           violation.nodes.slice(0, 5).forEach((node, nodeIndex) => {
@@ -480,25 +478,116 @@ export async function exportAnalysisToPDF(
             pdf.text(`... and ${violation.nodes.length - 5} more elements`, margin + 5, currentY);
             currentY += 8;
           }
-        }
-
-        // LLM-generated recommendation
+        }        // LLM-generated recommendation
         if (violation.recommendation) {
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(9);
-          pdf.text('HOW TO FIX (AI RECOMMENDATION):', margin, currentY);
+          pdf.text('RECOMMENDED:', margin, currentY);
           currentY += 5;
           
-          // Recommendation background
-          const recLines = pdf.splitTextToSize(cleanTextForPDF(violation.recommendation), pageWidth - 2 * margin - 10);
-          const recHeight = recLines.length * 4 + 6;
-          pdf.setFillColor(240, 253, 244); // Light green background
-          pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, recHeight, 'F');
+          // Parse and render recommendation with proper formatting
+          const recommendation = cleanTextForPDF(violation.recommendation);
+          const paragraphs = recommendation.split(/\n\s*\n/);
           
-          pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(9);
-          currentY = addTextWithLinks(pdf, cleanTextForPDF(violation.recommendation), margin + 5, currentY + 2, pageWidth - 2 * margin - 10);
-          currentY += 8;
+          paragraphs.forEach(paragraph => {
+            const trimmedParagraph = paragraph.trim();
+            if (!trimmedParagraph) return;
+            
+            // Check for code examples - only show code box if there's actual code content
+            if (trimmedParagraph.toLowerCase().includes('code example:')) {
+              const lines = trimmedParagraph.split('\n');
+              const codeExampleIndex = lines.findIndex(line => line.toLowerCase().includes('code example:'));
+              
+              if (codeExampleIndex !== -1) {
+                const beforeCode = lines.slice(0, codeExampleIndex).join('\n').trim();
+                const codeContent = lines.slice(codeExampleIndex + 1).join('\n').trim();
+                
+                // Add text before code if present
+                if (beforeCode) {
+                  pdf.setFont('helvetica', 'normal');
+                  pdf.setFontSize(9);
+                  currentY = addTextWithLinks(pdf, beforeCode, margin + 5, currentY, pageWidth - 2 * margin - 10);
+                  currentY += 3;
+                }
+                
+                // Only add code box if there's actual code content
+                if (codeContent) {
+                  // Code example header
+                  pdf.setFont('helvetica', 'bold');
+                  pdf.setFontSize(9);
+                  pdf.text('Code Example:', margin + 5, currentY);
+                  currentY += 5;
+                  
+                  // Code background
+                  const codeLines = pdf.splitTextToSize(codeContent, pageWidth - 2 * margin - 10);
+                  const codeHeight = codeLines.length * 3 + 6;
+                  pdf.setFillColor(248, 249, 250); // Light gray background for code
+                  pdf.rect(margin + 5, currentY - 2, pageWidth - 2 * margin - 10, codeHeight, 'F');
+                  
+                  pdf.setFont('courier', 'normal');
+                  pdf.setFontSize(8);
+                  pdf.text(codeLines, margin + 10, currentY + 2);
+                  pdf.setFont('helvetica', 'normal');
+                  currentY += codeHeight + 5;
+                }
+              }
+            }
+            // Check if this is a section heading (Testing:, etc.)
+            else if (/^Testing:/i.test(trimmedParagraph)) {
+              const headingContent = trimmedParagraph.replace(/^Testing:\s*/i, '').trim();
+              
+              pdf.setFont('helvetica', 'bold');
+              pdf.setFontSize(9);
+              pdf.text('Testing:', margin + 5, currentY);
+              currentY += 4;
+              
+              if (headingContent) {
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(9);
+                currentY = addTextWithLinks(pdf, headingContent, margin + 5, currentY, pageWidth - 2 * margin - 10);
+                currentY += 3;
+              }
+            }
+            // Handle numbered lists with bold numbers
+            else if (/^\d+\./.test(trimmedParagraph)) {
+              const numberedItems = trimmedParagraph.split(/(?=\d+\.)/);
+              
+              numberedItems.forEach(item => {
+                const trimmedItem = item.trim();
+                if (!trimmedItem) return;
+                
+                const match = trimmedItem.match(/^(\d+\.)(.*)$/s);
+                if (match) {
+                  const [, number, content] = match;
+                  
+                  // Bold number
+                  pdf.setFont('helvetica', 'bold');
+                  pdf.setFontSize(9);
+                  pdf.text(number, margin + 5, currentY);
+                  
+                  // Regular content
+                  pdf.setFont('helvetica', 'normal');
+                  const numberWidth = pdf.getTextWidth(number + ' ');
+                  currentY = addTextWithLinks(pdf, content.trim(), margin + 5 + numberWidth, currentY, pageWidth - 2 * margin - 10 - numberWidth);
+                  currentY += 3;
+                } else {
+                  pdf.setFont('helvetica', 'normal');
+                  pdf.setFontSize(9);
+                  currentY = addTextWithLinks(pdf, trimmedItem, margin + 5, currentY, pageWidth - 2 * margin - 10);
+                  currentY += 3;
+                }
+              });
+            }
+            // Regular paragraph
+            else {
+              pdf.setFont('helvetica', 'normal');
+              pdf.setFontSize(9);
+              currentY = addTextWithLinks(pdf, trimmedParagraph, margin + 5, currentY, pageWidth - 2 * margin - 10);
+              currentY += 3;
+            }
+          });
+          
+          currentY += 5;
         }
 
         currentY = addSectionDivider(pdf, currentY, margin, pageWidth);

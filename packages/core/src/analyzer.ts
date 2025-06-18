@@ -561,9 +561,10 @@ export class AccessibilityAnalyzer {
         
         // Add recommendations to violations
         violations.forEach(violation => {
-          const recommendation = recommendations.get(violation.id);
-          if (recommendation) {
-            violation.recommendation = recommendation;
+          const result = recommendations.get(violation.id);
+          if (result) {
+            violation.explanation = result.explanation;
+            violation.recommendation = result.recommendation;
           }
         });
         

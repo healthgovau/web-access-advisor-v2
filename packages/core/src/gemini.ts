@@ -577,18 +577,17 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
       recommendations,
       score: scoreMatch ? parseInt(scoreMatch[1]) : 50
     };  }
-
   /**
-   * Generate actionable recommendations for specific axe violations
+   * Generate explanations and actionable recommendations for specific axe violations
    */
-  async generateAxeRecommendations(violations: any[]): Promise<Map<string, string>> {
+  async generateAxeRecommendations(violations: any[]): Promise<Map<string, { explanation: string; recommendation: string }>> {
     if (!violations || violations.length === 0) {
       return new Map();
     }
 
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
-      const recommendations = new Map<string, string>();
+      const results = new Map<string, { explanation: string; recommendation: string }>();
 
       // Process violations in batches to avoid token limits
       const batchSize = 3;
@@ -602,37 +601,47 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
           const response = await result.response;
           const text = response.text();
           
-          // Parse the response to extract recommendations
+          // Parse the response to extract explanations and recommendations
           const parsed = this.parseAxeRecommendations(text, batch);
-          parsed.forEach((rec, id) => recommendations.set(id, rec));
+          parsed.forEach((data, id) => results.set(id, data));
           
         } catch (error) {
           console.warn(`Failed to generate recommendations for batch starting at ${i}:`, error);
           // Add fallback recommendations
           batch.forEach(violation => {
-            recommendations.set(violation.id, `Review and fix: ${violation.help}`);
+            results.set(violation.id, {
+              explanation: `This violation occurs when ${violation.description.toLowerCase()}`,
+              recommendation: `Review and fix: ${violation.help}`
+            });
           });
         }
       }
 
-      return recommendations;
+      return results;
     } catch (error) {
       console.error('Failed to generate axe recommendations:', error);
       return new Map();
-    }
-  }
+    }  }
 
   /**
    * Build prompt for axe violation recommendations
    */
   private buildAxeRecommendationPrompt(violations: any[]): string {
-    return `You are an accessibility expert. Generate specific, actionable recommendations for fixing these axe-core violations.
+    return `You are an accessibility expert. For each axe-core violation, provide both an explanation and actionable recommendations.
 
-For each violation, provide:
-1. A clear explanation of what's wrong
-2. Specific steps to fix it
-3. Code examples if relevant
-4. Testing instructions
+For each violation, respond in this exact format:
+
+VIOLATION_ID: [violation.id]
+EXPLANATION: [Clear explanation of why this is an accessibility problem and how it affects users with disabilities]
+RECOMMENDATION: [Specific, actionable steps to fix the issue]
+
+IMPORTANT FORMATTING RULES:
+- Use plain text only, NO markdown formatting
+- NO asterisks (*), backticks (\`), or other markdown symbols
+- For code examples, put them after "CODE EXAMPLE:" label
+- Use simple numbered lists (1. 2. 3.)
+- Keep explanations concise but informative
+- Make recommendations actionable and specific
 
 Violations to analyze:
 ${violations.map((v, i) => `
@@ -644,49 +653,132 @@ VIOLATION ${i + 1}:
 - Sample HTML: ${v.nodes?.[0]?.html || 'Not available'}
 `).join('\n')}
 
-Format your response as:
-VIOLATION_ID: [violation-id]
-RECOMMENDATION: [specific actionable steps]
-
-VIOLATION_ID: [next-violation-id]  
-RECOMMENDATION: [specific actionable steps]
-
-Focus on practical, implementable solutions that developers can apply immediately.`;
+Remember: Respond with VIOLATION_ID, EXPLANATION, and RECOMMENDATION sections for each violation.`;
   }
 
   /**
-   * Parse axe recommendations from LLM response
+   * Parse axe recommendations from LLM response and clean up formatting
    */
-  private parseAxeRecommendations(text: string, violations: any[]): Map<string, string> {
-    const recommendations = new Map<string, string>();
+  private parseAxeRecommendations(text: string, violations: any[]): Map<string, { explanation: string; recommendation: string }> {
+    const results = new Map<string, { explanation: string; recommendation: string }>();
+    
+    // Clean up the response text first
+    const cleanText = this.cleanMarkdownFromText(text);
     
     // Try to parse structured format
-    const violationBlocks = text.split(/VIOLATION_ID:\s*/i);
+    const violationBlocks = cleanText.split(/VIOLATION_ID:\s*/i);
     
     violationBlocks.forEach(block => {
       const lines = block.trim().split('\n');
       if (lines.length >= 2) {
         const idLine = lines[0].trim();
+        const explanationIndex = lines.findIndex(line => line.toLowerCase().includes('explanation:'));
         const recIndex = lines.findIndex(line => line.toLowerCase().includes('recommendation:'));
         
-        if (recIndex >= 0) {
-          const recommendation = lines.slice(recIndex + 1).join('\n').trim();
+        if (explanationIndex >= 0 && recIndex >= 0) {
+          const explanationLines = lines.slice(explanationIndex + 1, recIndex);
+          const recommendationLines = lines.slice(recIndex + 1);
+          
+          const explanation = this.formatRecommendationContent(explanationLines);
+          const recommendation = this.formatRecommendationContent(recommendationLines);
+          
           // Find matching violation
           const violation = violations.find(v => idLine.includes(v.id));
-          if (violation && recommendation) {
-            recommendations.set(violation.id, recommendation);
+          if (violation && explanation && recommendation) {
+            results.set(violation.id, { explanation, recommendation });
           }
         }
       }
     });
     
-    // Fallback: if parsing failed, generate basic recommendations
-    if (recommendations.size === 0) {
+    // Fallback: if parsing failed, generate basic explanations and recommendations
+    if (results.size === 0) {
       violations.forEach(violation => {
-        recommendations.set(violation.id, `Fix accessibility issue: ${violation.help}. See: ${violation.helpUrl}`);
+        results.set(violation.id, {
+          explanation: `This violation occurs when ${violation.description.toLowerCase()}. This affects accessibility because it prevents users with disabilities from properly accessing or understanding the content.`,
+          recommendation: `Fix accessibility issue: ${violation.help}. See: ${violation.helpUrl}`
+        });
       });
     }
     
-    return recommendations;
+    return results;
+  }
+
+  /**
+   * Clean markdown formatting from text
+   */
+  private cleanMarkdownFromText(text: string): string {
+    return text
+      // Remove markdown bold/italic
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/_([^_]+)_/g, '$1')
+      // Remove markdown headers
+      .replace(/#{1,6}\s+/g, '')
+      // Clean up backticks but preserve code blocks
+      .replace(/`([^`]+)`/g, '$1')
+      // Remove extra whitespace
+      .replace(/\n\s*\n/g, '\n\n')
+      .trim();
+  }
+
+  /**
+   * Format recommendation content with proper structure
+   */
+  private formatRecommendationContent(contentLines: string[]): string {
+    const result: string[] = [];
+    let inCodeBlock = false;
+    let codeLines: string[] = [];
+    
+    for (const line of contentLines) {
+      const trimmedLine = line.trim();
+      
+      // Check for code example section
+      if (trimmedLine.toLowerCase().includes('code example:')) {
+        if (codeLines.length > 0) {
+          result.push('\n' + codeLines.join('\n') + '\n');
+          codeLines = [];
+        }
+        result.push('\nCode Example:');
+        inCodeBlock = true;
+        continue;
+      }
+      
+      // Check for testing section
+      if (trimmedLine.toLowerCase().includes('testing:')) {
+        if (codeLines.length > 0) {
+          result.push('\n' + codeLines.join('\n') + '\n');
+          codeLines = [];
+        }
+        result.push('\nTesting:');
+        inCodeBlock = false;
+        continue;
+      }
+      
+      // Handle content based on current mode
+      if (inCodeBlock && trimmedLine && !trimmedLine.match(/^\d+\./)) {
+        // This looks like code
+        codeLines.push(trimmedLine);
+      } else {
+        // Add any pending code block
+        if (codeLines.length > 0) {
+          result.push('\n' + codeLines.join('\n') + '\n');
+          codeLines = [];
+          inCodeBlock = false;
+        }
+        
+        // Add regular content
+        if (trimmedLine) {
+          result.push(trimmedLine);
+        }
+      }
+    }
+    
+    // Add any remaining code
+    if (codeLines.length > 0) {
+      result.push('\n' + codeLines.join('\n') + '\n');
+    }
+    
+    return result.join('\n').trim();
   }
 }
