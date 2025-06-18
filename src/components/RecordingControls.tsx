@@ -13,11 +13,9 @@ interface RecordingControlsProps {
 const RecordingControls: React.FC<RecordingControlsProps> = ({ 
   isRecording, 
   onStartRecording, 
-  onStopRecording, 
   isNavigated 
 }) => {
   const canStartRecording = isNavigated && !isRecording;
-
   return (
     <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
       <div className="flex items-center justify-between">
@@ -40,22 +38,13 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
           >
             {!isNavigated ? 'Navigate to a URL first' : 'Start Recording'}
           </button>
+          
+          {!isNavigated && (
+            <p className="text-sm text-gray-500">
+              Enter a URL and navigate to the page before starting recording.
+            </p>
+          )}
         </div>
-      )}
-
-      {isRecording && (
-        <button
-          onClick={onStopRecording}
-          className="w-full px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-        >
-          Stop Recording
-        </button>
-      )}
-
-      {!isNavigated && (
-        <p className="text-sm text-gray-500">
-          Enter a URL and navigate to the page before starting recording.
-        </p>
       )}
     </div>
   );

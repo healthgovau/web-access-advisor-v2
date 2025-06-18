@@ -212,7 +212,10 @@ export class AccessibilityAnalyzer {
         snapshotCount: snapshots.length,
         snapshots,
         manifest,
-        analysis: geminiAnalysis
+        analysis: geminiAnalysis,
+        debug: {
+          llmLogs: geminiAnalysis?.debug ? [geminiAnalysis.debug] : []
+        }
       };
 
     } catch (error) {

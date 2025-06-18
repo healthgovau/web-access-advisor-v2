@@ -8,7 +8,8 @@ import type {
   AnalysisResult, 
   AnalysisOptions,
   SessionManifest,
-  SnapshotData 
+  SnapshotData,
+  LLMDebugLog 
 } from '../types';
 
 // Base API configuration
@@ -107,10 +108,52 @@ export const startAnalysis = async (
   actions: UserAction[], 
   options?: AnalysisOptions
 ): Promise<AnalysisResult> => {
-  return apiClient.post<AnalysisResult>('/api/analyze', {
+  const result = await apiClient.post<AnalysisResult>('/api/analyze', {
     actions,
-    options: options || {}
-  });
+    options: options || {}  });
+
+  // Log LLM debug information to browser console
+  console.log('🔍 DEBUG: Checking for LLM debug logs...', result.debug);
+  if (result.debug?.llmLogs) {
+    console.log('🔍 DEBUG: Found LLM logs:', result.debug.llmLogs.length);
+    result.debug.llmLogs.forEach((log: LLMDebugLog, index: number) => {
+      console.group(`🤖 LLM ${log.type.toUpperCase()} ANALYSIS LOG #${index + 1}`);
+      console.log(`📊 Timestamp: ${log.timestamp}`);
+      console.log(`📊 Prompt size: ${log.promptSize.toLocaleString()} characters`);
+      console.log(`📊 HTML content size: ${log.htmlSize.toLocaleString()} characters`);
+      console.log(`📊 Axe results count: ${log.axeResultsCount} violations`);
+      
+      // Log prompt in chunks to avoid truncation
+      console.group('🔍 FULL PROMPT SENT TO GEMINI:');
+      console.log('📋 Click to copy full prompt to clipboard:', log.prompt);
+      
+      // Break prompt into viewable chunks
+      const promptChunks = log.prompt.match(/.{1,8000}/g) || [log.prompt];
+      promptChunks.forEach((chunk, chunkIndex) => {
+        console.log(`📄 Prompt part ${chunkIndex + 1}/${promptChunks.length}:`, chunk);
+      });
+      console.groupEnd();
+        // Provide easy access to full prompt content
+      console.log('💾 Full prompt object (expand to see all):', {
+        prompt: log.prompt,
+        stats: {
+          promptSize: log.promptSize,
+          htmlSize: log.htmlSize,
+          axeResultsCount: log.axeResultsCount
+        }
+      });
+      
+      // Add global helper function for easy access to prompt
+      (window as any)[`llmPrompt${index + 1}`] = log.prompt;
+      console.log(`🔧 Global helper available:`);
+      console.log(`   - window.llmPrompt${index + 1} (access full prompt)`);
+      console.log(`   - copy(window.llmPrompt${index + 1}) (copy prompt to clipboard)`);
+      
+      console.groupEnd();
+    });
+  }
+
+  return result;
 };
 
 /**

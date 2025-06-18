@@ -19,21 +19,21 @@ interface AnalysisResultsProps {
 const formatTextWithCodeTags = (text: string): React.ReactElement => {
   // Pattern to match HTML tags (with angle brackets), backtick code, attributes, and CSS selectors
   const codePattern = /(`[^`]+`|<\/?[a-zA-Z][^>]*>|aria-[a-zA-Z-]+(?:="[^"]*")?|role="[^"]*"|class="[^"]*"|id="[^"]*"|\.[a-zA-Z_-]+|#[a-zA-Z_-]+)/g;
-  
+
   const parts = text.split(codePattern);
-  
+
   return (
     <>
       {parts.map((part, index) => {
         // Check if this part matches the code pattern (recreate regex to avoid global state)
         const isCode = /(`[^`]+`|<\/?[a-zA-Z][^>]*>|aria-[a-zA-Z-]+(?:="[^"]*")?|role="[^"]*"|class="[^"]*"|id="[^"]*"|\.[a-zA-Z_-]+|#[a-zA-Z_-]+)/.test(part);
-        
+
         if (isCode && part.trim()) {
           // Remove backticks from display but keep the styling
-          const displayText = part.startsWith('`') && part.endsWith('`') 
-            ? part.slice(1, -1) 
+          const displayText = part.startsWith('`') && part.endsWith('`')
+            ? part.slice(1, -1)
             : part;
-          
+
           return (
             <code key={index} className="px-1 py-0.5 bg-gray-100 text-gray-800 rounded text-sm font-mono">
               {displayText}
@@ -51,7 +51,7 @@ const formatTextWithCodeTags = (text: string): React.ReactElement => {
  */
 const formatHtmlCode = (html: string): string => {
   if (!html) return '';
-  
+
   try {
     return beautifyHtml(html, {
       indent_size: 2,
@@ -85,7 +85,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
     try {
       await navigator.clipboard.writeText(code);
       setCopiedStates(prev => ({ ...prev, [id]: true }));
-      
+
       // Reset the copied state after 2 seconds
       setTimeout(() => {
         setCopiedStates(prev => ({ ...prev, [id]: false }));
@@ -103,13 +103,13 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
   };
 
   // Filter components based on selected severities
-  const filteredComponents = analysisData?.analysis?.components.filter(component => 
+  const filteredComponents = analysisData?.analysis?.components.filter(component =>
     severityFilters[component.impact]
   ) || [];
 
   const handleExportPDF = async () => {
     if (!analysisData) return;
-    
+
     setIsExporting(true);
     try {
       await exportAnalysisToPDF(analysisData, resultsRef.current || undefined);
@@ -185,7 +185,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
               {analysisData.snapshotCount} snapshots analyzed • Session: {analysisData.sessionId}
             </p>
           </div>
-          
+
           {/* Export Button */}
           <button
             onClick={handleExportPDF}
@@ -201,100 +201,98 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
         {analysisData.analysis ? (
           <div className="space-y-6">
             <div className="bg-white border border-gray-200 rounded-lg p-6">              <h3 className="text-xl font-medium text-gray-900 mb-6 text-center">Issues Identified</h3>
-              
+
               {/* Component Issues */}
               {analysisData.analysis.components && analysisData.analysis.components.length > 0 && (<div className="mb-6">
-                  
-                  {/* Issue Count Summary */}                  {(() => {
-                    // Calculate counts from ALL components, not just filtered ones
-                    const counts = (analysisData.analysis?.components || []).reduce((acc, component) => {
-                      acc[component.impact] = (acc[component.impact] || 0) + 1;
-                      return acc;
-                    }, {} as Record<string, number>);
-                    
-                    // Color scheme for severity levels
-                    const getSeverityColors = (severity: string, isActive: boolean) => {
-                      const baseClasses = {
-                        critical: isActive 
-                          ? 'bg-red-50 border-red-300 text-red-800' 
-                          : 'bg-red-100 border-red-200 text-red-700 opacity-60',
-                        serious: isActive 
-                          ? 'bg-orange-50 border-orange-300 text-orange-800' 
-                          : 'bg-orange-100 border-orange-200 text-orange-700 opacity-60',
-                        moderate: isActive 
-                          ? 'bg-yellow-50 border-yellow-300 text-yellow-800' 
-                          : 'bg-yellow-100 border-yellow-200 text-yellow-700 opacity-60',
-                        minor: isActive 
-                          ? 'bg-blue-50 border-blue-300 text-blue-800' 
-                          : 'bg-blue-100 border-blue-200 text-blue-700 opacity-60'
-                      };
-                      return baseClasses[severity as keyof typeof baseClasses] || baseClasses.minor;
+
+                {/* Issue Count Summary */}                  {(() => {
+                  // Calculate counts from ALL components, not just filtered ones
+                  const counts = (analysisData.analysis?.components || []).reduce((acc, component) => {
+                    acc[component.impact] = (acc[component.impact] || 0) + 1;
+                    return acc;
+                  }, {} as Record<string, number>);
+
+                  // Color scheme for severity levels
+                  const getSeverityColors = (severity: string, isActive: boolean) => {
+                    const baseClasses = {
+                      critical: isActive
+                        ? 'bg-red-50 border-red-300 text-red-800'
+                        : 'bg-red-100 border-red-200 text-red-700 opacity-60',
+                      serious: isActive
+                        ? 'bg-orange-50 border-orange-300 text-orange-800'
+                        : 'bg-orange-100 border-orange-200 text-orange-700 opacity-60',
+                      moderate: isActive
+                        ? 'bg-yellow-50 border-yellow-300 text-yellow-800'
+                        : 'bg-yellow-100 border-yellow-200 text-yellow-700 opacity-60',
+                      minor: isActive
+                        ? 'bg-blue-50 border-blue-300 text-blue-800'
+                        : 'bg-blue-100 border-blue-200 text-blue-700 opacity-60'
                     };
-                        return (
-                      <>
-                        <div className="w-full flex justify-center mb-4">
-                          <div className="inline-grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {['critical', 'serious', 'moderate', 'minor'].map(impact => (                              <button
-                                key={impact}
-                                onClick={() => handleSeverityFilterChange(impact, !severityFilters[impact])}
-                                className={`relative text-center p-3 border rounded-lg transition-all hover:scale-105 ${getSeverityColors(impact, severityFilters[impact])}`}
-                                title={`${severityFilters[impact] ? 'Hide' : 'Show'} ${impact} issues`}
-                              >                                {/* Checkbox in top-right corner */}
-                                <div className="absolute top-1 right-1">
-                                  <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                                    severityFilters[impact]
-                                      ? impact === 'critical' ? 'bg-white border-red-300' :
-                                        impact === 'serious' ? 'bg-white border-orange-300' :
-                                        impact === 'moderate' ? 'bg-white border-yellow-300' :
+                    return baseClasses[severity as keyof typeof baseClasses] || baseClasses.minor;
+                  };
+                  return (
+                    <>
+                      <div className="w-full flex justify-center mb-4">
+                        <div className="inline-grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {['critical', 'serious', 'moderate', 'minor'].map(impact => (<button
+                            key={impact}
+                            onClick={() => handleSeverityFilterChange(impact, !severityFilters[impact])}
+                            className={`relative text-center p-3 border rounded-lg transition-all hover:scale-105 ${getSeverityColors(impact, severityFilters[impact])}`}
+                            title={`${severityFilters[impact] ? 'Hide' : 'Show'} ${impact} issues`}
+                          >                                {/* Checkbox in top-right corner */}
+                            <div className="absolute top-1 right-1">
+                              <div className={`w-4 h-4 rounded border flex items-center justify-center ${severityFilters[impact]
+                                  ? impact === 'critical' ? 'bg-white border-red-300' :
+                                    impact === 'serious' ? 'bg-white border-orange-300' :
+                                      impact === 'moderate' ? 'bg-white border-yellow-300' :
                                         'bg-white border-blue-300'
-                                      : 'bg-white border-gray-300'
-                                  }`}>
-                                    {severityFilters[impact] && (
-                                      <svg className="w-2.5 h-2.5 text-black" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                      </svg>
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                <div className="text-lg font-bold text-gray-900">{counts[impact] || 0}</div>
-                                <div className="text-xs font-medium text-gray-600 uppercase">{impact}</div>
-                              </button>
-                            ))}                          </div>
-                        </div>
-                        <p className="text-xs text-gray-500 text-center mb-10">Click boxes above to toggle filter</p>
-                      </>
-                    );
-                  })()}
-                  <div className="space-y-4">
-                    {filteredComponents.length > 0 ? (
-                      filteredComponents.map((component, index) => (                      <div key={index} className="bg-white border border-gray-300 rounded-lg overflow-hidden">                        {/* Header Section with Subtle Background */}
-                        <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ml-4 ${
-                              component.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                  : 'bg-white border-gray-300'
+                                }`}>
+                                {severityFilters[impact] && (
+                                  <svg className="w-2.5 h-2.5 text-black" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="text-lg font-bold text-gray-900">{counts[impact] || 0}</div>
+                            <div className="text-xs font-medium text-gray-600 uppercase">{impact}</div>
+                          </button>
+                          ))}                          </div>
+                      </div>
+                      <p className="text-xs text-gray-500 text-center mb-10">Click boxes above to toggle filter</p>
+                    </>
+                  );
+                })()}
+                <div className="space-y-4">
+                  {filteredComponents.length > 0 ? (
+                    filteredComponents.map((component, index) => (<div key={index} className="bg-white border border-gray-300 rounded-lg overflow-hidden">                        {/* Header Section with Subtle Background */}
+                      <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full ml-4 ${component.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
                               component.impact === 'serious' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
-                              component.impact === 'moderate' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
-                              'bg-blue-100 text-blue-800 border border-blue-300'
+                                component.impact === 'moderate' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
+                                  'bg-blue-100 text-blue-800 border border-blue-300'
                             }`}>
-                              {component.impact.toUpperCase()} IMPACT
-                            </span>                          </div>
-                          <p className="text-sm text-gray-500 text-left">
-                            URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{analysisData.manifest?.url || 'Unknown'}</code>
-                          </p>
-                        </div>
-                        
-                        {/* Content Section */}
-                        <div className="p-4">
-                          <div className="space-y-6 text-left">
+                            {component.impact.toUpperCase()} IMPACT
+                          </span>                          </div>
+                        <p className="text-sm text-gray-500 text-left">
+                          URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{analysisData.manifest?.url || 'Unknown'}</code>
+                        </p>
+                      </div>
+
+                      {/* Content Section */}
+                      <div className="p-4">
+                        <div className="space-y-6 text-left">
                           <div>
                             <span className="text-base font-medium text-gray-700">Issue: </span>
                             <div className="text-base text-gray-600 mt-1" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                               {formatTextWithCodeTags(component.issue)}
                             </div>
                           </div>
-                            <div>
+                          <div>
                             <span className="text-base font-medium text-gray-700">Explanation:</span>
                             <div className="text-base text-gray-600 mt-2" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                               {formatTextWithCodeTags(component.explanation)}
@@ -307,20 +305,20 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                               </pre>
                             </div>
                           )}
-                            {component.correctedCode && (
+                          {component.correctedCode && (
                             <div>                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-base font-medium text-gray-700">Recommended:</span>
-                                <button
-                                  onClick={() => handleCopyCode(component.correctedCode, `recommended-${index}`)}
-                                  className="flex items-center space-x-1 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded border border-green-300 transition-colors"
-                                  title="Copy recommended code"
-                                >
-                                  <span className="text-xs">
-                                    {copiedStates[`recommended-${index}`] ? '✓' : '📋'}
-                                  </span>
-                                  <span>{copiedStates[`recommended-${index}`] ? 'Copied!' : 'Copy'}</span>
-                                </button>
-                              </div>
+                              <span className="text-base font-medium text-gray-700">Recommended:</span>
+                              <button
+                                onClick={() => handleCopyCode(component.correctedCode, `recommended-${index}`)}
+                                className="flex items-center space-x-1 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded border border-green-300 transition-colors"
+                                title="Copy recommended code"
+                              >
+                                <span className="text-xs">
+                                  {copiedStates[`recommended-${index}`] ? '✓' : '📋'}
+                                </span>
+                                <span>{copiedStates[`recommended-${index}`] ? 'Copied!' : 'Copy'}</span>
+                              </button>
+                            </div>
                               <div className="text-base text-gray-600 block mt-2" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                                 {formatTextWithCodeTags(component.codeChangeSummary)}
                               </div>
@@ -328,16 +326,12 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                                 <code>{formatHtmlCode(component.correctedCode)}</code>
                               </pre>
                             </div>
-                          )}                          {component.wcagRule && (
+                          )}
+                          {component.wcagRule && (
                             <div>
                               <span className="text-base font-medium text-gray-700">WCAG Guideline: </span>
-                              <a 
+                              <a
                                 href={(() => {
-                                  console.log('🔗 WCAG Link Debug:', {
-                                    wcagRule: component.wcagRule,
-                                    wcagUrl: component.wcagUrl,
-                                    finalUrl: component.wcagUrl || 'https://www.w3.org/WAI/WCAG21/Understanding/'
-                                  });
                                   return component.wcagUrl || 'https://www.w3.org/WAI/WCAG21/Understanding/';
                                 })()}
                                 target="_blank"
@@ -348,21 +342,21 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                                 {component.wcagRule}                              </a>
                             </div>
                           )}
-                          </div>
                         </div>
                       </div>
+                    </div>
                     ))
-                    ) : (
-                      <div className="text-center py-8">
-                        <span className="text-gray-400 text-4xl">🔍</span>
-                        <h5 className="text-gray-600 font-medium mt-2">No Issues Match Current Filter</h5>
-                        <p className="text-gray-500 text-sm mt-1">
-                          Try adjusting your severity filter selections above.
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <span className="text-gray-400 text-4xl">🔍</span>
+                      <h5 className="text-gray-600 font-medium mt-2">No Issues Match Current Filter</h5>
+                      <p className="text-gray-500 text-sm mt-1">
+                        Try adjusting your severity filter selections above.
+                      </p>
+                    </div>
+                  )}
                 </div>
+              </div>
               )}
             </div>
           </div>

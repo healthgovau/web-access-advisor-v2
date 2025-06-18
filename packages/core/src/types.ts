@@ -104,6 +104,20 @@ export interface AnalysisResult {
   analysis?: GeminiAnalysis;
   warnings?: string[];
   error?: string;
+  debug?: {
+    llmLogs?: LLMDebugLog[];
+  };
+}
+
+export interface LLMDebugLog {
+  type: 'component' | 'flow';
+  prompt: string;
+  response: string;
+  promptSize: number;
+  responseSize: number;
+  htmlSize: number;
+  axeResultsCount: number;
+  timestamp: string;
 }
 
 export interface GeminiAnalysis {
@@ -111,6 +125,7 @@ export interface GeminiAnalysis {
   components: ComponentAccessibilityIssue[];
   recommendations: string[];
   score: number;
+  debug?: LLMDebugLog;
 }
 
 export interface ComponentAccessibilityIssue {

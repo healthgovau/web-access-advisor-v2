@@ -4,7 +4,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { GeminiAnalysis, ComponentAccessibilityIssue } from './types.js';
+import type { GeminiAnalysis, ComponentAccessibilityIssue, LLMDebugLog } from './types.js';
 
 export class GeminiService {
   private genAI: GoogleGenerativeAI;
@@ -31,8 +31,7 @@ export class GeminiService {
       domChangeType?: string;
     },
     previousHtml?: string
-  ): Promise<GeminiAnalysis> {
-    try {
+  ): Promise<GeminiAnalysis> {    try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
 
       const prompt = this.buildComponentAnalysisPrompt(htmlContent, axeResults, context, previousHtml);
@@ -47,7 +46,24 @@ export class GeminiService {
       const response = await result.response;
       const text = response.text();
 
-      return this.parseGeminiResponse(text, context);
+      // Create debug log
+      const debugLog: LLMDebugLog = {
+        type: 'component',
+        prompt,
+        response: text,
+        promptSize: prompt.length,
+        responseSize: text.length,
+        htmlSize: htmlContent.length,
+        axeResultsCount: axeResults.length,
+        timestamp: new Date().toISOString()
+      };
+
+      const analysisResult = this.parseGeminiResponse(text, context);
+      
+      // Attach debug info to the result
+      analysisResult.debug = debugLog;
+      
+      return analysisResult;
     } catch (error) {
       console.error('Gemini API error:', error);
       throw new Error(`Gemini analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -70,8 +86,7 @@ export class GeminiService {
       sessionId: string;
       totalSteps: number;
     }
-  ): Promise<GeminiAnalysis> {
-    try {
+  ): Promise<GeminiAnalysis> {    try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
 
       const prompt = this.buildFlowAnalysisPrompt(snapshots, manifest, context);
@@ -84,7 +99,26 @@ export class GeminiService {
 
       const result = await Promise.race([geminiPromise, timeoutPromise]);
       const response = await result.response;
-      const text = response.text();      return this.parseGeminiResponse(text, { step: context.totalSteps });
+      const text = response.text();
+
+      // Create debug log
+      const debugLog: LLMDebugLog = {
+        type: 'flow',
+        prompt,
+        response: text,
+        promptSize: prompt.length,
+        responseSize: text.length,
+        htmlSize: snapshots.reduce((total, snap) => total + snap.html.length, 0),
+        axeResultsCount: snapshots.reduce((total, snap) => total + (snap.axeResults?.length || 0), 0),
+        timestamp: new Date().toISOString()
+      };
+
+      const analysisResult = this.parseGeminiResponse(text, { step: context.totalSteps });
+      
+      // Attach debug info to the result
+      analysisResult.debug = debugLog;
+      
+      return analysisResult;
 
     } catch (error) {
       if (error instanceof Error) {
@@ -374,19 +408,27 @@ Focus on actionable issues that can be addressed by developers, prioritizing cri
     });
 
     return groups;
-  }
-  /**
+  }  /**
    * Truncates HTML content for analysis while preserving important accessibility attributes
    */
   private truncateHtml(html: string): string {
     // Configurable HTML size limit via environment variable (default 1MB)
     const maxLength = parseInt(process.env.GEMINI_HTML_MAX_SIZE || '1048576'); // 1MB default
-    if (html.length <= maxLength) return html;
+    
+    if (html.length <= maxLength) {
+      console.log(`📊 HTML size: ${html.length} chars (under ${maxLength} limit, no truncation)`);
+      return html;
+    }
 
+    console.log(`⚠️ HTML size: ${html.length} chars (exceeds ${maxLength} limit, truncating...)`);
+    
     // Try to truncate at element boundaries
     const truncated = html.substring(0, maxLength);
     const lastTag = truncated.lastIndexOf('<');
-    return lastTag > maxLength - 1000 ? truncated.substring(0, lastTag) : truncated;
+    const result = lastTag > maxLength - 1000 ? truncated.substring(0, lastTag) : truncated;
+    
+    console.log(`📊 HTML truncated to: ${result.length} chars`);
+    return result;
   }
   /**
    * Parses Gemini response into structured component-based format

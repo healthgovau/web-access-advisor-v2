@@ -45,6 +45,9 @@ export interface AnalysisResult {
   analysis?: GeminiAnalysis;
   warnings?: string[];
   error?: string;
+  debug?: {
+    llmLogs?: LLMDebugLog[];
+  };
 }
 
 export interface SessionManifest {
@@ -192,4 +195,15 @@ export interface AnalysisResultsProps extends ComponentProps {
   results: AnalysisResult | null;
   loading: boolean;
   error: string | null;
+}
+
+export interface LLMDebugLog {
+  type: 'component' | 'flow';
+  prompt: string;
+  response: string;
+  promptSize: number;
+  responseSize: number;
+  htmlSize: number;
+  axeResultsCount: number;
+  timestamp: string;
 }

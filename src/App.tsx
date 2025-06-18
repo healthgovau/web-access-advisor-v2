@@ -6,7 +6,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { QueryProvider } from './services/queryClient';
 import URLInput from './components/URLInput';
-import RecordingControls from './components/RecordingControls';
 import ActionList from './components/ActionList';
 import ThreePhaseStatus from './components/ThreePhaseStatus';
 import AnalysisResults from './components/AnalysisResults';
@@ -121,7 +120,6 @@ function App() {
         loading: false
       });
 
-      console.log(`Recording stopped. Captured ${state.actions.length} actions`);
     } catch (error) {
       updateProgress('error', 'Failed to stop recording', undefined, undefined, error instanceof Error ? error.message : 'Unknown error');
       updateState({
@@ -137,17 +135,18 @@ function App() {
       updateState({
         mode: 'analyzing',
         loading: true,
-        error: undefined      }); updateProgress('preparing-analysis', 'Initializing accessibility analysis');
+        error: undefined
+      }); updateProgress('preparing-analysis', 'Initializing accessibility analysis');
 
       if (state.actions.length === 0) {
         throw new Error('No actions to analyze');
-      } console.log(`Starting analysis of ${state.actions.length} actions`);
+      }
 
       updateProgress('replaying-actions', 'Replaying actions in headless browser');
-      
+
       // Brief delay to show the replaying phase
-      await new Promise(resolve => setTimeout(resolve, 800));      updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
-        // Start the analysis
+      await new Promise(resolve => setTimeout(resolve, 800)); updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
+      // Start the analysis
       const response = await recordingApi.analyzeSession(state.sessionId);
 
       if (response.status === 'completed' && response.result) {
@@ -163,31 +162,27 @@ function App() {
         // Poll for analysis completion - backend is now processing
         const pollAnalysis = async () => {
           try {
-            const statusResponse = await recordingApi.getAnalysisStatus(response.analysisId);            console.log(`Polling analysis status:`, {
-              status: statusResponse.status,
-              phase: statusResponse.phase,
-              message: statusResponse.message,
-              snapshotCount: statusResponse.snapshotCount
-            });            // Use backend-provided phase information directly
+            const statusResponse = await recordingApi.getAnalysisStatus(response.analysisId);
+           
             if (statusResponse.phase && statusResponse.message) {
               // Map backend phases to frontend progress stages
               const stageMapping: Record<string, ProgressStage> = {
                 'replaying-actions': 'replaying-actions',
-                'capturing-snapshots': 'capturing-snapshots', 
+                'capturing-snapshots': 'capturing-snapshots',
                 'running-accessibility-checks': 'running-accessibility-checks',
                 'processing-with-ai': 'processing-with-ai',
                 'generating-report': 'generating-report',
                 'completed': 'completed'
               };
-              
+
               const frontendStage = stageMapping[statusResponse.phase] || statusResponse.phase as ProgressStage;
-              
+
               // Update progress with real-time snapshot count
-              console.log(`Updating progress: stage=${frontendStage}, snapshotCount=${statusResponse.snapshotCount}`);
+              
               updateProgress(frontendStage, statusResponse.message, undefined, undefined, undefined, statusResponse.snapshotCount);
-            }if (statusResponse.status === 'completed' && statusResponse.result) {
+            } if (statusResponse.status === 'completed' && statusResponse.result) {
               // Analysis complete - handle result
-              console.log('Analysis completed, handling result');
+              
               const resultHandler = handleAnalysisResult(statusResponse.result);
               updateProgress(resultHandler.stage, resultHandler.message, undefined, resultHandler.details, undefined, statusResponse.result.snapshotCount);
 
@@ -209,7 +204,7 @@ function App() {
               });
               return; // Stop polling
             }
-            
+
             // Analysis still in progress - continue polling
             setTimeout(pollAnalysis, 2000);
           } catch (error) {
@@ -281,7 +276,7 @@ function App() {
     };
   }, []);  // Update progress helper
   const updateProgress = (stage: ProgressStage, message: string, progress?: number, details?: string, error?: string, snapshotCount?: number) => {
-    console.log(`📊 UpdateProgress called: stage=${stage}, snapshotCount=${snapshotCount}`);
+    
     setState(prev => ({
       ...prev,
       progress: { stage, message, progress, details, error, snapshotCount }
@@ -312,9 +307,6 @@ function App() {
             {/* URL Input - Always visible at top */}
             {state.mode === 'setup' && (
               <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-medium text-gray-900 mb-6">
-                  Website to Test
-                </h2>
                 <URLInput
                   url={state.url}
                   onUrlChange={handleUrlChange}
@@ -329,7 +321,6 @@ function App() {
               actionCount={state.actions.length}
               snapshotCount={(() => {
                 const snapshotCount = state.progress.snapshotCount || state.analysisResult?.snapshotCount || 0;
-                console.log(`🎯 Rendering ThreePhaseStatus: progressSnapshotCount=${state.progress.snapshotCount}, resultSnapshotCount=${state.analysisResult?.snapshotCount}, final=${snapshotCount}`);
                 return snapshotCount;
               })()}
               warnings={state.analysisResult?.warnings || []}
@@ -341,18 +332,18 @@ function App() {
 
             {/* Recording Mode */}
             {state.mode === 'recording' && (
-              <>
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    Recording Session
-                  </h2>                  <RecordingControls
-                    isRecording={true}
-                    onStartRecording={handleNavigateAndRecord}
-                    onStopRecording={handleStopRecording}
-                    hasActions={state.actions.length > 0}
-                    isNavigated={true}
-                  />
-                  <div className="mt-4 text-sm text-gray-600">
+              <>                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-medium text-gray-900">
+                      Recording Session
+                    </h2>                    <button
+                      onClick={handleStopRecording}
+                      className="flex items-center space-x-2 px-4 py-2 bg-red-700 text-white text-sm font-medium rounded-md hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
+                    >
+                      <span>Stop Recording</span>
+                      <div className="w-3 h-3 bg-white rounded-full"></div>
+                    </button>
+                  </div>                  <div className="text-sm text-gray-600 text-left">
                     Currently recording actions on: <span className="font-medium">{state.url}</span>
                   </div>
                 </div>

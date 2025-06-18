@@ -30,8 +30,6 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
 }) => {
     // Determine phase statuses based on current stage
   const getPhaseStatuses = (): PhaseStatus[] => {
-    // Debug log to help track stage transitions
-    console.log('ThreePhaseStatus - Current stage:', currentStage);
     
     const phases: PhaseStatus[] = [
       {
@@ -192,7 +190,7 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
   };
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <h3 className="text-lg font-medium text-gray-900 mb-3">Analysis Progress</h3>
+      <h3 className="text-lg font-medium text-gray-900 mb-3">Progress</h3>
       
       {/* Compact horizontal layout */}
       <div className="grid grid-cols-3 gap-3 mb-3">
@@ -209,18 +207,15 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
                     getStatusIcon(phase.status, phase.phase)
                   )}
                 </span>
-              </div>
-              
-              <div className="text-center">
-                <h4 className="text-sm font-medium uppercase tracking-wide">
+              </div>              <div className="text-center">
+                <h4 className="text-base font-medium uppercase tracking-wide mb-2">
                   {phase.phase === 'ai' ? 'AI Analysis' : phase.phase}
                 </h4>
               </div>
-            </div>            
-            <p className="text-xs opacity-90 mb-1 text-center">{phase.message}</p>
+            </div>            <p className="text-sm text-center mb-2">{phase.message}</p>
             
             {phase.details && (
-              <p className="text-xs opacity-75 text-center">{phase.details}</p>
+              <p className="text-xs text-center font-normal">{phase.details}</p>
             )}
             
             {phase.error && (
