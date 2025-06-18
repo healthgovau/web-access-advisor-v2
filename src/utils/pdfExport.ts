@@ -6,6 +6,49 @@ import jsPDF from 'jspdf';
 import type { AnalysisResult } from '../types';
 
 /**
+ * Clean text for PDF output - remove HTML entities and special characters
+ */
+function cleanTextForPDF(text: string): string {
+  if (!text) return '';
+  
+  return text
+    // Decode common HTML entities first
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')    // Decode numeric HTML entities
+    .replace(/&#(\d+);/g, (_, num) => {
+      const code = parseInt(num, 10);
+      // Only allow safe ASCII characters
+      return (code >= 32 && code <= 126) ? String.fromCharCode(code) : '';
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+      const code = parseInt(hex, 16);
+      // Only allow safe ASCII characters
+      return (code >= 32 && code <= 126) ? String.fromCharCode(code) : '';
+    })
+    // Remove any HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Replace smart quotes and special punctuation
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/[\u2026]/g, '...')
+    .replace(/[\u00A0]/g, ' ') // Non-breaking space
+    // Remove control characters and non-printable characters
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+    // Remove all Unicode characters above basic Latin + Latin-1 supplement
+    // This is more restrictive but prevents encoding issues
+    .replace(/[^\u0020-\u007E\u00A1-\u00FF]/g, '')
+    // Clean up multiple spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Add a styled header with background color
  */
 function addStyledHeader(pdf: jsPDF, text: string, y: number, margin: number, pageWidth: number, size: number = 16): number {
@@ -103,8 +146,7 @@ function addSummaryTable(pdf: jsPDF, counts: Record<string, number>, title: stri
  * Generate comprehensive PDF from analysis results
  */
 export async function exportAnalysisToPDF(
-  analysisData: AnalysisResult,
-  elementToCapture?: HTMLElement
+  analysisData: AnalysisResult
 ): Promise<void> {
   try {
     const pdf = new jsPDF('p', 'mm', 'a4');
@@ -131,10 +173,9 @@ export async function exportAnalysisToPDF(
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(11);
     pdf.setTextColor(0, 0, 0);
-    
-    const metadata = [
-      `Session ID: ${analysisData.sessionId}`,
-      `Website URL: ${analysisData.manifest?.url || 'Not specified'}`,
+      const metadata = [
+      `Session ID: ${cleanTextForPDF(analysisData.sessionId)}`,
+      `Website URL: ${cleanTextForPDF(analysisData.manifest?.url || 'Not specified')}`,
       `Generated: ${new Date().toLocaleString()}`,
       `Snapshots Analyzed: ${analysisData.snapshotCount}`,
       `Total Issues Found: ${(analysisData.analysis?.components?.length || 0) + (analysisData.axeResults?.length || 0)}`

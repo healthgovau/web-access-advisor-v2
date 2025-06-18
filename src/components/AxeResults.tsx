@@ -68,30 +68,22 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
       </details>
     );
   }
-
-  return (    <details className="mt-6 border-t border-gray-200 pt-6" open={isExpanded}>
-      <summary 
-        className="cursor-pointer flex items-center justify-center"
-        onClick={(e) => {
-          e.preventDefault();
-          setIsExpanded(!isExpanded);
-        }}
-      >
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-6">      <div className="flex items-center justify-center p-4 border-b border-gray-200 relative">
         <h4 className="text-lg font-medium text-gray-900 text-center">
-          Axe Accessibility Issues
+          Axe Accessibility Issues ({axeResults.length})
         </h4>
-        <div className="flex items-center space-x-3 ml-4">
-          <span className="text-sm text-gray-600">
-            {axeResults.length} issue{axeResults.length !== 1 ? 's' : ''} found
-          </span>
-          <span className="text-gray-400">
-            {isExpanded ? '▼' : '▶'}
-          </span>
-        </div>
-      </summary>
+        
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="text-sm text-gray-500 hover:text-gray-700 underline absolute right-4"
+        >
+          {isExpanded ? 'Collapse' : 'Expand'}
+        </button>
+      </div>
 
       {isExpanded && (
-        <div className="mt-4 space-y-6">
+        <div className="p-4 space-y-6">
           {/* Issue Count Summary - matching main analysis section styling */}
           {(() => {
             // Calculate counts from ALL violations, not just filtered ones
@@ -253,14 +245,13 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                 <span className="text-gray-400 text-4xl">🔍</span>
                 <h5 className="text-gray-600 font-medium mt-2">No Issues Match Current Filter</h5>
                 <p className="text-gray-500 text-sm mt-1">
-                  Try adjusting your severity filter selections above.
-                </p>
+                  Try adjusting your severity filter selections above.                </p>
               </div>
             )}
           </div>
         </div>
       )}
-    </details>
+    </div>
   );
 };
 

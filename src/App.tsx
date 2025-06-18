@@ -44,7 +44,7 @@ function App() {
 
     setIsExporting(true);
     try {
-      await exportAnalysisToPDF(state.analysisResult, analysisResultsRef.current || undefined);
+      await exportAnalysisToPDF(state.analysisResult);
     } catch (error) {
       console.error('PDF export failed:', error);
     } finally {
