@@ -56,7 +56,6 @@ const URLInput: React.FC<URLInputProps> = ({ url, onUrlChange, onNavigate, isLoa
       <label htmlFor="url-input" className="block text-med font-medium text-gray-700 text-left">
         Website Start URL
       </label>
-
       <form onSubmit={handleSubmit} className="flex space-x-2">
         <input
           id="url-input"
@@ -64,7 +63,7 @@ const URLInput: React.FC<URLInputProps> = ({ url, onUrlChange, onNavigate, isLoa
           value={inputValue}
           onChange={handleInputChange}
           placeholder="URL"
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-left"
+          className="flex-1 max-w-2xl px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-left"
           disabled={isLoading}
           required
         />
@@ -72,7 +71,7 @@ const URLInput: React.FC<URLInputProps> = ({ url, onUrlChange, onNavigate, isLoa
         <button
           type="submit"
           disabled={isLoading || !inputValue.trim()}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-8 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Loading...' : 'Start'}
         </button>

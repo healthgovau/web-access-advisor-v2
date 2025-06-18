@@ -2,8 +2,7 @@
  * Display accessibility analysis results with warnings support
  */
 
-import React, { useRef, useState } from 'react';
-import { exportAnalysisToPDF } from '../utils/pdfExport';
+import React, { useState } from 'react';
 import { html as beautifyHtml } from 'js-beautify';
 import type { AnalysisResult } from '../types';
 
@@ -71,8 +70,6 @@ const formatHtmlCode = (html: string): string => {
 };
 
 const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoading, error }) => {
-  const resultsRef = useRef<HTMLDivElement>(null);
-  const [isExporting, setIsExporting] = useState(false);
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
   const [severityFilters, setSeverityFilters] = useState<Record<string, boolean>>({
     critical: true,
@@ -104,22 +101,8 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
 
   // Filter components based on selected severities
   const filteredComponents = analysisData?.analysis?.components.filter(component =>
-    severityFilters[component.impact]
-  ) || [];
+    severityFilters[component.impact]  ) || [];
 
-  const handleExportPDF = async () => {
-    if (!analysisData) return;
-
-    setIsExporting(true);
-    try {
-      await exportAnalysisToPDF(analysisData, resultsRef.current || undefined);
-    } catch (error) {
-      console.error('PDF export failed:', error);
-      // You could add a toast notification here
-    } finally {
-      setIsExporting(false);
-    }
-  };
   if (isLoading) {
     return (
       <div className="p-6 bg-white border border-gray-200 rounded-lg">
@@ -175,32 +158,11 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
             </ul>
           </div>
         </div>
-      )}
-
-      {/* Basic Analysis Results */}
-      <div ref={resultsRef} className="bg-white border border-gray-200 rounded-lg p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div className="text-center flex-1">
-            <p className="text-sm text-gray-500">
-              {analysisData.snapshotCount} snapshots analyzed • Session: {analysisData.sessionId}
-            </p>
-          </div>
-
-          {/* Export Button */}
-          <button
-            onClick={handleExportPDF}
-            disabled={isExporting}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <span className="text-sm">📄</span>
-            <span className="text-sm font-medium">
-              {isExporting ? 'Generating PDF...' : 'Export PDF'}
-            </span>
-          </button>
-        </div>        {/* Gemini Analysis Results */}
+      )}      {/* Basic Analysis Results */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6">        {/* Gemini Analysis Results */}
         {analysisData.analysis ? (
-          <div className="space-y-6">
-            <div className="bg-white border border-gray-200 rounded-lg p-6">              <h3 className="text-xl font-medium text-gray-900 mb-6 text-center">Issues Identified</h3>
+          <div className="space-y-6">            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-6 text-center">Issues Identified</h3>
 
               {/* Component Issues */}
               {analysisData.analysis.components && analysisData.analysis.components.length > 0 && (<div className="mb-6">
@@ -242,11 +204,11 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                           >                                {/* Checkbox in top-right corner */}
                             <div className="absolute top-1 right-1">
                               <div className={`w-4 h-4 rounded border flex items-center justify-center ${severityFilters[impact]
-                                  ? impact === 'critical' ? 'bg-white border-red-300' :
-                                    impact === 'serious' ? 'bg-white border-orange-300' :
-                                      impact === 'moderate' ? 'bg-white border-yellow-300' :
-                                        'bg-white border-blue-300'
-                                  : 'bg-white border-gray-300'
+                                ? impact === 'critical' ? 'bg-white border-red-300' :
+                                  impact === 'serious' ? 'bg-white border-orange-300' :
+                                    impact === 'moderate' ? 'bg-white border-yellow-300' :
+                                      'bg-white border-blue-300'
+                                : 'bg-white border-gray-300'
                                 }`}>
                                 {severityFilters[impact] && (
                                   <svg className="w-2.5 h-2.5 text-black" fill="currentColor" viewBox="0 0 20 20">
@@ -272,9 +234,9 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                         <div className="flex items-start justify-between mb-2">
                           <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
                           <span className={`text-xs font-medium px-2 py-1 rounded-full ml-4 ${component.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
-                              component.impact === 'serious' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
-                                component.impact === 'moderate' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
-                                  'bg-blue-100 text-blue-800 border border-blue-300'
+                            component.impact === 'serious' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
+                              component.impact === 'moderate' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
+                                'bg-blue-100 text-blue-800 border border-blue-300'
                             }`}>
                             {component.impact.toUpperCase()} IMPACT
                           </span>                          </div>
@@ -354,8 +316,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                         Try adjusting your severity filter selections above.
                       </p>
                     </div>
-                  )}
-                </div>
+                  )}                </div>
               </div>
               )}
             </div>

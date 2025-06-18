@@ -12,6 +12,7 @@ import AnalysisResults from './components/AnalysisResults';
 import AnalysisControls from './components/AnalysisControls';
 import ErrorDisplay from './components/ErrorDisplay';
 import { useAccessibilityAnalysis } from './hooks/useAccessibilityAnalysis';
+import { exportAnalysisToPDF } from './utils/pdfExport';
 import * as recordingApi from './services/recordingApi';
 import type { AppState, ProgressStage } from './types';
 import './App.css';
@@ -26,13 +27,30 @@ function App() {
     progress: {
       stage: 'idle',
       message: 'Ready to start accessibility testing'
-    }
-  });
+    }  });
   // Polling interval reference
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
+  // Analysis results ref for PDF export
+  const analysisResultsRef = useRef<HTMLDivElement | null>(null);
+  // PDF export state
+  const [isExporting, setIsExporting] = useState(false);
 
   // Accessibility analysis hook
   const { handleAnalysisResult } = useAccessibilityAnalysis();
+
+  // PDF Export handler
+  const handleExportPDF = async () => {
+    if (!state.analysisResult) return;
+
+    setIsExporting(true);
+    try {
+      await exportAnalysisToPDF(state.analysisResult, analysisResultsRef.current || undefined);
+    } catch (error) {
+      console.error('PDF export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Update state helper
   const updateState = (updates: Partial<AppState>) => {
@@ -401,10 +419,9 @@ function App() {
                   <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-lg font-medium text-gray-900 mb-4">
                       Recorded Actions
-                    </h2>
-                    {/* Session info below heading */}
+                    </h2>                    {/* Session info below heading */}
                     {state.sessionId && (
-                      <div className="text-xs text-gray-500 mb-4">
+                      <div className="text-sm text-gray-500 mb-4">
                         Session ID: {state.sessionId}
                       </div>
                     )}
@@ -413,18 +430,35 @@ function App() {
                       isRecording={false}
                     />
                   </div>
-                )}
-
-                {/* Analysis Results */}
+                )}                {/* Analysis Results */}
                 {state.analysisResult && (
                   <div className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-lg font-medium text-gray-900 mb-4">
-                      Accessibility Analysis Results
-                    </h2>                    <AnalysisResults
-                      analysisData={state.analysisResult}
-                      isLoading={state.loading}
-                      error={state.error || null}
-                    />                  </div>
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex-1"></div>
+                      <h2 className="text-lg font-medium text-gray-900 text-center flex-1">
+                        Accessibility Analysis Results
+                      </h2>
+                      <div className="flex-1 flex justify-end">
+                        <button
+                          onClick={handleExportPDF}
+                          disabled={isExporting}
+                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <span className="text-sm">📄</span>
+                          <span className="text-sm font-medium">
+                            {isExporting ? 'Generating PDF...' : 'Export PDF'}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                    <div ref={analysisResultsRef}>
+                      <AnalysisResults
+                        analysisData={state.analysisResult}
+                        isLoading={state.loading}
+                        error={state.error || null}
+                      />
+                    </div>
+                  </div>
                 )}
               </>
             )}
