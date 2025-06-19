@@ -509,8 +509,8 @@ export async function exportAnalysisToPDF(
 
         // Issue details in structured format
         const sections = [
-          { label: 'ISSUE DESCRIPTION', content: component.issue },
-          { label: 'TECHNICAL EXPLANATION', content: component.explanation }
+          { label: 'ISSUE', content: component.issue },
+          { label: 'EXPLANATION', content: component.explanation }
         ];        sections.forEach(section => {
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(9);
