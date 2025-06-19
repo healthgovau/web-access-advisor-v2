@@ -39,11 +39,9 @@
   --neutral-white: #ffffff;
 
   /* Typography */
-  --open-sans-font: "Open Sans", "Segoe UI", Tahoma, sans-serif;
-
-  /* Shadows */
+  --open-sans-font: "Open Sans", "Segoe UI", Tahoma, sans-serif;  /* Shadows */
   --dropdown-shadow: 0px 1px 6px 0px rgba(8, 45, 70, 0.15);
-  --card-shadow: 0px 1px 8px 0px rgba(0, 0, 0, 0.20);
+  --card-shadow: 0px 1px 6px 0px rgba(0, 0, 0, 0.10);
 }
 
 /* Progress Status Classes */

@@ -64,7 +64,7 @@ const ActionList: React.FC<ActionListProps> = ({ actions, isRecording, sessionId
     }
   };  if (actions.length === 0 && !isRecording) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card">        <div className="flex items-center justify-center py-6 px-2 relative">
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card"><div className="flex items-center justify-center py-6 px-2 relative">
           <div className="text-center">
             <h2 className="text-xl font-medium text-gray-900">
               Recorded Actions
@@ -81,10 +81,8 @@ const ActionList: React.FC<ActionListProps> = ({ actions, isRecording, sessionId
         </div>
       </div>
     );
-  }
-
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card">      <div className="flex items-center justify-center py-6 px-2 relative">
+  }  return (
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card"><div className="flex items-center justify-center py-6 px-2 relative">
         <div className="text-center">
           <h2 className="text-xl font-medium text-gray-900">
             Recorded Actions ({actions.length})
