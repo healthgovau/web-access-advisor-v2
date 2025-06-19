@@ -325,9 +325,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
         >
           {isExpanded ? 'Collapse' : 'Expand'}
         </button>
-      </div>
-
-      {isExpanded && (
+      </div>      {isExpanded && (
         <div className="p-4 space-y-6">
           {/* Issue Count Summary - matching main analysis section styling */}
           {(() => {
@@ -339,7 +337,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
 
             return (
               <>
-                <div className="w-full flex justify-center mb-4">
+                <div className="w-full flex justify-center mb-4 mt-8">
                   <div className="inline-grid grid-cols-2 md:grid-cols-4 gap-4">
                     {['critical', 'serious', 'moderate', 'minor'].map(impact => (
                       <button
