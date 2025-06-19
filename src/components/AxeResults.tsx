@@ -315,7 +315,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
       </details>
     );
   }  return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-12"><div className="flex items-center justify-center py-6 px-2 relative"><h2 className="text-xl font-medium text-gray-900 text-center">
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-12 shadow-card"><div className="flex items-center justify-center py-6 px-2 relative"><h2 className="text-xl font-medium text-gray-900 text-center">
           Axe Accessibility Issues ({axeResults.length})
         </h2>        <button
           onClick={() => setIsExpanded(!isExpanded)}
@@ -323,7 +323,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
         >
           {isExpanded ? 'Collapse' : 'Expand'}
         </button>
-      </div>      {isExpanded && (
+      </div>{isExpanded && (
         <div className="p-3 space-y-3">
           {/* Issue Count Summary - matching main analysis section styling */}
           {(() => {

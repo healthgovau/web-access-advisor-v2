@@ -7,9 +7,10 @@ import { useState } from 'react';
 interface ActionListProps {
   actions: any[];
   isRecording: boolean;
+  sessionId?: string;
 }
 
-const ActionList: React.FC<ActionListProps> = ({ actions, isRecording }) => {
+const ActionList: React.FC<ActionListProps> = ({ actions, isRecording, sessionId }) => {
   const [isExpanded, setIsExpanded] = useState(false); // Collapsed by default
 
   const getActionIcon = (actionType: string) => {
@@ -63,27 +64,48 @@ const ActionList: React.FC<ActionListProps> = ({ actions, isRecording }) => {
     }
   };  if (actions.length === 0 && !isRecording) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <h3 className="text-xl font-medium text-brand-dark mb-2">Recorded Actions</h3>
-        <p className="text-base text-slate">No actions recorded yet. Start recording to see interactions here.</p>
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card">        <div className="flex items-center justify-center py-6 px-2 relative">
+          <div className="text-center">
+            <h2 className="text-xl font-medium text-gray-900">
+              Recorded Actions
+            </h2>
+            {sessionId && (
+              <div className="text-sm text-gray-500 mt-1">
+                {sessionId}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="p-4">
+          <p className="text-base text-slate text-center">No actions recorded yet. Start recording to see interactions here.</p>
+        </div>
       </div>
     );
-  }  return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div className={`flex items-center justify-between p-4 ${isExpanded ? 'border-b border-neutral-light' : ''}`}>
-        <h3 className="text-xl font-medium text-brand-dark">
-          Actions
-        </h3>
+  }
 
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card">      <div className="flex items-center justify-center py-6 px-2 relative">
+        <div className="text-center">
+          <h2 className="text-xl font-medium text-gray-900">
+            Recorded Actions ({actions.length})
+          </h2>
+          {sessionId && (
+            <div className="text-sm text-gray-500 mt-1">
+              {sessionId}
+            </div>
+          )}
+        </div>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-base text-slate hover:text-neutral-black underline"
+          className="text-base text-slate hover:text-neutral-black underline absolute right-4"
         >
           {isExpanded ? 'Collapse' : 'Expand'}
         </button>
       </div>
 
-      {isExpanded && (        <div className="max-h-64 overflow-y-auto overflow-x-hidden">
+      {isExpanded && (
+        <div className="p-3 space-y-3">
+          <div className="max-h-64 overflow-y-auto overflow-x-hidden">
           {actions.length === 0 && isRecording && (
             <div className="p-4 text-center text-base text-slate">
               Recording started. Interact with the page to see actions here.
@@ -110,8 +132,8 @@ const ActionList: React.FC<ActionListProps> = ({ actions, isRecording }) => {
               <span className="text-sm text-silver font-mono flex-shrink-0">
                 #{index + 1}
               </span>
-            </div>
-          ))}
+            </div>          ))}
+          </div>
         </div>
       )}
     </div>

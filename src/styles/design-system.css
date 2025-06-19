@@ -85,6 +85,11 @@
   box-shadow: var(--card-shadow);
 }
 
+/* Shadow utility class */
+.shadow-card {
+  box-shadow: var(--card-shadow);
+}
+
 /* Animation utilities */
 @keyframes spin {
   from {

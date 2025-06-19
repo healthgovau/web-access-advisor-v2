@@ -358,19 +358,13 @@ function App() {
                 </div>                  <div className="text-sm text-gray-600 text-left">
                   Currently recording actions on: <span className="font-medium">{state.url}</span>
                 </div>
-              </div>
-
-                {/* Actions List */}
+              </div>                {/* Actions List */}
                 {state.actions.length > 0 && (
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-lg font-medium text-gray-900 mb-4">
-                      Recorded Actions ({state.actions.length})
-                    </h2>
-                    <ActionList
-                      actions={state.actions}
-                      isRecording={state.mode === 'recording'}
-                    />
-                  </div>
+                  <ActionList
+                    actions={state.actions}
+                    isRecording={state.mode === 'recording'}
+                    sessionId={state.sessionId}
+                  />
                 )}
               </>
             )}            {/* Analyzing Mode */}
@@ -383,19 +377,13 @@ function App() {
                   <div className="text-sm text-gray-600">
                     Analyzing {state.actions.length} recorded actions for accessibility issues.
                   </div>
-                </div>
-
-                {/* Actions List - Keep visible during analysis for consistency */}
+                </div>                {/* Actions List - Keep visible during analysis for consistency */}
                 {state.actions.length > 0 && (
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-lg font-medium text-gray-900 mb-4">
-                      Recorded Actions ({state.actions.length})
-                    </h2>
-                    <ActionList
-                      actions={state.actions}
-                      isRecording={false}
-                    />
-                  </div>
+                  <ActionList
+                    actions={state.actions}
+                    isRecording={false}
+                    sessionId={state.sessionId}
+                  />
                 )}
               </>
             )}
@@ -407,49 +395,46 @@ function App() {
                   hasAnalysisResult={!!state.analysisResult}
                   isLoading={state.loading}
                   onStartAnalysis={handleStartAnalysis}
-                  onReset={handleReset} />
-
-                {/* Actions List */}
+                  onReset={handleReset} />                {/* Actions List */}
                 {state.actions.length > 0 && (
-                  <div className="card rounded-lg p-6">                    <h2 className="text-xl font-medium text-gray-900 mb-4">
-                    Recorded Actions
-                  </h2>{/* Session info below heading */}
-                    {state.sessionId && (
-                      <div className="text-sm text-gray-500 mb-4">
-                        Session ID: {state.sessionId}
-                      </div>
-                    )}
-                    <ActionList
-                      actions={state.actions}
-                      isRecording={false}
-                    />
-                  </div>
+                  <ActionList
+                    actions={state.actions}
+                    isRecording={false}
+                    sessionId={state.sessionId}
+                  />
                 )}                {/* Analysis Results */}
                 {state.analysisResult && (
-                  <div className="card rounded-lg p-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="flex-1"></div>                      <h2 className="text-xl font-medium text-gray-900 text-center flex-1">
-                        Accessibility Analysis Results
-                      </h2>
-                      <div className="flex-1 flex justify-end">
-                        <button
-                          onClick={handleExportPDF}
-                          disabled={isExporting}
-                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          <span className="text-sm">📄</span>
-                          <span className="text-sm font-medium">
-                            {isExporting ? 'Generating PDF...' : 'Export PDF'}
-                          </span>
-                        </button>
+                  <div className="card rounded-lg overflow-hidden">
+                    <div className="p-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="flex-1"></div>                      <h2 className="text-xl font-medium text-gray-900 text-center flex-1">
+                          Accessibility Analysis Results
+                        </h2>
+                        <div className="flex-1 flex justify-end">
+                          <button
+                            onClick={handleExportPDF}
+                            disabled={isExporting}
+                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <span className="text-sm">📄</span>
+                            <span className="text-sm font-medium">
+                              {isExporting ? 'Generating PDF...' : 'Export PDF'}
+                            </span>
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <div ref={analysisResultsRef}>
-                      <AnalysisResults
-                        analysisData={state.analysisResult}
-                        isLoading={state.loading}
-                        error={state.error || null}
-                      />
+                    
+                    {/* HR separator to emphasize master header - full width */}
+                    <hr className="border-gray-200" />
+                    
+                    <div className="p-6">
+                      <div ref={analysisResultsRef}>                        <AnalysisResults
+                          analysisData={state.analysisResult}
+                          isLoading={state.loading}
+                          error={state.error || null}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

@@ -191,7 +191,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
           </div>
         </div>
       )}      {/* Screen Reader Analysis Results */}
-      {analysisData.analysis && analysisData.analysis.components && analysisData.analysis.components.length > 0 && (        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-12">
+      {analysisData.analysis && analysisData.analysis.components && analysisData.analysis.components.length > 0 && (        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-12 shadow-card">
           <div className="flex items-center justify-center py-6 px-2 relative">
             <h2 className="text-xl font-medium text-gray-900 text-center">
               Screen Reader Accessibility Issues ({analysisData.analysis.components.length})
