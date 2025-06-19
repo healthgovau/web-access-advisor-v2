@@ -130,11 +130,9 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
 
   // Filter components based on selected severities
   const filteredComponents = analysisData?.analysis?.components.filter(component =>
-    severityFilters[component.impact]  ) || [];
-
-  if (isLoading) {
+    severityFilters[component.impact]  ) || [];  if (isLoading) {
     return (
-      <div className="p-6 bg-white border border-gray-200 rounded-lg">
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center justify-center space-x-3">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <span className="text-gray-600">Analyzing accessibility...</span>
@@ -188,7 +186,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
           </div>
         </div>
       )}      {/* Basic Analysis Results */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">        {/* Gemini Analysis Results */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6">{/* Gemini Analysis Results */}
         {analysisData.analysis ? (
           <div className="space-y-6">            <div className="p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-6 text-center">Screen Reader Accessibility Issues</h3>
@@ -228,7 +226,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                           {['critical', 'serious', 'moderate', 'minor'].map(impact => (<button
                             key={impact}
                             onClick={() => handleSeverityFilterChange(impact, !severityFilters[impact])}
-                            className={`relative text-center p-3 border rounded-lg transition-all hover:scale-105 ${getSeverityColors(impact, severityFilters[impact])}`}
+                            className={`relative text-center p-3 border rounded transition-all hover:scale-105 ${getSeverityColors(impact, severityFilters[impact])}`}
                             title={`${severityFilters[impact] ? 'Hide' : 'Show'} ${impact} issues`}
                           >                                {/* Checkbox in top-right corner */}
                             <div className="absolute top-1 right-1">
@@ -258,7 +256,8 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                 })()}
                 <div className="space-y-4">
                   {filteredComponents.length > 0 ? (
-                    filteredComponents.map((component, index) => (<div key={index} className="bg-white border border-gray-300 rounded-lg overflow-hidden">                        {/* Header Section with Subtle Background */}
+                    filteredComponents.map((component, index) => (
+                      <div key={index} className="bg-white border border-gray-200 rounded overflow-hidden">                        {/* Header Section with Subtle Background */}
                       <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">                        <div className="flex items-start justify-between mb-2">                          <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
                           <span className={`text-xs font-medium px-2 py-1 rounded-full ml-4 ${component.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
                             component.impact === 'serious' ? 'bg-orange-100 text-orange-800 border border-orange-300' :

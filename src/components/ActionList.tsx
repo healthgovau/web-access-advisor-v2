@@ -61,26 +61,23 @@ const ActionList: React.FC<ActionListProps> = ({ actions, isRecording }) => {
       default:
         return `${action.type} action`;
     }
-  };
-  if (actions.length === 0 && !isRecording) {
+  };  if (actions.length === 0 && !isRecording) {
     return (
-      <div className="card rounded-lg p-4">
-        <h3 className="text-lg font-medium text-brand-dark mb-2">Recorded Actions</h3>
-        <p className="text-sm text-slate">No actions recorded yet. Start recording to see interactions here.</p>
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <h3 className="text-xl font-medium text-brand-dark mb-2">Recorded Actions</h3>
+        <p className="text-base text-slate">No actions recorded yet. Start recording to see interactions here.</p>
       </div>
     );
-  }
-
-  return (
-    <div className="card rounded-lg overflow-hidden">
+  }  return (
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div className="flex items-center justify-between p-4 border-b border-neutral-light">
-        <h3 className="text-lg font-medium text-brand-dark">
+        <h3 className="text-xl font-medium text-brand-dark">
           Actions
         </h3>
 
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-sm text-slate hover:text-neutral-black underline"
+          className="text-base text-slate hover:text-neutral-black underline"
         >
           {isExpanded ? 'Collapse' : 'Expand'}
         </button>
@@ -88,7 +85,7 @@ const ActionList: React.FC<ActionListProps> = ({ actions, isRecording }) => {
 
       {isExpanded && (        <div className="max-h-64 overflow-y-auto overflow-x-hidden">
           {actions.length === 0 && isRecording && (
-            <div className="p-4 text-center text-sm text-slate">
+            <div className="p-4 text-center text-base text-slate">
               Recording started. Interact with the page to see actions here.
             </div>
           )}
@@ -98,19 +95,19 @@ const ActionList: React.FC<ActionListProps> = ({ actions, isRecording }) => {
               key={index}
               className="flex items-center space-x-4 p-3 border-b border-neutral-light last:border-b-0 hover:bg-neutral-xx-light"
             >
-              <span className="text-lg flex-shrink-0">{getActionIcon(action.type)}</span>
+              <span className="text-xl flex-shrink-0">{getActionIcon(action.type)}</span>
 
               <div className="flex-1 min-w-0 flex items-center justify-between">
-                <div className="text-sm font-medium text-neutral-black break-words flex-1 mr-4">
+                <div className="text-base font-medium text-neutral-black break-words flex-1 mr-4">
                   {formatActionDescription(action)}
                 </div>
 
-                <div className="text-xs text-slate flex-shrink-0">
+                <div className="text-sm text-slate flex-shrink-0">
                   {new Date(action.timestamp).toLocaleTimeString()}
                 </div>
               </div>
 
-              <span className="text-xs text-silver font-mono flex-shrink-0">
+              <span className="text-sm text-silver font-mono flex-shrink-0">
                 #{index + 1}
               </span>
             </div>

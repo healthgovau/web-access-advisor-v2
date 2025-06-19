@@ -27,7 +27,8 @@ function App() {
     progress: {
       stage: 'idle',
       message: 'Ready to start accessibility testing'
-    }  });
+    }
+  });
   // Polling interval reference
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   // Analysis results ref for PDF export
@@ -181,7 +182,7 @@ function App() {
         const pollAnalysis = async () => {
           try {
             const statusResponse = await recordingApi.getAnalysisStatus(response.analysisId);
-           
+
             if (statusResponse.phase && statusResponse.message) {
               // Map backend phases to frontend progress stages
               const stageMapping: Record<string, ProgressStage> = {
@@ -196,11 +197,11 @@ function App() {
               const frontendStage = stageMapping[statusResponse.phase] || statusResponse.phase as ProgressStage;
 
               // Update progress with real-time snapshot count
-              
+
               updateProgress(frontendStage, statusResponse.message, undefined, undefined, undefined, statusResponse.snapshotCount);
             } if (statusResponse.status === 'completed' && statusResponse.result) {
               // Analysis complete - handle result
-              
+
               const resultHandler = handleAnalysisResult(statusResponse.result);
               updateProgress(resultHandler.stage, resultHandler.message, undefined, resultHandler.details, undefined, statusResponse.result.snapshotCount);
 
@@ -294,44 +295,37 @@ function App() {
     };
   }, []);  // Update progress helper
   const updateProgress = (stage: ProgressStage, message: string, progress?: number, details?: string, error?: string, snapshotCount?: number) => {
-    
+
     setState(prev => ({
       ...prev,
       progress: { stage, message, progress, details, error, snapshotCount }
     }));
-  };
-
-  return (
+  };  return (
     <QueryProvider>
-      <div className="min-h-screen bg-gray-50">        <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="min-h-screen">        <header className="bg-white">
           <div className="flex items-center justify-between">
-            <div className="text-left">              <h1 className="text-2xl font-bold text-gray-900">
-                Web Access Advisor <span className="text-lg font-normal text-orange-600 bg-orange-100 px-2 py-1 rounded-md">alpha</span>
+            <div className="text-left">
+              <h1 className="text-3xl font-bold text-brand-dark">
+                Web Access Advisor <span className="text-xl font-normal text-orange-600 bg-orange-100 px-2 py-1 rounded-md">alpha</span>
               </h1>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-base text-slate mt-1">
                 AI-powered accessibility testing and analysis
               </p>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-base text-slate">
               Mode: <span className="font-medium capitalize">{state.mode}</span>
             </div>
-          </div>
-        </div>
-      </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="space-y-6">
-            {/* URL Input - Always visible at top */}
+          </div>        </header>
+        <main className="mt-8">
+          <div className="space-y-6">{/* URL Input - Always visible at top */}
             {state.mode === 'setup' && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <URLInput
-                  url={state.url}
-                  onUrlChange={handleUrlChange}
-                  onNavigate={handleNavigateAndRecord}
-                  isLoading={state.loading}
-                />
-              </div>
-            )}            {/* Three-Phase Status - Always visible */}
+              <URLInput
+                url={state.url}
+                onUrlChange={handleUrlChange}
+                onNavigate={handleNavigateAndRecord}
+                isLoading={state.loading}
+              />
+            )}{/* Three-Phase Status - Always visible */}
             <ThreePhaseStatus
               currentStage={state.progress.stage}
               error={state.progress.error}
@@ -350,20 +344,20 @@ function App() {
             {/* Recording Mode */}
             {state.mode === 'recording' && (
               <>                <div className="bg-white rounded-lg shadow p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-gray-900">
-                      Recording Session
-                    </h2>                    <button
-                      onClick={handleStopRecording}
-                      className="flex items-center space-x-2 px-4 py-2 bg-red-700 text-white text-sm font-medium rounded-md hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
-                    >
-                      <span>Stop Recording</span>
-                      <div className="w-3 h-3 bg-white rounded-full"></div>
-                    </button>
-                  </div>                  <div className="text-sm text-gray-600 text-left">
-                    Currently recording actions on: <span className="font-medium">{state.url}</span>
-                  </div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-medium text-gray-900">
+                    Recording Session
+                  </h2>                    <button
+                    onClick={handleStopRecording}
+                    className="flex items-center space-x-2 px-4 py-2 bg-red-700 text-white text-sm font-medium rounded-md hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
+                  >
+                    <span>Stop Recording</span>
+                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  </button>
+                </div>                  <div className="text-sm text-gray-600 text-left">
+                  Currently recording actions on: <span className="font-medium">{state.url}</span>
                 </div>
+              </div>
 
                 {/* Actions List */}
                 {state.actions.length > 0 && (
@@ -412,13 +406,14 @@ function App() {
                   hasAnalysisResult={!!state.analysisResult}
                   isLoading={state.loading}
                   onStartAnalysis={handleStartAnalysis}
-                  onReset={handleReset}
-                />                {/* Actions List */}
+                  onReset={handleReset}                />
+
+                {/* Actions List */}
                 {state.actions.length > 0 && (
-                  <div className="bg-white rounded-lg shadow p-6">
+                  <div className="card rounded-lg p-6">
                     <h2 className="text-lg font-medium text-gray-900 mb-4">
                       Recorded Actions
-                    </h2>                    {/* Session info below heading */}
+                    </h2>{/* Session info below heading */}
                     {state.sessionId && (
                       <div className="text-sm text-gray-500 mb-4">
                         Session ID: {state.sessionId}
@@ -431,7 +426,7 @@ function App() {
                   </div>
                 )}                {/* Analysis Results */}
                 {state.analysisResult && (
-                  <div className="bg-white rounded-lg shadow p-6">
+                  <div className="card rounded-lg p-6">
                     <div className="flex justify-between items-center mb-4">
                       <div className="flex-1"></div>
                       <h2 className="text-lg font-medium text-gray-900 text-center flex-1">
@@ -462,11 +457,9 @@ function App() {
               </>
             )}
           </div>
-        </main>
-
-        <footer className="bg-white border-t mt-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="text-center text-sm text-gray-500">
+        </main>        <footer className="mt-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="text-center text-sm" style={{ color: 'var(--silver)' }}>
               <p>Web Access Advisor v2.0 (alpha)</p>
             </div>
           </div>

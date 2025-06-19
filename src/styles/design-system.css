@@ -57,6 +57,7 @@
   color: var(--blueberry-dark);
   background-color: var(--blueberry-10);
   border-color: var(--blueberry-30);
+  box-shadow: var(--card-shadow);
 }
 
 .status-completed {
@@ -135,10 +136,10 @@
   background-color: var(--blueberry);
   color: var(--neutral-white);
   border: 1px solid var(--blueberry-dark);
-  padding: 0.5rem 2rem;
+  padding: 0.75rem 2rem;
   border-radius: 0.375rem;
   font-weight: 500;
-  font-size: 0.875rem;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
 }
@@ -163,8 +164,9 @@
   border: 1px solid var(--mid-grey);
   color: var(--neutral-black);
   background-color: var(--neutral-white);
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   border-radius: 0.375rem;
+  font-size: 1rem;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   width: 100%;
 }

@@ -243,38 +243,36 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
         return 'status-pending';
     }
   };  return (
-    <div className="card rounded-lg p-4" style={{ backgroundColor: 'var(--xx-light-grey)' }}>
-      <h3 className="text-lg font-medium text-brand-dark mb-3">Progress</h3>
+    <div className="card rounded-lg p-4">
+      <h3 className="text-xl font-medium text-brand-dark mb-3">Progress</h3>
         {/* Compact horizontal layout */}
       <div className="grid grid-cols-3 gap-3 mb-3">
         {phases.map((phase) => (
-          <div key={phase.phase} className={`border rounded-lg p-3 transition-all duration-300 ${getStatusColor(phase.status)}`}>
+          <div key={phase.phase} className={`border rounded p-3 transition-all duration-300 ${getStatusColor(phase.status)}`}>
             <div className="mb-1">              {/* Status icon above the heading */}
               <div className="flex justify-center mb-2">
                 {phase.status === 'active' && phase.phase === 'replay' ? (
-                  <div className="animate-spin">
+                  <div className="animate-spin-reverse">
                     {getStatusIcon(phase.status, phase.phase)}
                   </div>
                 ) : (
                   getStatusIcon(phase.status, phase.phase)
                 )}
               </div>
-              
-              <div className="text-center">
-                <h4 className="text-sm font-semibold uppercase tracking-wide mb-1">
+                <div className="text-center">
+                <h4 className="text-base font-semibold uppercase tracking-wide mb-1">
                   {phase.phase === 'ai' ? 'AI Analysis' : phase.phase}
                 </h4>
               </div>
             </div>
             
-            <p className="text-xs text-center mb-1 font-medium">{phase.message}</p>
+            <p className="text-sm text-center mb-1 font-medium">{phase.message}</p>
             
             {phase.details && (
-              <p className="text-xs text-center opacity-80">{phase.details}</p>
+              <p className="text-sm text-center opacity-80">{phase.details}</p>
             )}
-            
-            {phase.error && (
-              <div className="text-xs status-error rounded p-1 mt-2">
+              {phase.error && (
+              <div className="text-sm status-error rounded p-1 mt-2">
                 <strong>Error:</strong> {phase.error}
               </div>
             )}

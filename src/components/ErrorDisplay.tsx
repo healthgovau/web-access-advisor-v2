@@ -13,10 +13,10 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error }) => {
     <div className="status-error rounded-md p-4">
       <div className="flex">
         <div className="ml-3">
-          <h3 className="text-sm font-medium">
+          <h3 className="text-base font-medium">
             Error
           </h3>
-          <div className="mt-2 text-sm opacity-90">
+          <div className="mt-2 text-base opacity-90">
             {error}
           </div>
         </div>

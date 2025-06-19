@@ -51,7 +51,7 @@ const URLInput: React.FC<URLInputProps> = ({ url, onUrlChange, onNavigate, isLoa
     }
   };  return (
     <div className="card rounded-lg p-4">
-      <h3 className="text-lg font-medium text-brand-dark mb-3 text-center">Website Start URL</h3>
+      <h3 className="text-xl font-medium text-brand-dark mb-3 text-center">Website Start URL</h3>
 
       <div className="flex justify-center">
         <form onSubmit={handleSubmit} className="flex space-x-2 items-center w-full max-w-6xl">

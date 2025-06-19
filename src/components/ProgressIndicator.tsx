@@ -42,7 +42,7 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   const isProcessing = stage !== 'idle' && stage !== 'completed' && !error;
 
   return (
-    <div className={`bg-white border rounded-lg shadow p-4 ${getTypeStyles()}`}>
+    <div className={`bg-white border rounded p-4 ${getTypeStyles()}`}>
       <div className="flex items-start">
         <span className="text-lg mr-3 flex-shrink-0">
           {isProcessing ? (

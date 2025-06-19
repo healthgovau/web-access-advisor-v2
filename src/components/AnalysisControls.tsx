@@ -18,9 +18,8 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
   isLoading,
   onStartAnalysis,
   onReset
-}) => {
-  return (
-    <div className="bg-white rounded-lg shadow p-6">
+}) => {  return (
+    <div className="card rounded-lg p-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium text-gray-900">
           Ready for Analysis

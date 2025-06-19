@@ -314,16 +314,14 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
         </div>
       </details>
     );
-  }
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-6">      <div className="flex items-center justify-center p-4 border-b border-gray-200 relative">
-        <h4 className="text-lg font-medium text-gray-900 text-center">
+  }  return (
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-6"><div className="flex items-center justify-center p-4 border-b border-neutral-light relative">
+        <h4 className="text-xl font-medium text-brand-dark text-center">
           Axe Accessibility Issues ({axeResults.length})
         </h4>
-        
-        <button
+          <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-sm text-gray-500 hover:text-gray-700 underline absolute right-4"
+          className="text-base text-slate hover:text-neutral-black underline absolute right-4"
         >
           {isExpanded ? 'Collapse' : 'Expand'}
         </button>
@@ -347,7 +345,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                       <button
                         key={impact}
                         onClick={() => handleSeverityFilterChange(impact, !severityFilters[impact])}
-                        className={`relative text-center p-3 border rounded-lg transition-all hover:scale-105 ${getSeverityColors(impact, severityFilters[impact])}`}
+                        className={`relative text-center p-3 border rounded transition-all hover:scale-105 ${getSeverityColors(impact, severityFilters[impact])}`}
                         title={`${severityFilters[impact] ? 'Hide' : 'Show'} ${impact} issues`}
                       >
                         {/* Checkbox in top-right corner */}
@@ -357,7 +355,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                               impact === 'serious' ? 'bg-white border-orange-300' :
                                 impact === 'moderate' ? 'bg-white border-yellow-300' :
                                   'bg-white border-blue-300'
-                            : 'bg-white border-gray-300'
+                            : 'bg-white border-gray-200'
                             }`}>
                             {severityFilters[impact] && (
                               <svg className="w-2.5 h-2.5 text-black" fill="currentColor" viewBox="0 0 20 20">
@@ -380,7 +378,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
           <div className="space-y-4">
             {filteredViolations.length > 0 ? (
               filteredViolations.map((violation, index) => (
-                <div key={`${violation.id}-${index}`} className="bg-white border border-gray-300 rounded-lg overflow-hidden">
+                <div key={`${violation.id}-${index}`} className="bg-white border border-gray-200 rounded overflow-hidden">
                   {/* Header Section with Subtle Background */}
                   <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">                    <div className="flex items-start justify-between mb-2">
                       <h4 className="text-base font-medium text-gray-900">{violation.help}</h4>
