@@ -172,12 +172,11 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
 
   // Handle warnings (e.g., Gemini not available)
   const hasWarnings = analysisData.warnings && analysisData.warnings.length > 0;
-  
-  return (
+    return (
     <div className="space-y-4">
       {/* Warnings Display */}
       {hasWarnings && (
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="mx-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-2">
               <span className="text-yellow-500 text-xl">⚠️</span>
@@ -191,8 +190,8 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
           </div>
         </div>
       )}      {/* Screen Reader Analysis Results */}
-      {analysisData.analysis && analysisData.analysis.components && analysisData.analysis.components.length > 0 && (        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-12 shadow-card">
-          <div className="flex items-center justify-center py-6 px-2 relative">
+      {analysisData.analysis && analysisData.analysis.components && analysisData.analysis.components.length > 0 && (        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card -mx-6">
+          <div className="flex items-center justify-center py-4 px-4 relative">
             <h2 className="text-xl font-medium text-gray-900 text-center">
               Screen Reader Accessibility Issues ({analysisData.analysis.components.length})
             </h2>            <button

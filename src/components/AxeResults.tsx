@@ -12,14 +12,14 @@ interface AxeResultsProps {
 }
 
 /**
- * Wraps HTML tags, attributes, and URLs with appropriate styling and links
+ * Wraps HTML tags, attributes, URLs, and Markdown bold with appropriate styling and links
  */
 const formatTextWithCodeTags = (text: string): React.ReactElement => {
   // First, put "See:" URLs on their own lines
   const processedText = text.replace(/(\.\s+See:\s+)(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g, '.\n\nSee: $2');
   
-  // Enhanced pattern to match URLs, HTML tags, attributes, CSS selectors, and backtick code
-  const pattern = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|`[^`]+`|<\/?[a-zA-Z0-9][^>]*>|&lt;\/?[a-zA-Z0-9][^&]*&gt;|aria-[a-zA-Z-]+(?:="[^"]*")?|role="[^"]*"|class="[^"]*"|id="[^"]*"|data-[a-zA-Z-]+="[^"]*"|\.[a-zA-Z_-][a-zA-Z0-9_-]*|#[a-zA-Z_-][a-zA-Z0-9_-]*)/g;
+  // Enhanced pattern to match URLs, HTML tags, attributes, CSS selectors, backtick code, and bold text
+  const pattern = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|`[^`]+`|<\/?[a-zA-Z0-9][^>]*>|&lt;\/?[a-zA-Z0-9][^&]*&gt;|aria-[a-zA-Z-]+(?:="[^"]*")?|role="[^"]*"|class="[^"]*"|id="[^"]*"|data-[a-zA-Z-]+="[^"]*"|\.[a-zA-Z_-][a-zA-Z0-9_-]*|#[a-zA-Z_-][a-zA-Z0-9_-]*|\*\*[^*]+\*\*)/g;
 
   const parts = processedText.split(pattern);
 
@@ -38,6 +38,16 @@ const formatTextWithCodeTags = (text: string): React.ReactElement => {
             >
               {part}
             </a>
+          );
+        }
+        
+        // Check if this is bold text (**text**)
+        if (/^\*\*[^*]+\*\*$/.test(part)) {
+          const boldText = part.slice(2, -2); // Remove the ** markers
+          return (
+            <strong key={index} className="font-semibold text-gray-900">
+              {boldText}
+            </strong>
           );
         }
         
@@ -315,8 +325,8 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
       </details>
     );
   }  return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-12 shadow-card">
-      <div className="flex items-center justify-center py-6 px-2 relative">
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card -mx-6">
+      <div className="flex items-center justify-center py-4 px-4 relative">
         <h2 className="text-xl font-medium text-gray-900 text-center">
           Axe Accessibility Issues ({axeResults.length})
         </h2><button

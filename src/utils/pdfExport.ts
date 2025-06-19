@@ -12,7 +12,7 @@ function cleanTextForPDF(text: string): string {
   if (!text) return '';
   
   return text
-    // First pass - decode HTML entities
+    // Decode HTML entities
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -23,34 +23,20 @@ function cleanTextForPDF(text: string): string {
     // Decode numeric HTML entities
     .replace(/&#(\d+);/g, (_, num) => {
       const code = parseInt(num, 10);
-      return (code >= 32 && code <= 126) ? String.fromCharCode(code) : '';
+      return String.fromCharCode(code);
     })
     .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
       const code = parseInt(hex, 16);
-      return (code >= 32 && code <= 126) ? String.fromCharCode(code) : '';
+      return String.fromCharCode(code);
     })
     // Remove HTML tags
     .replace(/<[^>]*>/g, '')
-    // Convert common Unicode characters to ASCII equivalents
+    // Convert smart quotes and dashes
     .replace(/[\u2018\u2019]/g, "'")  // Smart quotes
     .replace(/[\u201C\u201D]/g, '"')  // Smart double quotes
     .replace(/[\u2013\u2014]/g, '-')  // En/em dashes
     .replace(/[\u2026]/g, '...')      // Ellipsis
     .replace(/[\u00A0]/g, ' ')        // Non-breaking space
-    // More aggressive character replacements
-    .replace(/[àáâãäå]/g, 'a')
-    .replace(/[èéêë]/g, 'e')
-    .replace(/[ìíîï]/g, 'i')
-    .replace(/[òóôõö]/g, 'o')
-    .replace(/[ùúûü]/g, 'u')
-    .replace(/[ñ]/g, 'n')
-    .replace(/[ç]/g, 'c')
-    .replace(/[ß]/g, 'ss')
-    .replace(/[Ø]/g, 'O')
-    // Remove control characters
-    .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
-    // Ultra-aggressive: only allow basic printable ASCII
-    .replace(/[^\u0020-\u007E]/g, '')
     // Clean up whitespace
     .replace(/\s+/g, ' ')
     .trim();
@@ -60,8 +46,8 @@ function cleanTextForPDF(text: string): string {
  * Add text with clickable links to PDF
  */
 function addTextWithLinks(pdf: jsPDF, text: string, x: number, y: number, maxWidth: number): number {
-  // Combined regex for URLs and WCAG references
-  const linkRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|WCAG\s+\d+\.\d+(?:\.\d+)?(?:\s+\([^)]+\))?)/gi;
+  // Enhanced regex for URLs and WCAG references
+  const linkRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|WCAG\s+(?:GUIDELINE:\s*)?(\d+\.\d+(?:\.\d+)?)\s*([A-Z])?)/gi;
   
   let currentY = y;
   const lines = pdf.splitTextToSize(text, maxWidth);
@@ -70,7 +56,9 @@ function addTextWithLinks(pdf: jsPDF, text: string, x: number, y: number, maxWid
     let parts = line.split(linkRegex);
     let currentX = x;
     
-    parts.forEach((part) => {
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      
       if (/https?:\/\//.test(part)) {
         // This is a URL - add as clickable link
         pdf.setTextColor(0, 0, 255); // Blue color for links
@@ -81,24 +69,33 @@ function addTextWithLinks(pdf: jsPDF, text: string, x: number, y: number, maxWid
         
         currentX += textWidth;
         pdf.setTextColor(0, 0, 0); // Reset to black
-      } else if (/WCAG\s+\d+\.\d+/i.test(part)) {
-        // This is a WCAG reference - make it a link to WCAG guidelines
-        const wcagUrl = `https://www.w3.org/WAI/WCAG21/Understanding/`;
-        
-        pdf.setTextColor(0, 0, 255); // Blue color for links
-        pdf.text(part, currentX, currentY);
-        
-        const textWidth = pdf.getTextWidth(part);
-        pdf.link(currentX, currentY - 3, textWidth, 4, { url: wcagUrl });
-        
-        currentX += textWidth;
-        pdf.setTextColor(0, 0, 0); // Reset to black
-      } else if (part.trim()) {
-        // Regular text
+      } else if (/WCAG\s+(?:GUIDELINE:\s*)?(\d+\.\d+(?:\.\d+)?)/i.test(part)) {
+        // This is a WCAG reference - extract the guideline number
+        const wcagMatch = part.match(/(\d+\.\d+(?:\.\d+)?)/);
+        if (wcagMatch) {
+          const guidelineNumber = wcagMatch[1];
+          // Create specific WCAG Understanding URL
+          const wcagUrl = `https://www.w3.org/WAI/WCAG21/Understanding/${guidelineNumber.replace(/\./g, '-')}.html`;
+          
+          pdf.setTextColor(0, 0, 255); // Blue color for links
+          pdf.text(part, currentX, currentY);
+          
+          const textWidth = pdf.getTextWidth(part);
+          pdf.link(currentX, currentY - 3, textWidth, 4, { url: wcagUrl });
+          
+          currentX += textWidth;
+          pdf.setTextColor(0, 0, 0); // Reset to black
+        } else {
+          // Fallback for malformed WCAG references
+          pdf.text(part, currentX, currentY);
+          currentX += pdf.getTextWidth(part);
+        }
+      } else if (part && part.trim()) {
+        // Regular text - skip empty parts from regex splitting
         pdf.text(part, currentX, currentY);
         currentX += pdf.getTextWidth(part);
       }
-    });
+    }
     
     currentY += 4; // Line height
   });
@@ -196,15 +193,41 @@ function addSummaryTable(pdf: jsPDF, counts: Record<string, number>, title: stri
     
     currentY += cellHeight;
   });
-
   return currentY + 5;
+}
+
+/**
+ * Format action description for PDF display
+ */
+function getActionDescription(action: any): string {
+  if (!action || !action.type) return 'Unknown action';
+  
+  switch (action.type) {
+    case 'navigate':
+      return `Navigated to: ${action.url || 'Unknown URL'}`;
+    case 'click':
+      return `Clicked on element${action.selector ? `: ${action.selector}` : ''}`;
+    case 'type':
+      return `Typed text${action.text ? `: "${action.text}"` : ''}${action.selector ? ` in ${action.selector}` : ''}`;
+    case 'scroll':
+      return 'Scrolled page';
+    case 'keydown':
+      return `Pressed key: ${action.key || 'Unknown key'}`;
+    case 'focus':
+      return `Focused on element${action.selector ? `: ${action.selector}` : ''}`;
+    case 'blur':
+      return `Lost focus on element${action.selector ? `: ${action.selector}` : ''}`;
+    default:
+      return `${action.type} action`;
+  }
 }
 
 /**
  * Generate comprehensive PDF from analysis results
  */
 export async function exportAnalysisToPDF(
-  analysisData: AnalysisResult
+  analysisData: AnalysisResult,
+  actions: any[] = []
 ): Promise<void> {
   try {
     const pdf = new jsPDF('p', 'mm', 'a4');
@@ -274,10 +297,40 @@ export async function exportAnalysisToPDF(
         const lines = pdf.splitTextToSize(line, pageWidth - 2 * margin);
         pdf.text(lines, margin, currentY);
         currentY += lines.length * 6 + 3;
+      });      
+      currentY += 15;
+    }
+
+    // ===== RECORDED ACTIONS =====
+    if (actions && actions.length > 0) {
+      currentY = addStyledHeader(pdf, `RECORDED ACTIONS (${actions.length})`, currentY, margin, pageWidth);
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(11);
+      pdf.text(`Session ID: ${analysisData.sessionId}`, margin, currentY);
+      currentY += 10;
+      
+      pdf.setFontSize(10);
+      pdf.text('User interactions captured during the accessibility analysis session:', margin, currentY);
+      currentY += 10;
+
+      actions.forEach((action, index) => {
+        if (currentY > pageHeight - 30) {
+          pdf.addPage();
+          currentY = margin;
+        }
+        
+        const actionText = getActionDescription(action);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.text(`${index + 1}. ${actionText}`, margin + 5, currentY);
+        currentY += 6;
       });
       
       currentY += 15;
-    }    // ===== SCREEN READER ACCESSIBILITY ISSUES =====
+    }
+
+    // ===== SCREEN READER ACCESSIBILITY ISSUES =====
     if (analysisData.analysis?.components && analysisData.analysis.components.length > 0) {
       currentY = addStyledHeader(pdf, 'SCREEN READER ACCESSIBILITY ISSUES', currentY, margin, pageWidth);
       
@@ -376,17 +429,16 @@ export async function exportAnalysisToPDF(
           pdf.text(solutionLines, margin + 5, currentY + 2);
           pdf.setFont('helvetica', 'normal');
           currentY += solutionHeight + 5;
-        }
-
-        // WCAG Reference
+        }        // WCAG Reference
         if (component.wcagRule) {
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(9);
           pdf.text('WCAG GUIDELINE:', margin, currentY);
+          currentY += 5;
           
           pdf.setFont('helvetica', 'normal');
-          pdf.text(component.wcagRule, margin + 35, currentY);
-          currentY += 8;
+          currentY = addTextWithLinks(pdf, component.wcagRule, margin, currentY, pageWidth - 2 * margin);
+          currentY += 3;
         }
 
         currentY = addSectionDivider(pdf, currentY, margin, pageWidth);

@@ -38,14 +38,13 @@ function App() {
 
   // Accessibility analysis hook
   const { handleAnalysisResult } = useAccessibilityAnalysis();
-
   // PDF Export handler
   const handleExportPDF = async () => {
     if (!state.analysisResult) return;
 
     setIsExporting(true);
     try {
-      await exportAnalysisToPDF(state.analysisResult);
+      await exportAnalysisToPDF(state.analysisResult, state.actions);
     } catch (error) {
       console.error('PDF export failed:', error);
     } finally {
@@ -370,14 +369,18 @@ function App() {
             )}            {/* Analyzing Mode */}
             {state.mode === 'analyzing' && (
               <>
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-4">
-                    Analyzing Accessibility
-                  </h2>
-                  <div className="text-sm text-gray-600">
-                    Analyzing {state.actions.length} recorded actions for accessibility issues.
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card">
+                  <div className="flex items-center justify-center py-6 px-2 relative">
+                    <div className="text-center">
+                      <h2 className="text-xl font-medium text-gray-900">
+                        Analyzing Accessibility
+                      </h2>
+                      <div className="text-sm text-gray-500 mt-1">
+                        Analyzing {state.actions.length} recorded actions for accessibility issues.
+                      </div>
+                    </div>
                   </div>
-                </div>                {/* Actions List - Keep visible during analysis for consistency */}
+                </div>{/* Actions List - Keep visible during analysis for consistency */}
                 {state.actions.length > 0 && (
                   <ActionList
                     actions={state.actions}
@@ -422,14 +425,12 @@ function App() {
                             </span>
                           </button>
                         </div>
-                      </div>
-                    </div>
-                    
-                    {/* HR separator to emphasize master header - full width */}
+                      </div>                    </div>                    {/* HR separator to emphasize master header - full width */}
                     <hr className="border-gray-200" />
                     
-                    <div className="p-6">
-                      <div ref={analysisResultsRef}>                        <AnalysisResults
+                    <div className="px-6 pb-6 pt-6">
+                      <div ref={analysisResultsRef}>
+                        <AnalysisResults
                           analysisData={state.analysisResult}
                           isLoading={state.loading}
                           error={state.error || null}
