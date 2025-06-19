@@ -11,8 +11,9 @@ import type { AnalysisResult } from '../types';
 function cleanTextForPDF(text: string): string {
   if (!text) return '';
   
-  return text
-    // Decode HTML entities
+  // More conservative approach to character cleaning
+  let cleaned = text
+    // First, handle common HTML entities
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -20,87 +21,172 @@ function cleanTextForPDF(text: string): string {
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
     .replace(/&nbsp;/g, ' ')
-    // Decode numeric HTML entities
+      // Handle numeric entities more carefully
     .replace(/&#(\d+);/g, (_, num) => {
       const code = parseInt(num, 10);
-      return String.fromCharCode(code);
+      // Only convert safe printable characters
+      if (code >= 32 && code <= 126) return String.fromCharCode(code);
+      if (code === 160) return ' '; // Non-breaking space
+      // For unknown codes, return empty string to remove them
+      return '';
     })
     .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
       const code = parseInt(hex, 16);
-      return String.fromCharCode(code);
+      // Only convert safe printable characters
+      if (code >= 32 && code <= 126) return String.fromCharCode(code);
+      if (code === 160) return ' '; // Non-breaking space
+      // For unknown codes, return empty string to remove them
+      return '';
     })
+    
     // Remove HTML tags
     .replace(/<[^>]*>/g, '')
-    // Convert smart quotes and dashes
+    
+    // Convert smart quotes and dashes to ASCII
     .replace(/[\u2018\u2019]/g, "'")  // Smart quotes
-    .replace(/[\u201C\u201D]/g, '"')  // Smart double quotes
+    .replace(/[\u201C\u201D]/g, '"')  // Smart double quotes  
     .replace(/[\u2013\u2014]/g, '-')  // En/em dashes
     .replace(/[\u2026]/g, '...')      // Ellipsis
     .replace(/[\u00A0]/g, ' ')        // Non-breaking space
-    // Clean up whitespace
+    
+    // Remove problematic Unicode ranges that cause encoding artifacts
+    .replace(/[\u0080-\u009F]/g, '')   // C1 control characters
+    .replace(/[\u00AD]/g, '')          // Soft hyphen
+    .replace(/[\uFFF0-\uFFFF]/g, '')   // Specials block
+    .replace(/[\uFFFE\uFFFF]/g, '')    // Non-characters
+    
+    // Remove any remaining non-printable characters except basic whitespace
+    .replace(/[^\x20-\x7E\u00A1-\u00FF\u2018-\u201D\u2013-\u2014\u2026]/g, '')
+    
+    // Clean up multiple spaces
     .replace(/\s+/g, ' ')
     .trim();
+    
+  return cleaned;
 }
 
 /**
  * Add text with clickable links to PDF
  */
 function addTextWithLinks(pdf: jsPDF, text: string, x: number, y: number, maxWidth: number): number {
-  // Enhanced regex for URLs and WCAG references
-  const linkRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|WCAG\s+(?:GUIDELINE:\s*)?(\d+\.\d+(?:\.\d+)?)\s*([A-Z])?)/gi;
+  // Clean the text first to remove encoding artifacts
+  const cleanedText = cleanTextForPDF(text);
   
   let currentY = y;
-  const lines = pdf.splitTextToSize(text, maxWidth);
+  const lines = pdf.splitTextToSize(cleanedText, maxWidth);
   
   lines.forEach((line: string) => {
-    let parts = line.split(linkRegex);
     let currentX = x;
+    let remainingText = line;
     
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      
-      if (/https?:\/\//.test(part)) {
-        // This is a URL - add as clickable link
-        pdf.setTextColor(0, 0, 255); // Blue color for links
-        pdf.text(part, currentX, currentY);
-        
-        const textWidth = pdf.getTextWidth(part);
-        pdf.link(currentX, currentY - 3, textWidth, 4, { url: part });
-        
-        currentX += textWidth;
-        pdf.setTextColor(0, 0, 0); // Reset to black
-      } else if (/WCAG\s+(?:GUIDELINE:\s*)?(\d+\.\d+(?:\.\d+)?)/i.test(part)) {
-        // This is a WCAG reference - extract the guideline number
-        const wcagMatch = part.match(/(\d+\.\d+(?:\.\d+)?)/);
-        if (wcagMatch) {
-          const guidelineNumber = wcagMatch[1];
-          // Create specific WCAG Understanding URL
-          const wcagUrl = `https://www.w3.org/WAI/WCAG21/Understanding/${guidelineNumber.replace(/\./g, '-')}.html`;
-          
-          pdf.setTextColor(0, 0, 255); // Blue color for links
-          pdf.text(part, currentX, currentY);
-          
-          const textWidth = pdf.getTextWidth(part);
-          pdf.link(currentX, currentY - 3, textWidth, 4, { url: wcagUrl });
-          
-          currentX += textWidth;
-          pdf.setTextColor(0, 0, 0); // Reset to black
-        } else {
-          // Fallback for malformed WCAG references
-          pdf.text(part, currentX, currentY);
-          currentX += pdf.getTextWidth(part);
-        }
-      } else if (part && part.trim()) {
-        // Regular text - skip empty parts from regex splitting
-        pdf.text(part, currentX, currentY);
-        currentX += pdf.getTextWidth(part);
+    // Process URLs first
+    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/g;
+    let urlMatch;
+    let lastIndex = 0;
+    
+    while ((urlMatch = urlRegex.exec(remainingText)) !== null) {
+      // Add text before URL
+      const beforeText = remainingText.substring(lastIndex, urlMatch.index);
+      if (beforeText) {
+        // Check for WCAG references in the before text
+        currentX = addWcagLinks(pdf, beforeText, currentX, currentY);
       }
+      
+      // Add the URL as clickable link
+      const url = urlMatch[0];
+      pdf.setTextColor(0, 0, 255); // Blue color for links
+      pdf.text(url, currentX, currentY);
+      
+      const textWidth = pdf.getTextWidth(url);
+      pdf.link(currentX, currentY - 3, textWidth, 4, { url: url });
+      
+      currentX += textWidth;
+      pdf.setTextColor(0, 0, 0); // Reset to black
+      
+      lastIndex = urlMatch.index + urlMatch[0].length;
+    }
+    
+    // Add remaining text after last URL
+    const remainingAfterUrls = remainingText.substring(lastIndex);
+    if (remainingAfterUrls) {
+      currentX = addWcagLinks(pdf, remainingAfterUrls, currentX, currentY);
     }
     
     currentY += 4; // Line height
   });
   
   return currentY;
+}
+
+/**
+ * Add text with WCAG references as clickable links
+ */
+function addWcagLinks(pdf: jsPDF, text: string, x: number, y: number): number {
+  let currentX = x;
+  
+  // Enhanced regex to catch various WCAG guideline formats:
+  // "4.1.2 Name, Role, Value"
+  // "WCAG 4.1.2"
+  // "WCAG guideline 4.1.2"
+  // "wcag244" (from axe results)
+  const wcagRegex = /(?:WCAG\s+(?:GUIDELINE\s+)?)?(\d+\.\d+(?:\.\d+)?)\s*([A-Z][A-Za-z\s,\-&]+(?=\s|$|\.|\n))|wcag(\d)(\d)(\d)?/gi;
+  
+  let wcagMatch;
+  let lastIndex = 0;
+  
+  while ((wcagMatch = wcagRegex.exec(text)) !== null) {
+    // Add text before WCAG reference
+    const beforeText = text.substring(lastIndex, wcagMatch.index);
+    if (beforeText) {
+      pdf.text(beforeText, currentX, y);
+      currentX += pdf.getTextWidth(beforeText);
+    }
+    
+    let fullMatch = wcagMatch[0];
+    let guidelineNumber = '';
+    
+    // Handle different match patterns
+    if (wcagMatch[1]) {
+      // Standard format like "4.1.2 Name, Role, Value"
+      guidelineNumber = wcagMatch[1];
+    } else if (wcagMatch[3] && wcagMatch[4]) {
+      // Axe format like "wcag244"
+      guidelineNumber = `${wcagMatch[3]}.${wcagMatch[4]}`;
+      if (wcagMatch[5]) {
+        guidelineNumber += `.${wcagMatch[5]}`;
+      }
+      // For axe format, just show the guideline number
+      fullMatch = guidelineNumber;
+    }
+    
+    if (guidelineNumber) {
+      const wcagUrl = `https://www.w3.org/WAI/WCAG21/Understanding/${guidelineNumber.replace(/\./g, '-')}.html`;
+      
+      pdf.setTextColor(0, 0, 255); // Blue color for links
+      pdf.text(fullMatch, currentX, y);
+      
+      const textWidth = pdf.getTextWidth(fullMatch);
+      pdf.link(currentX, y - 3, textWidth, 4, { url: wcagUrl });
+      
+      currentX += textWidth;
+      pdf.setTextColor(0, 0, 0); // Reset to black
+    } else {
+      // Fallback - just add as regular text
+      pdf.text(fullMatch, currentX, y);
+      currentX += pdf.getTextWidth(fullMatch);
+    }
+    
+    lastIndex = wcagMatch.index + wcagMatch[0].length;
+  }
+  
+  // Add remaining text after last WCAG reference
+  const remainingText = text.substring(lastIndex);
+  if (remainingText) {
+    pdf.text(remainingText, currentX, y);
+    currentX += pdf.getTextWidth(remainingText);
+  }
+  
+  return currentX;
 }
 
 /**
@@ -204,7 +290,11 @@ function getActionDescription(action: any): string {
   
   switch (action.type) {
     case 'navigate':
-      return `Navigated to: ${action.url || 'Unknown URL'}`;
+      // Clean the URL to prevent duplication
+      let url = action.url || 'Unknown URL';
+      // Remove duplicate protocol/domain if present
+      url = url.replace(/^(https?:\/\/[^\/]+)\1/, '$1');
+      return `Navigated to: ${url}`;
     case 'click':
       return `Clicked on element${action.selector ? `: ${action.selector}` : ''}`;
     case 'type':
@@ -270,7 +360,7 @@ export async function exportAnalysisToPDF(
 
     // Executive Summary
     if (analysisData.analysis?.components || analysisData.axeResults) {
-      currentY = addStyledHeader(pdf, 'EXECUTIVE SUMMARY', currentY, margin, pageWidth, 14);
+      currentY = addStyledHeader(pdf, 'SUMMARY', currentY, margin, pageWidth, 14);
       
       let totalIssues = 0;
       let criticalCount = 0;
@@ -283,14 +373,60 @@ export async function exportAnalysisToPDF(
       if (analysisData.axeResults) {
         totalIssues += analysisData.axeResults.length;
         criticalCount += analysisData.axeResults.filter(v => v.impact === 'critical').length;
-      }
-
+      }      pdf.setFontSize(11);
+      
+      // Key metrics box
+      pdf.setDrawColor(59, 130, 246);
+      pdf.setFillColor(239, 246, 255);
+      const metricsHeight = 25;
+      pdf.rect(margin, currentY, pageWidth - 2 * margin, metricsHeight, 'FD');
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.setTextColor(30, 64, 175);
+      pdf.text('📊 KEY FINDINGS', margin + 10, currentY + 8);
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`Total Issues: ${totalIssues}  |  Critical: ${criticalCount}`, margin + 10, currentY + 18);
+      
+      currentY += metricsHeight + 15;
+      
+      // Summary content with better formatting
+      pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(11);
+      pdf.setTextColor(185, 28, 28);
+      pdf.text('🚨 PRIORITY ACTIONS:', margin, currentY);
+      currentY += 8;
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      
+      const priorityText = criticalCount > 0 
+        ? `• ${criticalCount} critical issues require immediate attention for WCAG compliance`
+        : '• ✅ No critical issues found - maintain current accessibility standards';
+      
+      const lines = pdf.splitTextToSize(priorityText, pageWidth - 2 * margin - 10);
+      pdf.text(lines, margin + 5, currentY);
+      currentY += lines.length * 6 + 10;
+      
+      // Methodology section
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      pdf.setTextColor(34, 197, 94);
+      pdf.text('📋 ANALYSIS APPROACH:', margin, currentY);
+      currentY += 8;
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      
       const summaryText = [
-        `This accessibility analysis identified ${totalIssues} issues across the tested website.`,
-        `${criticalCount} critical issues require immediate attention to ensure WCAG compliance.`,
-        `This report combines AI-powered screen reader analysis with automated axe-core scanning`,
-        `to provide comprehensive accessibility insights for development teams.`
+        `• AI-powered screen reader analysis identified user experience barriers`,
+        `• Automated axe-core scanning provided comprehensive technical coverage`,
+        `• Combined approach delivers both usability and compliance insights`
       ];
       
       summaryText.forEach(line => {
@@ -312,27 +448,28 @@ export async function exportAnalysisToPDF(
       
       pdf.setFontSize(10);
       pdf.text('User interactions captured during the accessibility analysis session:', margin, currentY);
-      currentY += 10;
-
-      actions.forEach((action, index) => {
+      currentY += 10;      actions.forEach((action, index) => {
         if (currentY > pageHeight - 30) {
           pdf.addPage();
           currentY = margin;
         }
         
-        const actionText = getActionDescription(action);
+        const actionText = cleanTextForPDF(getActionDescription(action));
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
-        pdf.text(`${index + 1}. ${actionText}`, margin + 5, currentY);
-        currentY += 6;
+        
+        // Use addTextWithLinks to make URLs clickable
+        const indexText = `${index + 1}. `;
+        pdf.text(indexText, margin + 5, currentY);
+        const indexWidth = pdf.getTextWidth(indexText);
+        currentY = addTextWithLinks(pdf, actionText, margin + 5 + indexWidth, currentY, pageWidth - 2 * margin - indexWidth);
+        currentY += 2;
       });
       
       currentY += 15;
-    }
-
-    // ===== SCREEN READER ACCESSIBILITY ISSUES =====
+    }    // ===== SCREEN READER ACCESSIBILITY ISSUES =====
     if (analysisData.analysis?.components && analysisData.analysis.components.length > 0) {
-      currentY = addStyledHeader(pdf, 'SCREEN READER ACCESSIBILITY ISSUES', currentY, margin, pageWidth);
+      currentY = addStyledHeader(pdf, `SCREEN READER ACCESSIBILITY ISSUES (${analysisData.analysis.components.length})`, currentY, margin, pageWidth);
       
       // Summary table
       const llmCounts = analysisData.analysis.components.reduce((acc, component) => {
@@ -390,7 +527,7 @@ export async function exportAnalysisToPDF(
         if (component.relevantHtml) {
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(9);
-          pdf.text('PROBLEMATIC CODE:', margin, currentY);
+          pdf.text('OFFENDING CODE:', margin, currentY);
           currentY += 5;
           
           // Code background
@@ -451,7 +588,7 @@ export async function exportAnalysisToPDF(
       pdf.addPage();
       currentY = margin;
       
-      currentY = addStyledHeader(pdf, 'AXE ACCESSIBILITY ISSUES', currentY, margin, pageWidth);
+      currentY = addStyledHeader(pdf, `Axe Accessibility Issues (${analysisData.axeResults.length})`, currentY, margin, pageWidth);
 
       // Axe summary table
       const axeCounts = analysisData.axeResults.reduce((acc, violation) => {

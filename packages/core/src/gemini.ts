@@ -637,7 +637,7 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
           console.warn(`⚠️ Missing LLM recommendation for ${violation.id}, using fallback`);
           recommendations.set(violation.id, {
             explanation: `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`,
-            recommendation: `Fix this accessibility issue: ${violation.help}
+            recommendation: `${violation.help}
 
 See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
           });
@@ -654,7 +654,7 @@ See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
       violations.forEach(violation => {
         fallbackResults.set(violation.id, {
           explanation: `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`,
-          recommendation: `Fix this accessibility issue: ${violation.help}
+          recommendation: `${violation.help}
 
 See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
         });
@@ -770,7 +770,7 @@ Remember:
       violations.forEach(violation => {
         results.set(violation.id, {
           explanation: `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`,
-          recommendation: `Fix this accessibility issue: ${violation.help}
+          recommendation: `${violation.help}
 
 See: ${violation.helpUrl}`
         });
