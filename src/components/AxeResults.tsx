@@ -324,9 +324,8 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
         </div>
       </details>
     );
-  }  return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card -mx-6">
-      <div className="flex items-center justify-center py-4 px-4 relative">
+  }  return (    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card -mx-6">
+      <div className="flex items-center justify-center py-5 px-4 relative">
         <h2 className="text-xl font-medium text-gray-900 text-center">
           Axe Accessibility Issues ({axeResults.length})
         </h2><button
