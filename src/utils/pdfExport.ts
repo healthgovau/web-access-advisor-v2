@@ -6,12 +6,12 @@ import jsPDF from 'jspdf';
 import type { AnalysisResult } from '../types';
 
 /**
- * Clean text for PDF output - remove HTML entities and special characters
+ * Clean text for PDF output - preserve backticks and important content
  */
 function cleanTextForPDF(text: string): string {
   if (!text) return '';
   
-  // More conservative approach to character cleaning
+  // More conservative approach - preserve backticks and important formatting
   let cleaned = text
     // First, handle common HTML entities
     .replace(/&amp;/g, '&')
@@ -21,7 +21,8 @@ function cleanTextForPDF(text: string): string {
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
     .replace(/&nbsp;/g, ' ')
-      // Handle numeric entities more carefully
+    
+    // Handle numeric entities more carefully
     .replace(/&#(\d+);/g, (_, num) => {
       const code = parseInt(num, 10);
       // Only convert safe printable characters
@@ -39,7 +40,7 @@ function cleanTextForPDF(text: string): string {
       return '';
     })
     
-    // Remove HTML tags
+    // Remove HTML tags BUT preserve backtick content
     .replace(/<[^>]*>/g, '')
     
     // Convert smart quotes and dashes to ASCII
@@ -55,8 +56,8 @@ function cleanTextForPDF(text: string): string {
     .replace(/[\uFFF0-\uFFFF]/g, '')   // Specials block
     .replace(/[\uFFFE\uFFFF]/g, '')    // Non-characters
     
-    // Remove any remaining non-printable characters except basic whitespace
-    .replace(/[^\x20-\x7E\u00A1-\u00FF\u2018-\u201D\u2013-\u2014\u2026]/g, '')
+    // More selective character filtering - preserve backticks and common symbols
+    .replace(/[^\x20-\x7E\u00A1-\u00FF`]/g, '')
     
     // Clean up multiple spaces
     .replace(/\s+/g, ' ')
@@ -490,9 +491,7 @@ export async function exportAnalysisToPDF(
         if (currentY > pageHeight - 80) {
           pdf.addPage();
           currentY = margin;
-        }
-
-        // Issue header with styling
+        }        // Issue header with styling
         const styling = getImpactStyling(component.impact);
         
         pdf.setFont('helvetica', 'bold');
@@ -500,10 +499,15 @@ export async function exportAnalysisToPDF(
         pdf.setTextColor(styling.color[0], styling.color[1], styling.color[2]);
         pdf.text(`${index + 1}. ${component.componentName}`, margin, currentY);
         
+        // Keep impact label colored
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.setTextColor(styling.color[0], styling.color[1], styling.color[2]);
+        pdf.text(styling.text, pageWidth - margin - 30, currentY);
+        
+        // Reset to black for subsequent content
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(9);
-        pdf.text(styling.text, pageWidth - margin - 30, currentY);
         currentY += 10;
 
         // Issue details in structured format
@@ -520,59 +524,102 @@ export async function exportAnalysisToPDF(
           pdf.setFontSize(9);
           currentY = addTextWithLinks(pdf, cleanTextForPDF(section.content), margin, currentY, pageWidth - 2 * margin);
           currentY += 5;
-        });        // Code sections with improved formatting
+        });        // Code sections - show whatever the LLM provided with appropriate formatting
         if (component.relevantHtml) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(9);
-          pdf.text('OFFENDING CODE:', margin, currentY);
-          currentY += 5;
-          
-          // Clean and format code for better display
           const cleanCode = cleanTextForPDF(component.relevantHtml);
-          const codeLines = pdf.splitTextToSize(cleanCode, pageWidth - 2 * margin - 20);
-          const codeHeight = Math.max(codeLines.length * 4 + 8, 15);
           
-          // Code background with border
-          pdf.setFillColor(254, 242, 242);
-          pdf.setDrawColor(220, 38, 127);
-          pdf.setLineWidth(0.5);
-          pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, codeHeight, 'FD');
-          
-          pdf.setFont('courier', 'normal');
-          pdf.setFontSize(7);
-          pdf.text(codeLines, margin + 8, currentY + 4);
-          pdf.setFont('helvetica', 'normal');
-          currentY += codeHeight + 5;
-        }
-
-        if (component.correctedCode) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(9);
-          pdf.text('RECOMMENDED SOLUTION:', margin, currentY);
-          currentY += 5;
-          
-          if (component.codeChangeSummary) {
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(9);
-            currentY = addTextWithLinks(pdf, cleanTextForPDF(component.codeChangeSummary), margin, currentY, pageWidth - 2 * margin);
-            currentY += 3;
+          if (cleanCode.trim()) {
+            // Check if this looks like actual HTML markup
+            const isActualHtml = /<\w+[^>]*>/.test(component.relevantHtml) || 
+                                /&lt;\w+[^&]*&gt;/.test(component.relevantHtml);
+            
+            // Check if this is just descriptive text with backticks (not actual code)
+            const isDescriptiveText = /^The `\w+`/.test(cleanCode.trim()) ||
+                                     /`\w+` with the/.test(cleanCode) ||
+                                     /contains `\w+`/.test(cleanCode);
+            
+            if (isActualHtml && !isDescriptiveText) {
+              // Show as formatted code
+              pdf.setFont('helvetica', 'bold');
+              pdf.setFontSize(9);
+              pdf.text('OFFENDING CODE:', margin, currentY);
+              currentY += 5;
+              
+              const codeLines = pdf.splitTextToSize(cleanCode, pageWidth - 2 * margin - 20);
+              const codeHeight = Math.max(codeLines.length * 4 + 8, 15);
+              
+              // Code background with border
+              pdf.setFillColor(254, 242, 242);
+              pdf.setDrawColor(220, 38, 127);
+              pdf.setLineWidth(0.5);
+              pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, codeHeight, 'FD');
+              
+              pdf.setFont('courier', 'normal');
+              pdf.setFontSize(7);
+              pdf.text(codeLines, margin + 8, currentY + 4);
+              pdf.setFont('helvetica', 'normal');
+              currentY += codeHeight + 5;
+            } else {
+              // Show as regular content description
+              pdf.setFont('helvetica', 'bold');
+              pdf.setFontSize(9);
+              pdf.text('AFFECTED ELEMENT:', margin, currentY);
+              currentY += 5;
+              
+              pdf.setFont('helvetica', 'normal');
+              pdf.setFontSize(9);
+              currentY = addTextWithLinks(pdf, cleanCode, margin, currentY, pageWidth - 2 * margin);
+              currentY += 5;
+            }
           }
-          
-          // Solution code background with border
+        }        if (component.correctedCode) {
           const cleanSolution = cleanTextForPDF(component.correctedCode);
-          const solutionLines = pdf.splitTextToSize(cleanSolution, pageWidth - 2 * margin - 20);
-          const solutionHeight = Math.max(solutionLines.length * 4 + 8, 15);
           
-          pdf.setFillColor(240, 253, 244);
-          pdf.setDrawColor(34, 197, 94);
-          pdf.setLineWidth(0.5);
-          pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, solutionHeight, 'FD');
-          
-          pdf.setFont('courier', 'normal');
-          pdf.setFontSize(7);
-          pdf.text(solutionLines, margin + 8, currentY + 4);
-          pdf.setFont('helvetica', 'normal');
-          currentY += solutionHeight + 5;
+          if (cleanSolution.trim()) {
+            // Check if this looks like actual HTML markup
+            const isActualHtml = /<\w+[^>]*>/.test(component.correctedCode) || 
+                                /&lt;\w+[^&]*&gt;/.test(component.correctedCode);
+            
+            // Check if this is descriptive text rather than code
+            const isDescriptiveText = /^The `\w+`/.test(cleanSolution.trim()) ||
+                                     /`\w+` with the/.test(cleanSolution) ||
+                                     /contains `\w+`/.test(cleanSolution);
+            
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(9);
+            pdf.text('RECOMMENDED SOLUTION:', margin, currentY);
+            currentY += 5;
+            
+            if (component.codeChangeSummary) {
+              pdf.setFont('helvetica', 'normal');
+              pdf.setFontSize(9);
+              currentY = addTextWithLinks(pdf, cleanTextForPDF(component.codeChangeSummary), margin, currentY, pageWidth - 2 * margin);
+              currentY += 3;
+            }
+            
+            if (isActualHtml && !isDescriptiveText) {
+              // Show as formatted code
+              const solutionLines = pdf.splitTextToSize(cleanSolution, pageWidth - 2 * margin - 20);
+              const solutionHeight = Math.max(solutionLines.length * 4 + 8, 15);
+              
+              pdf.setFillColor(240, 253, 244);
+              pdf.setDrawColor(34, 197, 94);
+              pdf.setLineWidth(0.5);
+              pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, solutionHeight, 'FD');
+              
+              pdf.setFont('courier', 'normal');
+              pdf.setFontSize(7);
+              pdf.text(solutionLines, margin + 8, currentY + 4);
+              pdf.setFont('helvetica', 'normal');
+              currentY += solutionHeight + 5;
+            } else {
+              // Show as regular text description
+              pdf.setFont('helvetica', 'normal');
+              pdf.setFontSize(9);
+              currentY = addTextWithLinks(pdf, cleanSolution, margin, currentY, pageWidth - 2 * margin);
+              currentY += 5;
+            }
+          }
         }// WCAG Reference
         if (component.wcagRule) {
           pdf.setFont('helvetica', 'bold');
@@ -617,9 +664,7 @@ export async function exportAnalysisToPDF(
         if (currentY > pageHeight - 80) {
           pdf.addPage();
           currentY = margin;
-        }
-
-        // Violation header
+        }        // Violation header
         const styling = getImpactStyling(violation.impact);
         
         pdf.setFont('helvetica', 'bold');
@@ -627,10 +672,15 @@ export async function exportAnalysisToPDF(
         pdf.setTextColor(styling.color[0], styling.color[1], styling.color[2]);
         pdf.text(`${index + 1}. ${violation.help}`, margin, currentY);
         
+        // Keep impact label colored
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.setTextColor(styling.color[0], styling.color[1], styling.color[2]);
+        pdf.text(styling.text, pageWidth - margin - 30, currentY);
+        
+        // Reset to black for subsequent content
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(9);
-        pdf.text(styling.text, pageWidth - margin - 30, currentY);
         currentY += 8;
 
         // Rule ID

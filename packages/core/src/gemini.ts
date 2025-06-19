@@ -270,6 +270,14 @@ GOOD: relevantHtml shows <div class="content"> and correctedCode shows <div clas
 BAD: relevantHtml shows <html> but issue is missing main landmark  
 GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode shows <body><main><div class="page-content">
 
+**CRITICAL: relevantHtml MUST BE ACTUAL HTML CODE:**
+- NEVER provide text content like "Skip to main content" or "New Aged Care Act"
+- ALWAYS provide HTML markup with < > angle brackets
+- Example GOOD: <button class="nav-btn">Skip to content</button>
+- Example BAD: Skip to main content
+- If you cannot identify specific HTML, leave relevantHtml empty
+- The relevantHtml field is for CODE ONLY, not page text content
+
 **Important**: Report ONLY components with identified screen reader accessibility issues.Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
 
 **OUTPUT FORMAT REQUIREMENTS:**
@@ -414,6 +422,13 @@ BAD: relevantHtml shows <html> but issue is missing main landmark
 GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode shows <body><main><div class="page-content">
 
 Focus on actionable screen reader accessibility issues that can be addressed by developers, prioritizing critical ARIA barriers that impact assistive technology users.
+
+**CRITICAL: relevantHtml MUST BE ACTUAL HTML CODE:**
+- NEVER provide text content like "Skip to main content" or page descriptions
+- ALWAYS provide HTML markup with < > angle brackets
+- Example GOOD: <button class="nav-btn">Skip to content</button>
+- Example BAD: Skip to main content
+- If you cannot identify specific HTML, leave relevantHtml empty
 
 **OUTPUT FORMAT REQUIREMENTS:**
 - Do NOT use emoji, Unicode symbols, or special characters in any output text
