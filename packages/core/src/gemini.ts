@@ -150,7 +150,7 @@ export class GeminiService {
       return `
 Your task is to analyze the provided DOM snapshot(s) and corresponding Axe Accessibility Report(s) with a PRIMARY FOCUS on screen reader (ARIA) accessibility and assistive technology compatibility. This tool is specifically designed to ensure interactive components work correctly with screen readers and other assistive technologies.
 
-**🎯 PRIMARY OBJECTIVE: SCREEN READER ACCESSIBILITY**
+**PRIMARY OBJECTIVE: SCREEN READER ACCESSIBILITY**
 The main requirement for this analysis is to ensure all interactive components are fully accessible to screen reader users through proper ARIA implementation, semantic HTML, and correct assistive technology behavior.
 
 **Context:**
@@ -272,7 +272,13 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
 
 **Important**: Report ONLY components with identified screen reader accessibility issues.Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
 
-**🎯 SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
+**OUTPUT FORMAT REQUIREMENTS:**
+- Do NOT use emoji, Unicode symbols, or special characters in any output text
+- Use plain ASCII text only for maximum compatibility with PDF export systems
+- Each component must have a specific, non-generic name
+- Issues must be actionable and specific
+
+**SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
 `;
   }
   /**
@@ -289,7 +295,7 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
       return `
 Your task is to analyze a complete user interaction flow consisting of ${context.totalSteps} steps captured during accessibility testing, with a PRIMARY FOCUS on screen reader (ARIA) accessibility and assistive technology compatibility. This analysis ensures that interaction sequences work correctly for screen reader users through proper ARIA implementation and state management.
 
-**🎯 PRIMARY OBJECTIVE: SCREEN READER ACCESSIBILITY FLOW ANALYSIS**
+**PRIMARY OBJECTIVE: SCREEN READER ACCESSIBILITY FLOW ANALYSIS**
 The main requirement is to ensure the entire interaction flow maintains proper screen reader accessibility, with correct ARIA state transitions, focus management, and assistive technology announcements throughout the user journey.
 
 **Session Context:**
@@ -409,7 +415,13 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
 
 Focus on actionable screen reader accessibility issues that can be addressed by developers, prioritizing critical ARIA barriers that impact assistive technology users.
 
-**🎯 SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
+**OUTPUT FORMAT REQUIREMENTS:**
+- Do NOT use emoji, Unicode symbols, or special characters in any output text
+- Use plain ASCII text only for maximum compatibility with PDF export systems
+- Each component must have a specific, non-generic name
+- Issues must be actionable and specific
+
+**SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
 `;
   }
 
@@ -452,7 +464,7 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
     const maxLength = parseInt(process.env.GEMINI_HTML_MAX_SIZE || '1048576'); // 1MB default
     
     if (html.length <= maxLength) {
-      console.log(`📊 HTML size: ${html.length} chars (under ${maxLength} limit, no truncation)`);
+      console.log(`HTML size: ${html.length} chars (under ${maxLength} limit, no truncation)`);
       return html;
     }
 
@@ -463,7 +475,7 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
     const lastTag = truncated.lastIndexOf('<');
     const result = lastTag > maxLength - 1000 ? truncated.substring(0, lastTag) : truncated;
     
-    console.log(`📊 HTML truncated to: ${result.length} chars`);
+    console.log(`HTML truncated to: ${result.length} chars`);
     return result;
   }
   /**
@@ -629,7 +641,7 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
       // Parse the structured response
       const recommendations = this.parseAxeRecommendations(text, violations);
       
-      console.log(`✅ Successfully parsed ${recommendations.size} recommendations from LLM`);
+      console.log(`Successfully parsed ${recommendations.size} recommendations from LLM`);
       
       // Ensure all violations have recommendations (fallback for unparsed ones)
       violations.forEach(violation => {

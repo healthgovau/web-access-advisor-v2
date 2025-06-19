@@ -221,20 +221,20 @@ function addSectionDivider(pdf: jsPDF, y: number, margin: number, pageWidth: num
 }
 
 /**
- * Get impact level styling
+ * Get impact level styling without emoji symbols
  */
 function getImpactStyling(impact: string): { color: [number, number, number], text: string } {
   switch (impact.toLowerCase()) {
     case 'critical':
-      return { color: [220, 38, 127], text: '🔴 CRITICAL' };
+      return { color: [220, 38, 127], text: 'CRITICAL' };
     case 'serious':
-      return { color: [234, 88, 12], text: '🟠 SERIOUS' };
+      return { color: [234, 88, 12], text: 'SERIOUS' };
     case 'moderate':
-      return { color: [202, 138, 4], text: '🟡 MODERATE' };
+      return { color: [202, 138, 4], text: 'MODERATE' };
     case 'minor':
-      return { color: [37, 99, 235], text: '🔵 MINOR' };
+      return { color: [37, 99, 235], text: 'MINOR' };
     default:
-      return { color: [107, 114, 128], text: '⚫ UNKNOWN' };
+      return { color: [107, 114, 128], text: 'UNKNOWN' };
   }
 }
 
@@ -380,11 +380,10 @@ export async function exportAnalysisToPDF(
       pdf.setFillColor(239, 246, 255);
       const metricsHeight = 25;
       pdf.rect(margin, currentY, pageWidth - 2 * margin, metricsHeight, 'FD');
-      
-      pdf.setFont('helvetica', 'bold');
+        pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(12);
       pdf.setTextColor(30, 64, 175);
-      pdf.text('📊 KEY FINDINGS', margin + 10, currentY + 8);
+      pdf.text('KEY FINDINGS', margin + 10, currentY + 8);
       
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(10);
@@ -397,7 +396,7 @@ export async function exportAnalysisToPDF(
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(11);
       pdf.setTextColor(185, 28, 28);
-      pdf.text('🚨 PRIORITY ACTIONS:', margin, currentY);
+      pdf.text('PRIORITY ACTIONS:', margin, currentY);
       currentY += 8;
       
       pdf.setFont('helvetica', 'normal');
@@ -406,7 +405,7 @@ export async function exportAnalysisToPDF(
       
       const priorityText = criticalCount > 0 
         ? `• ${criticalCount} critical issues require immediate attention for WCAG compliance`
-        : '• ✅ No critical issues found - maintain current accessibility standards';
+        : '• No critical issues found - maintain current accessibility standards';
       
       const lines = pdf.splitTextToSize(priorityText, pageWidth - 2 * margin - 10);
       pdf.text(lines, margin + 5, currentY);
@@ -416,7 +415,7 @@ export async function exportAnalysisToPDF(
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(11);
       pdf.setTextColor(34, 197, 94);
-      pdf.text('📋 ANALYSIS APPROACH:', margin, currentY);
+      pdf.text('ANALYSIS APPROACH:', margin, currentY);
       currentY += 8;
       
       pdf.setFont('helvetica', 'normal');
@@ -521,24 +520,27 @@ export async function exportAnalysisToPDF(
           pdf.setFontSize(9);
           currentY = addTextWithLinks(pdf, cleanTextForPDF(section.content), margin, currentY, pageWidth - 2 * margin);
           currentY += 5;
-        });
-
-        // Code sections with proper formatting
+        });        // Code sections with improved formatting
         if (component.relevantHtml) {
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(9);
           pdf.text('OFFENDING CODE:', margin, currentY);
           currentY += 5;
           
-          // Code background
-          const codeLines = pdf.splitTextToSize(component.relevantHtml, pageWidth - 2 * margin - 10);
-          const codeHeight = codeLines.length * 3 + 6;
+          // Clean and format code for better display
+          const cleanCode = cleanTextForPDF(component.relevantHtml);
+          const codeLines = pdf.splitTextToSize(cleanCode, pageWidth - 2 * margin - 20);
+          const codeHeight = Math.max(codeLines.length * 4 + 8, 15);
+          
+          // Code background with border
           pdf.setFillColor(254, 242, 242);
-          pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, codeHeight, 'F');
+          pdf.setDrawColor(220, 38, 127);
+          pdf.setLineWidth(0.5);
+          pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, codeHeight, 'FD');
           
           pdf.setFont('courier', 'normal');
-          pdf.setFontSize(8);
-          pdf.text(codeLines, margin + 5, currentY + 2);
+          pdf.setFontSize(7);
+          pdf.text(codeLines, margin + 8, currentY + 4);
           pdf.setFont('helvetica', 'normal');
           currentY += codeHeight + 5;
         }
@@ -548,25 +550,30 @@ export async function exportAnalysisToPDF(
           pdf.setFontSize(9);
           pdf.text('RECOMMENDED SOLUTION:', margin, currentY);
           currentY += 5;
-            if (component.codeChangeSummary) {
+          
+          if (component.codeChangeSummary) {
             pdf.setFont('helvetica', 'normal');
             pdf.setFontSize(9);
             currentY = addTextWithLinks(pdf, cleanTextForPDF(component.codeChangeSummary), margin, currentY, pageWidth - 2 * margin);
             currentY += 3;
           }
           
-          // Solution code background
-          const solutionLines = pdf.splitTextToSize(component.correctedCode, pageWidth - 2 * margin - 10);
-          const solutionHeight = solutionLines.length * 3 + 6;
+          // Solution code background with border
+          const cleanSolution = cleanTextForPDF(component.correctedCode);
+          const solutionLines = pdf.splitTextToSize(cleanSolution, pageWidth - 2 * margin - 20);
+          const solutionHeight = Math.max(solutionLines.length * 4 + 8, 15);
+          
           pdf.setFillColor(240, 253, 244);
-          pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, solutionHeight, 'F');
+          pdf.setDrawColor(34, 197, 94);
+          pdf.setLineWidth(0.5);
+          pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, solutionHeight, 'FD');
           
           pdf.setFont('courier', 'normal');
-          pdf.setFontSize(8);
-          pdf.text(solutionLines, margin + 5, currentY + 2);
+          pdf.setFontSize(7);
+          pdf.text(solutionLines, margin + 8, currentY + 4);
           pdf.setFont('helvetica', 'normal');
           currentY += solutionHeight + 5;
-        }        // WCAG Reference
+        }// WCAG Reference
         if (component.wcagRule) {
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(9);
@@ -644,24 +651,34 @@ export async function exportAnalysisToPDF(
         if (violation.nodes && violation.nodes.length > 0) {
           pdf.setFont('helvetica', 'bold');
           pdf.text(`OFFENDING CODE (${violation.nodes.length} total):`, margin, currentY);
-          currentY += 8;
-
-          violation.nodes.slice(0, 5).forEach((node, nodeIndex) => {
-            // Element background
-            pdf.setFillColor(249, 250, 251);
-            pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, 12, 'F');
+          currentY += 8;          violation.nodes.slice(0, 5).forEach((node, nodeIndex) => {
+            // Clean HTML element for better display
+            const cleanHtml = node.html ? cleanTextForPDF(node.html) : '';
+            const shortHtml = cleanHtml.length > 120 ? cleanHtml.substring(0, 120) + '...' : cleanHtml;
+            
+            // Code lines for sizing
+            const codeLines = pdf.splitTextToSize(shortHtml, pageWidth - 2 * margin - 20);
+            const elementHeight = Math.max(codeLines.length * 4 + 12, 20);
+            
+            // Element background with border
+            pdf.setFillColor(254, 242, 242);
+            pdf.setDrawColor(220, 38, 127);
+            pdf.setLineWidth(0.3);
+            pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, elementHeight, 'FD');
             
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(8);
-            pdf.text(`Element ${nodeIndex + 1}:`, margin + 2, currentY + 3);
+            pdf.text(`Element ${nodeIndex + 1}:`, margin + 5, currentY + 4);
             
-            pdf.setFont('courier', 'normal');
-            const selectorText = Array.isArray(node.target) ? node.target.join(' > ') : node.target;
-            const shortSelector = selectorText.length > 80 ? selectorText.substring(0, 80) + '...' : selectorText;
-            pdf.text(shortSelector, margin + 2, currentY + 8);
+            if (shortHtml) {
+              pdf.setFont('courier', 'normal');
+              pdf.setFontSize(7);
+              pdf.text(codeLines, margin + 5, currentY + 10);
+            }
             
-            currentY += 15;
-          });          if (violation.nodes.length > 5) {
+            currentY += elementHeight + 5;
+          });
+          if (violation.nodes.length > 5) {
             pdf.setFont('helvetica', 'italic');
             pdf.setFontSize(9);
             pdf.text(`... and ${violation.nodes.length - 5} more elements`, margin + 5, currentY);
@@ -700,22 +717,26 @@ export async function exportAnalysisToPDF(
                 }
                 
                 // Only add code box if there's actual code content
-                if (codeContent) {
-                  // Code example header
+                if (codeContent) {                  // Code example header
                   pdf.setFont('helvetica', 'bold');
                   pdf.setFontSize(9);
                   pdf.text('Code Example:', margin + 5, currentY);
                   currentY += 5;
                   
-                  // Code background
-                  const codeLines = pdf.splitTextToSize(codeContent, pageWidth - 2 * margin - 10);
-                  const codeHeight = codeLines.length * 3 + 6;
-                  pdf.setFillColor(248, 249, 250); // Light gray background for code
-                  pdf.rect(margin + 5, currentY - 2, pageWidth - 2 * margin - 10, codeHeight, 'F');
+                  // Clean and format code for better display
+                  const cleanCodeContent = cleanTextForPDF(codeContent);
+                  const codeLines = pdf.splitTextToSize(cleanCodeContent, pageWidth - 2 * margin - 25);
+                  const codeHeight = Math.max(codeLines.length * 4 + 8, 15);
+                  
+                  // Code background with border
+                  pdf.setFillColor(248, 249, 250);
+                  pdf.setDrawColor(156, 163, 175);
+                  pdf.setLineWidth(0.5);
+                  pdf.rect(margin + 5, currentY - 2, pageWidth - 2 * margin - 10, codeHeight, 'FD');
                   
                   pdf.setFont('courier', 'normal');
-                  pdf.setFontSize(8);
-                  pdf.text(codeLines, margin + 10, currentY + 2);
+                  pdf.setFontSize(7);
+                  pdf.text(codeLines, margin + 10, currentY + 4);
                   pdf.setFont('helvetica', 'normal');
                   currentY += codeHeight + 5;
                 }
