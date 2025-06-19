@@ -430,18 +430,10 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                         </div>
                       )}                      {violation.nodes && violation.nodes.length > 0 && (
                         <div>
-                          <span className="text-base font-medium text-gray-700 mb-3">Offending Code ({violation.nodes.length}): </span>
-                          <div className="mt-3 space-y-4">
+                          <span className="text-base font-medium text-gray-700 mb-3">Offending Code ({violation.nodes.length}): </span>                          <div className="mt-3 space-y-4">
                             {violation.nodes.slice(0, 5).map((node, nodeIndex) => (
                               <div key={nodeIndex} className="bg-gray-50 border border-gray-200 rounded p-3">
                                 <div className="space-y-3">
-                                  <div>
-                                    <span className="text-sm font-medium text-gray-700">Selector: </span>
-                                    <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">
-                                      {Array.isArray(node.target) ? node.target.join(' > ') : node.target}
-                                    </code>
-                                  </div>
-
                                   {node.html && (
                                     <div>
                                       <pre className="p-3 bg-red-50 border border-red-200 rounded text-sm text-gray-700 overflow-x-auto" style={{ fontFamily: 'Consolas, Monaco, monospace' }}>
@@ -449,6 +441,13 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                                       </pre>
                                     </div>
                                   )}
+
+                                  <div>
+                                    <span className="text-xs font-medium text-gray-600">Selector: </span>
+                                    <code className="px-1 py-0.5 bg-white text-gray-700 rounded text-xs font-mono border border-gray-200">
+                                      {Array.isArray(node.target) ? node.target.join(' > ') : node.target}
+                                    </code>
+                                  </div>
 
                                   {node.failureSummary && !violation.recommendation && (
                                     <div>
@@ -480,8 +479,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                                           }
                                         })()}
                                       </div>
-                                    </div>
-                                  )}
+                                    </div>                                  )}
                                 </div>
                               </div>
                             ))}

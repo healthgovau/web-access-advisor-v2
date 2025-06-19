@@ -285,23 +285,21 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                             <div className="text-base text-gray-600 mt-2" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                               {formatTextWithCodeTags(component.explanation)}
                             </div>
-                          </div>
-
-                          {component.selector && (
-                            <div>
-                              <span className="text-base font-medium text-gray-700">Selector: </span>
-                              <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">
-                                {component.selector}
-                              </code>
-                            </div>
-                          )}
-
-                          {component.relevantHtml && (
+                          </div>                          {component.relevantHtml && (
                             <div>
                               <span className="text-base font-medium text-gray-700">Offending Code: </span>
                               <pre className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-sm text-gray-700 overflow-x-auto" style={{ fontFamily: 'Consolas, Monaco, monospace' }}>
                                 <code>{formatHtmlCode(component.relevantHtml)}</code>
                               </pre>
+                            </div>
+                          )}
+
+                          {component.selector && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-600">Selector: </span>
+                              <code className="px-1 py-0.5 bg-white text-gray-700 rounded text-xs font-mono border border-gray-200">
+                                {component.selector}
+                              </code>
                             </div>
                           )}
                           {component.correctedCode && (

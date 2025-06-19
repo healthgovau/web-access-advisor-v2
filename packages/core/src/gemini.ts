@@ -587,10 +587,11 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
       components: [], // Would need more sophisticated parsing for components
       recommendations,
       score: scoreMatch ? parseInt(scoreMatch[1]) : 50
-    };  }
-  /**
+    };  }  /**
    * Generate explanations and actionable recommendations for specific axe violations
-   */  async generateAxeRecommendations(violations: any[]): Promise<Map<string, { explanation: string; recommendation: string }>> {
+   * Using simplified approach for better reliability
+   */
+  async generateAxeRecommendations(violations: any[]): Promise<Map<string, { explanation: string; recommendation: string }>> {
     console.log(`🤖 generateAxeRecommendations called with ${violations?.length || 0} violations`);
     
     if (!violations || violations.length === 0) {
@@ -598,52 +599,82 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
       return new Map();
     }
 
-    console.log(`🔧 Processing violations:`, violations.map(v => v.id));
+    console.log(`🔧 Using simplified approach for ${violations.length} violations:`, violations.map(v => v.id));
 
+    // Debug: Let's see what fields axe actually provides
+    if (violations.length > 0) {
+      console.log(`🔍 Sample violation structure:`, {
+        id: violations[0].id,
+        description: violations[0].description,
+        help: violations[0].help,
+        helpUrl: violations[0].helpUrl,
+        impact: violations[0].impact,
+        tags: violations[0].tags
+      });
+    }    // Use LLM to generate user-focused explanations
+    const results = new Map<string, { explanation: string; recommendation: string }>();
+    
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
-      const results = new Map<string, { explanation: string; recommendation: string }>();
+      
+      // Simple prompt just for explanations
+      const prompt = `For each accessibility violation, provide a clear explanation of why it matters to users with disabilities. Focus on user impact, not technical details.
 
-      // Process violations in batches to avoid token limits
-      const batchSize = 3;
-      for (let i = 0; i < violations.length; i += batchSize) {
-        const batch = violations.slice(i, i + batchSize);
-        console.log(`📝 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(violations.length/batchSize)} with violations: ${batch.map(v => v.id).join(', ')}`);
-        
-        const prompt = this.buildAxeRecommendationPrompt(batch);
-        
-        try {
-          console.log(`📤 Sending prompt to LLM (${prompt.length} chars)...`);
-          const result = await model.generateContent(prompt);
-          const response = await result.response;
-          const text = response.text();
-          console.log(`📥 Received LLM response (${text.length} chars)`);
-          
-          // Parse the response to extract explanations and recommendations
-          const parsed = this.parseAxeRecommendations(text, batch);
-          console.log(`🔧 Parsed ${parsed.size} results from batch`);
-          parsed.forEach((data, id) => {
-            console.log(`✅ Adding content for ${id}: explanation=${!!data.explanation}, recommendation=${!!data.recommendation}`);
-            results.set(id, data);
-          });
-          
-        } catch (error) {
-          console.warn(`Failed to generate recommendations for batch starting at ${i}:`, error);
-          // Add fallback recommendations
-          batch.forEach(violation => {
-            results.set(violation.id, {
-              explanation: `This violation occurs when ${violation.description.toLowerCase()}`,
-              recommendation: `Review and fix: ${violation.help}`
-            });
-          });
+Violations:
+${violations.map(v => `${v.id}: ${v.description} (Help: ${v.help})`).join('\n')}
+
+Respond in this format:
+VIOLATION_ID: explanation focusing on user impact and why it matters for accessibility
+
+Be concise and user-focused. Explain who is affected and why.`;
+
+      console.log(`📤 Sending simple explanation prompt to LLM...`);
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      console.log(`📥 Received LLM explanations response`);
+      
+      // Simple parsing for explanations
+      const explanationMap = new Map<string, string>();
+      const lines = text.split('\n');
+      lines.forEach(line => {
+        const match = line.match(/^([^:]+):\s*(.+)$/);
+        if (match) {
+          const violationId = match[1].trim();
+          const explanation = match[2].trim();
+          explanationMap.set(violationId, explanation);
         }
-      }
+      });
+      
+      // Build results with LLM explanations or fallback
+      violations.forEach(violation => {
+        const explanation = explanationMap.get(violation.id) || 
+          `This accessibility issue affects users with disabilities and can prevent them from properly accessing or using the content. ${violation.help}`;
+        
+        const recommendation = `${violation.help}
 
-      return results;
+See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`;
+
+        results.set(violation.id, { explanation, recommendation });
+      });
+      
     } catch (error) {
-      console.error('Failed to generate axe recommendations:', error);
-      return new Map();
-    }  }
+      console.warn('LLM explanation generation failed, using fallback:', error);
+      // Fallback to simple approach
+      violations.forEach(violation => {
+        const explanation = `This accessibility issue affects users with disabilities and can prevent them from properly accessing or using the content. ${violation.help}`;
+        
+        const recommendation = `${violation.help}
+
+See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`;
+
+        results.set(violation.id, { explanation, recommendation });
+      });
+    }
+
+    console.log(`✅ Generated ${results.size} axe recommendations using simplified approach`);
+    return results;
+  }
   /**
    * Build prompt for axe violation recommendations
    */  private buildAxeRecommendationPrompt(violations: any[]): string {
@@ -745,13 +776,15 @@ Remember:
         }
       }
     });
-    
-    // Fallback: if parsing failed, generate basic explanations and recommendations
+      // Fallback: if parsing failed, generate basic explanations and recommendations
     if (results.size === 0) {
+      console.warn(`⚠️ LLM parsing completely failed, using fallback explanations for ${violations.length} violations`);
       violations.forEach(violation => {
         results.set(violation.id, {
-          explanation: `This violation occurs when ${violation.description.toLowerCase()}. This affects accessibility because it prevents users with disabilities from properly accessing or understanding the content.`,
-          recommendation: `${violation.help}. See: ${violation.helpUrl}`
+          explanation: `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`,
+          recommendation: `Fix this accessibility issue: ${violation.help}
+
+See: ${violation.helpUrl}`
         });
       });
     }
