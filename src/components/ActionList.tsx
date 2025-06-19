@@ -70,7 +70,7 @@ const ActionList: React.FC<ActionListProps> = ({ actions, isRecording }) => {
     );
   }  return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b border-neutral-light">
+      <div className={`flex items-center justify-between p-4 ${isExpanded ? 'border-b border-neutral-light' : ''}`}>
         <h3 className="text-xl font-medium text-brand-dark">
           Actions
         </h3>

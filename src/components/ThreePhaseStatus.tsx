@@ -244,7 +244,7 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
     }
   };  return (
     <div className="card rounded-lg p-4">
-      <h3 className="text-xl font-medium text-brand-dark mb-3">Progress</h3>
+      <h2 className="text-xl font-medium text-brand-dark mb-6">Progress</h2>
         {/* Compact horizontal layout */}
       <div className="grid grid-cols-3 gap-3 mb-3">
         {phases.map((phase) => (

@@ -410,8 +410,7 @@ function App() {
 
                 {/* Actions List */}
                 {state.actions.length > 0 && (
-                  <div className="card rounded-lg p-6">
-                    <h2 className="text-lg font-medium text-gray-900 mb-4">
+                  <div className="card rounded-lg p-6">                    <h2 className="text-xl font-medium text-gray-900 mb-4">
                       Recorded Actions
                     </h2>{/* Session info below heading */}
                     {state.sessionId && (
@@ -428,8 +427,7 @@ function App() {
                 {state.analysisResult && (
                   <div className="card rounded-lg p-6">
                     <div className="flex justify-between items-center mb-4">
-                      <div className="flex-1"></div>
-                      <h2 className="text-lg font-medium text-gray-900 text-center flex-1">
+                      <div className="flex-1"></div>                      <h2 className="text-xl font-medium text-gray-900 text-center flex-1">
                         Accessibility Analysis Results
                       </h2>
                       <div className="flex-1 flex justify-end">

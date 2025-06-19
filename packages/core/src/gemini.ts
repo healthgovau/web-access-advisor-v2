@@ -589,7 +589,6 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
       score: scoreMatch ? parseInt(scoreMatch[1]) : 50
     };  }  /**
    * Generate explanations and actionable recommendations for specific axe violations
-   * Using simplified approach for better reliability
    */
   async generateAxeRecommendations(violations: any[]): Promise<Map<string, { explanation: string; recommendation: string }>> {
     console.log(`🤖 generateAxeRecommendations called with ${violations?.length || 0} violations`);
@@ -599,7 +598,7 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
       return new Map();
     }
 
-    console.log(`🔧 Using simplified approach for ${violations.length} violations:`, violations.map(v => v.id));
+    console.log(`🔧 Generating LLM explanations for ${violations.length} violations:`, violations.map(v => v.id));
 
     // Debug: Let's see what fields axe actually provides
     if (violations.length > 0) {
@@ -611,69 +610,58 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
         impact: violations[0].impact,
         tags: violations[0].tags
       });
-    }    // Use LLM to generate user-focused explanations
-    const results = new Map<string, { explanation: string; recommendation: string }>();
-    
+    }
+
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
       
-      // Simple prompt just for explanations
-      const prompt = `For each accessibility violation, provide a clear explanation of why it matters to users with disabilities. Focus on user impact, not technical details.
-
-Violations:
-${violations.map(v => `${v.id}: ${v.description} (Help: ${v.help})`).join('\n')}
-
-Respond in this format:
-VIOLATION_ID: explanation focusing on user impact and why it matters for accessibility
-
-Be concise and user-focused. Explain who is affected and why.`;
-
-      console.log(`📤 Sending simple explanation prompt to LLM...`);
+      // Use the comprehensive prompt for both explanations and recommendations
+      const prompt = this.buildAxeRecommendationPrompt(violations);
+      
+      console.log(`📤 Sending comprehensive prompt to LLM for ${violations.length} violations...`);
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      console.log(`📥 Received LLM explanations response`);
       
-      // Simple parsing for explanations
-      const explanationMap = new Map<string, string>();
-      const lines = text.split('\n');
-      lines.forEach(line => {
-        const match = line.match(/^([^:]+):\s*(.+)$/);
-        if (match) {
-          const violationId = match[1].trim();
-          const explanation = match[2].trim();
-          explanationMap.set(violationId, explanation);
+      console.log(`📥 Received LLM response (${text.length} chars)`);
+      console.log(`🔍 LLM Response Sample:`, text.substring(0, 300) + '...');
+      
+      // Parse the structured response
+      const recommendations = this.parseAxeRecommendations(text, violations);
+      
+      console.log(`✅ Successfully parsed ${recommendations.size} recommendations from LLM`);
+      
+      // Ensure all violations have recommendations (fallback for unparsed ones)
+      violations.forEach(violation => {
+        if (!recommendations.has(violation.id)) {
+          console.warn(`⚠️ Missing LLM recommendation for ${violation.id}, using fallback`);
+          recommendations.set(violation.id, {
+            explanation: `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`,
+            recommendation: `Fix this accessibility issue: ${violation.help}
+
+See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
+          });
         }
       });
       
-      // Build results with LLM explanations or fallback
-      violations.forEach(violation => {
-        const explanation = explanationMap.get(violation.id) || 
-          `This accessibility issue affects users with disabilities and can prevent them from properly accessing or using the content. ${violation.help}`;
-        
-        const recommendation = `${violation.help}
-
-See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`;
-
-        results.set(violation.id, { explanation, recommendation });
-      });
+      return recommendations;
       
     } catch (error) {
-      console.warn('LLM explanation generation failed, using fallback:', error);
-      // Fallback to simple approach
+      console.warn('❌ LLM recommendation generation failed, using fallback for all violations:', error);
+      
+      // Fallback to basic recommendations for all violations
+      const fallbackResults = new Map<string, { explanation: string; recommendation: string }>();
       violations.forEach(violation => {
-        const explanation = `This accessibility issue affects users with disabilities and can prevent them from properly accessing or using the content. ${violation.help}`;
-        
-        const recommendation = `${violation.help}
+        fallbackResults.set(violation.id, {
+          explanation: `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`,
+          recommendation: `Fix this accessibility issue: ${violation.help}
 
-See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`;
-
-        results.set(violation.id, { explanation, recommendation });
+See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
+        });
       });
+      
+      return fallbackResults;
     }
-
-    console.log(`✅ Generated ${results.size} axe recommendations using simplified approach`);
-    return results;
   }
   /**
    * Build prompt for axe violation recommendations

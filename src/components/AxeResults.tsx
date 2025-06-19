@@ -315,18 +315,16 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
       </details>
     );
   }  return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-6"><div className="flex items-center justify-center p-4 border-b border-neutral-light relative">
-        <h4 className="text-xl font-medium text-brand-dark text-center">
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-6">      <div className="flex items-center justify-center p-2 relative">        <h2 className="text-xl font-medium text-gray-900 text-center">
           Axe Accessibility Issues ({axeResults.length})
-        </h4>
-          <button
+        </h2><button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-base text-slate hover:text-neutral-black underline absolute right-4"
+          className="text-sm text-gray-600 hover:text-gray-900 underline absolute right-4"
         >
           {isExpanded ? 'Collapse' : 'Expand'}
         </button>
       </div>      {isExpanded && (
-        <div className="p-4 space-y-6">
+        <div className="p-3 space-y-3">
           {/* Issue Count Summary - matching main analysis section styling */}
           {(() => {
             // Calculate counts from ALL violations, not just filtered ones
@@ -337,8 +335,8 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
 
             return (
               <>
-                <div className="w-full flex justify-center mb-4 mt-8">
-                  <div className="inline-grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="w-full flex justify-center mb-3 mt-2">
+                  <div className="inline-grid grid-cols-2 md:grid-cols-4 gap-3">
                     {['critical', 'serious', 'moderate', 'minor'].map(impact => (
                       <button
                         key={impact}
@@ -369,7 +367,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                     ))}
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 text-center mb-10">Click boxes above to toggle filter</p>
+                <p className="text-xs text-gray-500 text-center mb-6">Click boxes above to toggle filter</p>
               </>
             );
           })()}          {/* Violations List - matching main analysis section styling */}

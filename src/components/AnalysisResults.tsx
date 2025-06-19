@@ -186,10 +186,10 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
           </div>
         </div>
       )}      {/* Basic Analysis Results */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">{/* Gemini Analysis Results */}
+      <div className="bg-white border border-gray-200 rounded-lg">{/* Remove padding here to make it full width */}
         {analysisData.analysis ? (
           <div className="space-y-6">            <div className="p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-6 text-center">Screen Reader Accessibility Issues</h3>
+              <h2 className="text-xl font-medium text-gray-900 mb-6 text-center">Screen Reader Accessibility Issues</h2>
 
               {/* Component Issues */}
               {analysisData.analysis.components && analysisData.analysis.components.length > 0 && (<div className="mb-6">
