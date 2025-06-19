@@ -163,68 +163,124 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
   };
 
   const phases = getPhaseStatuses();  const getStatusIcon = (status: PhaseStatus['status'], phase: string) => {
+    // Using SVG icons with improved designs for better visual consistency
+    const iconClass = "w-5 h-5 flex-shrink-0";
+    
     switch (status) {
-      case 'pending': return '⏸️';
+      case 'pending': 
+        return (
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+            <path d="M8 12h8" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        );
+      case 'active':
+        if (phase === 'recording') {
+          return (
+            <svg className={iconClass} fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="8" />
+              <circle cx="12" cy="12" r="3" fill="white" />
+            </svg>
+          );
+        }        if (phase === 'replay') {
+          return (
+            <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          );
+        }
+        if (phase === 'ai') {
+          return (
+            <svg className={`${iconClass} animate-pulse`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          );
+        }
+        return (
+          <svg className={`${iconClass} animate-spin`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        );
+      case 'completed': 
+        return (
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      case 'error': 
+        return (
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      case 'skipped': 
+        return (
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.996-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        );
+      default: 
+        return (
+          <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+            <path d="M8 12h8" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        );
+    }
+  };  const getStatusColor = (status: PhaseStatus['status']) => {
+    switch (status) {
+      case 'pending': 
+        return 'status-pending';
       case 'active': 
-        // Use different icons for different phases
-        if (phase === 'recording') return '🔴';
-        if (phase === 'replay') return '🔄';
-        if (phase === 'ai') return '🧠';
-        return '🔄';
-      case 'completed': return '✅';
-      case 'error': return '❌';
-      case 'skipped': return '⚠️';
-      default: return '⏸️';
+        return 'status-active';
+      case 'completed': 
+        return 'status-completed';
+      case 'error': 
+        return 'status-error';
+      case 'skipped': 
+        return 'status-warning';
+      default: 
+        return 'status-pending';
     }
-  };
-
-  const getStatusColor = (status: PhaseStatus['status']) => {
-    switch (status) {
-      case 'pending': return 'text-gray-500 bg-gray-50 border-gray-200';
-      case 'active': return 'text-blue-700 bg-blue-50 border-blue-200';
-      case 'completed': return 'text-green-700 bg-green-50 border-green-200';
-      case 'error': return 'text-red-700 bg-red-50 border-red-200';
-      case 'skipped': return 'text-yellow-700 bg-yellow-50 border-yellow-200';
-      default: return 'text-gray-500 bg-gray-50 border-gray-200';
-    }
-  };
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <h3 className="text-lg font-medium text-gray-900 mb-3">Progress</h3>
-      
-      {/* Compact horizontal layout */}
+  };  return (
+    <div className="card rounded-lg p-4" style={{ backgroundColor: 'var(--xx-light-grey)' }}>
+      <h3 className="text-lg font-medium text-brand-dark mb-3">Progress</h3>
+        {/* Compact horizontal layout */}
       <div className="grid grid-cols-3 gap-3 mb-3">
         {phases.map((phase) => (
-          <div key={phase.phase} className={`border rounded p-3 transition-all duration-300 ${getStatusColor(phase.status)}`}>            <div className="mb-1">
-              {/* Status icon above the heading */}
+          <div key={phase.phase} className={`border rounded-lg p-3 transition-all duration-300 ${getStatusColor(phase.status)}`}>
+            <div className="mb-1">              {/* Status icon above the heading */}
               <div className="flex justify-center mb-2">
-                <span className="text-lg">
-                  {phase.status === 'active' ? (
-                    <div className={phase.phase === 'replay' ? 'animate-spin-reverse' : ''}>
-                      {getStatusIcon(phase.status, phase.phase)}
-                    </div>
-                  ) : (
-                    getStatusIcon(phase.status, phase.phase)
-                  )}
-                </span>
-              </div>              <div className="text-center">
-                <h4 className="text-base font-medium uppercase tracking-wide mb-2">
+                {phase.status === 'active' && phase.phase === 'replay' ? (
+                  <div className="animate-spin">
+                    {getStatusIcon(phase.status, phase.phase)}
+                  </div>
+                ) : (
+                  getStatusIcon(phase.status, phase.phase)
+                )}
+              </div>
+              
+              <div className="text-center">
+                <h4 className="text-sm font-semibold uppercase tracking-wide mb-1">
                   {phase.phase === 'ai' ? 'AI Analysis' : phase.phase}
                 </h4>
               </div>
-            </div>            <p className="text-sm text-center mb-2">{phase.message}</p>
+            </div>
+            
+            <p className="text-xs text-center mb-1 font-medium">{phase.message}</p>
             
             {phase.details && (
-              <p className="text-xs text-center font-normal">{phase.details}</p>
+              <p className="text-xs text-center opacity-80">{phase.details}</p>
             )}
             
             {phase.error && (
-              <div className="text-xs bg-red-100 border border-red-200 rounded p-1 mt-1">
+              <div className="text-xs status-error rounded p-1 mt-2">
                 <strong>Error:</strong> {phase.error}
               </div>
             )}
           </div>
-        ))}      </div>
+        ))}
+      </div>
     </div>
   );
 };

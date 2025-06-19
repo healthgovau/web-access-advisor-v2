@@ -50,17 +50,18 @@ const URLInput: React.FC<URLInputProps> = ({ url, onUrlChange, onNavigate, isLoa
       onUrlChange('');
     }
   };  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <h3 className="text-lg font-medium text-gray-900 mb-3 text-center">Website Start URL</h3>      <div className="flex justify-center">
+    <div className="card rounded-lg p-4">
+      <h3 className="text-lg font-medium text-brand-dark mb-3 text-center">Website Start URL</h3>
+
+      <div className="flex justify-center">
         <form onSubmit={handleSubmit} className="flex space-x-2 items-center w-full max-w-6xl">
-          <div className="relative flex-1">
-            <input
+          <div className="relative flex-1">            <input
               id="url-input"
               type="text"
               value={inputValue}
               onChange={handleInputChange}
-              placeholder="URL"
-              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-left"
+              placeholder="Enter website URL to analyze"
+              className="input-primary pr-10 text-left"
               disabled={isLoading}
               required
             />
@@ -71,7 +72,7 @@ const URLInput: React.FC<URLInputProps> = ({ url, onUrlChange, onNavigate, isLoa
                   setInputValue('');
                   onUrlChange('');
                 }}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate hover:text-neutral-black focus:outline-none"
                 title="Clear URL"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -79,12 +80,10 @@ const URLInput: React.FC<URLInputProps> = ({ url, onUrlChange, onNavigate, isLoa
                 </svg>
               </button>
             )}
-          </div>
-
-          <button
+          </div>          <button
             type="submit"
             disabled={isLoading || !inputValue.trim()}
-            className="px-8 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+            className="btn-primary flex-shrink-0"
           >
             {isLoading ? 'Loading...' : 'Start'}
           </button>
