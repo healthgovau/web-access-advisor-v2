@@ -36,7 +36,7 @@ const formatTextWithCodeTags = (text: string): React.ReactElement => {
               href={part}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 underline break-words"
+              className="text-info hover:text-matte-blue underline break-words"
             >
               {part}
             </a>
@@ -56,7 +56,8 @@ const formatTextWithCodeTags = (text: string): React.ReactElement => {
             <code key={index} className="px-1 py-0.5 bg-gray-100 text-gray-800 rounded text-sm font-mono">
               {displayText}
             </code>
-          );        }
+          );
+        }
         
         // Handle line breaks in regular text
         return (
@@ -100,6 +101,7 @@ const formatHtmlCode = (html: string): string => {
 
 const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoading, error }) => {
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
+  const [isScreenReaderExpanded, setIsScreenReaderExpanded] = useState(false);
   const [severityFilters, setSeverityFilters] = useState<Record<string, boolean>>({
     critical: true,
     serious: true,
@@ -130,7 +132,10 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
 
   // Filter components based on selected severities
   const filteredComponents = analysisData?.analysis?.components.filter(component =>
-    severityFilters[component.impact]  ) || [];  if (isLoading) {
+    severityFilters[component.impact]
+  ) || [];
+
+  if (isLoading) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center justify-center space-x-3">
@@ -157,17 +162,17 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
 
   if (!analysisData) {
     return (
-      <div className="p-6 bg-gray-50 border border-gray-200 rounded-lg">
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Analysis Results</h3>
-        <p className="text-gray-500">
-          No analysis results yet. Complete a recording and replay to see accessibility analysis here.
-        </p>
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="text-center text-gray-500">
+          No analysis data available
+        </div>
       </div>
     );
   }
 
   // Handle warnings (e.g., Gemini not available)
   const hasWarnings = analysisData.warnings && analysisData.warnings.length > 0;
+  
   return (
     <div className="space-y-4">
       {/* Warnings Display */}
@@ -185,50 +190,58 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
             </ul>
           </div>
         </div>
-      )}      {/* Basic Analysis Results */}
-      <div className="bg-white border border-gray-200 rounded-lg">{/* Remove padding here to make it full width */}
-        {analysisData.analysis ? (
-          <div className="space-y-6">            <div className="p-6">
-              <h2 className="text-xl font-medium text-gray-900 mb-6 text-center">Screen Reader Accessibility Issues</h2>
+      )}      {/* Screen Reader Analysis Results */}
+      {analysisData.analysis && analysisData.analysis.components && analysisData.analysis.components.length > 0 && (        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-12">
+          <div className="flex items-center justify-center py-6 px-2 relative">
+            <h2 className="text-xl font-medium text-gray-900 text-center">
+              Screen Reader Accessibility Issues ({analysisData.analysis.components.length})
+            </h2>            <button
+              onClick={() => setIsScreenReaderExpanded(!isScreenReaderExpanded)}
+              className="text-base text-slate hover:text-neutral-black underline absolute right-4"
+            >
+              {isScreenReaderExpanded ? 'Collapse' : 'Expand'}
+            </button>
+          </div>
+          {isScreenReaderExpanded && (
+            <div className="p-3 space-y-3">
+              {/* Issue Count Summary */}
+              {(() => {
+                // Calculate counts from ALL components, not just filtered ones
+                const counts = (analysisData.analysis?.components || []).reduce((acc, component) => {
+                  acc[component.impact] = (acc[component.impact] || 0) + 1;
+                  return acc;
+                }, {} as Record<string, number>);
 
-              {/* Component Issues */}
-              {analysisData.analysis.components && analysisData.analysis.components.length > 0 && (<div className="mb-6">
-
-                {/* Issue Count Summary */}                  {(() => {
-                  // Calculate counts from ALL components, not just filtered ones
-                  const counts = (analysisData.analysis?.components || []).reduce((acc, component) => {
-                    acc[component.impact] = (acc[component.impact] || 0) + 1;
-                    return acc;
-                  }, {} as Record<string, number>);
-
-                  // Color scheme for severity levels
-                  const getSeverityColors = (severity: string, isActive: boolean) => {
-                    const baseClasses = {
-                      critical: isActive
-                        ? 'bg-red-50 border-red-300 text-red-800'
-                        : 'bg-red-100 border-red-200 text-red-700 opacity-60',
-                      serious: isActive
-                        ? 'bg-orange-50 border-orange-300 text-orange-800'
-                        : 'bg-orange-100 border-orange-200 text-orange-700 opacity-60',
-                      moderate: isActive
-                        ? 'bg-yellow-50 border-yellow-300 text-yellow-800'
-                        : 'bg-yellow-100 border-yellow-200 text-yellow-700 opacity-60',
-                      minor: isActive
-                        ? 'bg-blue-50 border-blue-300 text-blue-800'
-                        : 'bg-blue-100 border-blue-200 text-blue-700 opacity-60'
-                    };
-                    return baseClasses[severity as keyof typeof baseClasses] || baseClasses.minor;
+                // Color scheme for severity levels
+                const getSeverityColors = (severity: string, isActive: boolean) => {
+                  const baseClasses = {
+                    critical: isActive
+                      ? 'bg-red-50 border-red-300 text-red-800'
+                      : 'bg-red-100 border-red-200 text-red-700 opacity-60',
+                    serious: isActive
+                      ? 'bg-orange-50 border-orange-300 text-orange-800'
+                      : 'bg-orange-100 border-orange-200 text-orange-700 opacity-60',
+                    moderate: isActive
+                      ? 'bg-yellow-50 border-yellow-300 text-yellow-800'
+                      : 'bg-yellow-100 border-yellow-200 text-yellow-700 opacity-60',
+                    minor: isActive
+                      ? 'bg-blue-50 border-blue-300 text-blue-800'
+                      : 'bg-blue-100 border-blue-200 text-blue-700 opacity-60'
                   };
-                  return (
-                    <>
-                      <div className="w-full flex justify-center mb-4">
-                        <div className="inline-grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {['critical', 'serious', 'moderate', 'minor'].map(impact => (<button
+                  return baseClasses[severity as keyof typeof baseClasses] || baseClasses.minor;
+                };
+                return (
+                  <>
+                    <div className="w-full flex justify-center mb-3 mt-2">
+                      <div className="inline-grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {['critical', 'serious', 'moderate', 'minor'].map(impact => (
+                          <button
                             key={impact}
                             onClick={() => handleSeverityFilterChange(impact, !severityFilters[impact])}
                             className={`relative text-center p-3 border rounded transition-all hover:scale-105 ${getSeverityColors(impact, severityFilters[impact])}`}
                             title={`${severityFilters[impact] ? 'Hide' : 'Show'} ${impact} issues`}
-                          >                                {/* Checkbox in top-right corner */}
+                          >
+                            {/* Checkbox in top-right corner */}
                             <div className="absolute top-1 right-1">
                               <div className={`w-4 h-4 rounded border flex items-center justify-center ${severityFilters[impact]
                                 ? impact === 'critical' ? 'bg-white border-red-300' :
@@ -244,28 +257,33 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                                 )}
                               </div>
                             </div>
-
                             <div className="text-lg font-bold text-gray-900">{counts[impact] || 0}</div>
                             <div className="text-xs font-medium text-gray-600 uppercase">{impact}</div>
                           </button>
-                          ))}                          </div>
+                        ))}
                       </div>
-                      <p className="text-xs text-gray-500 text-center mb-10">Click boxes above to toggle filter</p>
-                    </>
-                  );
-                })()}
-                <div className="space-y-4">
-                  {filteredComponents.length > 0 ? (
-                    filteredComponents.map((component, index) => (
-                      <div key={index} className="bg-white border border-gray-200 rounded overflow-hidden">                        {/* Header Section with Subtle Background */}
-                      <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">                        <div className="flex items-start justify-between mb-2">                          <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
+                    </div>
+                    <p className="text-xs text-gray-500 text-center mb-3">Click boxes above to toggle filter</p>
+                  </>
+                );
+              })()}
+              
+              <div className="space-y-3">
+                {filteredComponents.length > 0 ? (
+                  filteredComponents.map((component, index) => (
+                    <div key={index} className="bg-white border border-gray-200 rounded overflow-hidden">
+                      {/* Header Section with Subtle Background */}
+                      <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
                           <span className={`text-xs font-medium px-2 py-1 rounded-full ml-4 ${component.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
                             component.impact === 'serious' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
                               component.impact === 'moderate' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
                                 'bg-blue-100 text-blue-800 border border-blue-300'
                             }`}>
                             {component.impact.toUpperCase()} IMPACT
-                          </span></div>
+                          </span>
+                        </div>
                         <p className="text-sm text-gray-500 text-left">
                           URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{analysisData.manifest?.url || 'Unknown'}</code>
                         </p>
@@ -279,12 +297,14 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                             <div className="text-base text-gray-600 mt-1" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                               {formatTextWithCodeTags(component.issue)}
                             </div>
-                          </div>                          <div>
+                          </div>
+                          <div>
                             <span className="text-base font-medium text-gray-700">Explanation:</span>
                             <div className="text-base text-gray-600 mt-2" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                               {formatTextWithCodeTags(component.explanation)}
                             </div>
-                          </div>                          {component.relevantHtml && (
+                          </div>
+                          {component.relevantHtml && (
                             <div>
                               <span className="text-base font-medium text-gray-700">Offending Code: </span>
                               <pre className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-sm text-gray-700 overflow-x-auto" style={{ fontFamily: 'Consolas, Monaco, monospace' }}>
@@ -292,7 +312,6 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                               </pre>
                             </div>
                           )}
-
                           {component.selector && (
                             <div>
                               <span className="text-xs font-medium text-gray-600">Selector: </span>
@@ -302,19 +321,20 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                             </div>
                           )}
                           {component.correctedCode && (
-                            <div>                              <div className="flex items-center justify-between mb-2">
-                              <span className="text-base font-medium text-gray-700">Recommended:</span>
-                              <button
-                                onClick={() => handleCopyCode(component.correctedCode, `recommended-${index}`)}
-                                className="flex items-center space-x-1 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded border border-green-300 transition-colors"
-                                title="Copy recommended code"
-                              >
-                                <span className="text-xs">
-                                  {copiedStates[`recommended-${index}`] ? '✓' : '📋'}
-                                </span>
-                                <span>{copiedStates[`recommended-${index}`] ? 'Copied!' : 'Copy'}</span>
-                              </button>
-                            </div>
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-base font-medium text-gray-700">Recommended:</span>
+                                <button
+                                  onClick={() => handleCopyCode(component.correctedCode, `recommended-${index}`)}
+                                  className="flex items-center space-x-1 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded border border-green-300 transition-colors"
+                                  title="Copy recommended code"
+                                >
+                                  <span className="text-xs">
+                                    {copiedStates[`recommended-${index}`] ? '✓' : '📋'}
+                                  </span>
+                                  <span>{copiedStates[`recommended-${index}`] ? 'Copied!' : 'Copy'}</span>
+                                </button>
+                              </div>
                               <div className="text-base text-gray-600 block mt-2" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                                 {formatTextWithCodeTags(component.codeChangeSummary)}
                               </div>
@@ -327,35 +347,38 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                             <div>
                               <span className="text-base font-medium text-gray-700">WCAG Guideline: </span>
                               <a
-                                href={(() => {
-                                  return component.wcagUrl || 'https://www.w3.org/WAI/WCAG21/Understanding/';
-                                })()}
+                                href={component.wcagUrl || 'https://www.w3.org/WAI/WCAG21/Understanding/'}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-base text-blue-600 hover:text-blue-800 underline"
+                                className="text-base text-info hover:text-matte-blue underline"
                                 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}
                               >
-                                {component.wcagRule}                              </a>
+                                {component.wcagRule}
+                              </a>
                             </div>
                           )}
                         </div>
                       </div>
                     </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8">
-                      <span className="text-gray-400 text-4xl">🔍</span>
-                      <h5 className="text-gray-600 font-medium mt-2">No Issues Match Current Filter</h5>
-                      <p className="text-gray-500 text-sm mt-1">
-                        Try adjusting your severity filter selections above.
-                      </p>
-                    </div>
-                  )}                </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <span className="text-gray-400 text-4xl">🔍</span>
+                    <h5 className="text-gray-600 font-medium mt-2">No Issues Match Current Filter</h5>
+                    <p className="text-gray-500 text-sm mt-1">
+                      Try adjusting your severity filter selections above.
+                    </p>
+                  </div>
+                )}
               </div>
-              )}
             </div>
-          </div>
-        ) : (
+          )}
+        </div>
+      )}
+
+      {/* No Analysis Data State */}
+      {(!analysisData.analysis || !analysisData.analysis.components || analysisData.analysis.components.length === 0) && (
+        <div className="bg-white border border-gray-200 rounded-lg">
           <div className="text-center py-8">
             <span className="text-gray-400 text-4xl">
               {analysisData.snapshotCount === 0 ? '⚠️' : '🔍'}
@@ -377,9 +400,12 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
               <p className="text-blue-600 text-sm mt-2">
                 Try recording some interactions with the website before running analysis.
               </p>
-            )}          </div>
-        )}
-      </div>      {/* Automated Accessibility Scan Results */}
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Automated Accessibility Scan Results */}
       {analysisData.axeResults && (
         <AxeResults axeResults={analysisData.axeResults} url={analysisData.manifest?.url} />
       )}

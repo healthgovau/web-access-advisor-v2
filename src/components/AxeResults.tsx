@@ -34,7 +34,7 @@ const formatTextWithCodeTags = (text: string): React.ReactElement => {
               href={part}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 underline break-words"
+              className="text-info hover:text-matte-blue underline break-words"
             >
               {part}
             </a>
@@ -315,11 +315,11 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
       </details>
     );
   }  return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-6">      <div className="flex items-center justify-center p-2 relative">        <h2 className="text-xl font-medium text-gray-900 text-center">
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mt-12"><div className="flex items-center justify-center py-6 px-2 relative"><h2 className="text-xl font-medium text-gray-900 text-center">
           Axe Accessibility Issues ({axeResults.length})
-        </h2><button
+        </h2>        <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-sm text-gray-600 hover:text-gray-900 underline absolute right-4"
+          className="text-base text-slate hover:text-neutral-black underline absolute right-4"
         >
           {isExpanded ? 'Collapse' : 'Expand'}
         </button>
@@ -416,7 +416,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                             href={violation.helpUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-base text-blue-600 hover:text-blue-800 underline"
+                            className="text-base text-info hover:text-matte-blue underline"
                             style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}
                           >
                             {violation.id}

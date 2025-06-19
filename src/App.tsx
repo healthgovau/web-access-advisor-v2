@@ -300,22 +300,23 @@ function App() {
       ...prev,
       progress: { stage, message, progress, details, error, snapshotCount }
     }));
-  };  return (
+  }; return (
     <QueryProvider>
       <div className="min-h-screen">        <header className="bg-white">
-          <div className="flex items-center justify-between">
-            <div className="text-left">
-              <h1 className="text-3xl font-bold text-brand-dark">
-                Web Access Advisor <span className="text-xl font-normal text-orange-600 bg-orange-100 px-2 py-1 rounded-md">alpha</span>
-              </h1>
-              <p className="text-base text-slate mt-1">
-                AI-powered accessibility testing and analysis
-              </p>
-            </div>
-            <div className="text-base text-slate">
-              Mode: <span className="font-medium capitalize">{state.mode}</span>
-            </div>
-          </div>        </header>
+        <div className="flex items-center justify-between">
+          <div className="text-left">
+            <h1 className="text-3xl font-bold text-brand-dark">
+              Web Access Advisor <span className="text-xl font-normal text-orange-600 bg-orange-100 px-2 py-1 rounded-md">alpha</span>
+            </h1>
+            <p className="text-base text-slate mt-1">
+              AI-powered accessibility testing and analysis
+            </p>
+          </div>
+          <div className="text-base text-slate">
+            Mode: <span className="font-medium capitalize">{state.mode}</span>
+          </div>
+        </div>
+      </header>
         <main className="mt-8">
           <div className="space-y-6">{/* URL Input - Always visible at top */}
             {state.mode === 'setup' && (
@@ -406,13 +407,13 @@ function App() {
                   hasAnalysisResult={!!state.analysisResult}
                   isLoading={state.loading}
                   onStartAnalysis={handleStartAnalysis}
-                  onReset={handleReset}                />
+                  onReset={handleReset} />
 
                 {/* Actions List */}
                 {state.actions.length > 0 && (
                   <div className="card rounded-lg p-6">                    <h2 className="text-xl font-medium text-gray-900 mb-4">
-                      Recorded Actions
-                    </h2>{/* Session info below heading */}
+                    Recorded Actions
+                  </h2>{/* Session info below heading */}
                     {state.sessionId && (
                       <div className="text-sm text-gray-500 mb-4">
                         Session ID: {state.sessionId}
@@ -458,7 +459,7 @@ function App() {
         </main>        <footer className="mt-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div className="text-center text-sm" style={{ color: 'var(--silver)' }}>
-              <p>Web Access Advisor v2.0 (alpha)</p>
+              <p>Web Access Advisor v2 (alpha)</p>
             </div>
           </div>
         </footer>
