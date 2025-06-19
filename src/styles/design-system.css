@@ -79,7 +79,7 @@
 /* Enhanced card styling with design system shadow */
 .card {
   background-color: var(--neutral-white);
-  border: 1px solid var(--mid-grey);
+  border: 1px solid #e5e7eb;
   box-shadow: var(--card-shadow);
 }
 
