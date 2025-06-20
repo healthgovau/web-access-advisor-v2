@@ -4,7 +4,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { GeminiAnalysis, ComponentAccessibilityIssue, LLMDebugLog } from './types.js';
+import type { GeminiAnalysis, ComponentAccessibilityIssue, LLMDebugLog } from './types';
 
 export class GeminiService {
   private genAI: GoogleGenerativeAI;

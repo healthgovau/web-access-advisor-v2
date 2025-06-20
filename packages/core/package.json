@@ -8,10 +8,10 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
-  },
-  "dependencies": {
+  },  "dependencies": {
     "@axe-core/playwright": "^4.10.2",
     "@google/generative-ai": "^0.24.1",
+    "auto-playwright": "^1.16.1",
     "axe-core": "^4.10.3",
     "playwright": "^1.53.0"
   },

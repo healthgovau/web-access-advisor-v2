@@ -12,10 +12,10 @@
     "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
-    "composite": true,
-    "baseUrl": "../../",
+    "composite": true,    "baseUrl": "../../",
     "paths": {
-      "@web-access-advisor/core/*": ["./packages/core/src/*"]
+      "@web-access-advisor/core": ["./packages/core/dist/index"],
+      "@web-access-advisor/core/*": ["./packages/core/dist/*"]
     }
   },
   "include": ["src/**/*"],

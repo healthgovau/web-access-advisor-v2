@@ -222,6 +222,49 @@ function addSectionDivider(pdf: jsPDF, y: number, margin: number, pageWidth: num
 }
 
 /**
+ * Find actual HTML code from axe results for a component
+ */
+function findActualHtmlFromAxe(component: any, axeResults: any[]): string | null {
+  if (!axeResults || !Array.isArray(axeResults)) return null;
+  
+  // Try to match by selector if available
+  if (component.selector) {
+    for (const violation of axeResults) {
+      if (violation.nodes && Array.isArray(violation.nodes)) {
+        for (const node of violation.nodes) {
+          if (node.html && Array.isArray(node.target)) {
+            // Check if selector matches target
+            const targetSelector = node.target.join(' > ');
+            if (targetSelector.includes(component.selector) || component.selector.includes(targetSelector)) {
+              return node.html;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // Try to match by component name or WCAG rule
+  if (component.wcagRule || component.componentName) {
+    for (const violation of axeResults) {
+      // Match by violation ID or help text
+      const matchesByRule = component.wcagRule && violation.id && violation.id.includes(component.wcagRule.toLowerCase());
+      const matchesByName = component.componentName && violation.help && 
+        (violation.help.toLowerCase().includes(component.componentName.toLowerCase()) ||
+         component.componentName.toLowerCase().includes(violation.help.toLowerCase().split(' ')[0]));
+      
+      if (matchesByRule || matchesByName) {
+        if (violation.nodes && violation.nodes.length > 0 && violation.nodes[0].html) {
+          return violation.nodes[0].html;
+        }
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
  * Get impact level styling without emoji symbols
  */
 function getImpactStyling(impact: string): { color: [number, number, number], text: string } {
@@ -257,7 +300,6 @@ function addSummaryTable(pdf: jsPDF, counts: Record<string, number>, title: stri
   pdf.setFontSize(11);
   pdf.text(title, margin + 5, currentY + 6);
   currentY += cellHeight;
-
   // Table rows
   ['critical', 'serious', 'moderate', 'minor'].forEach((impact, index) => {
     const styling = getImpactStyling(impact);
@@ -271,10 +313,14 @@ function addSummaryTable(pdf: jsPDF, counts: Record<string, number>, title: stri
     
     pdf.rect(margin, currentY, tableWidth, cellHeight, 'S');
     
+    // Use colored text for impact labels
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
+    pdf.setTextColor(styling.color[0], styling.color[1], styling.color[2]);
     pdf.text(styling.text, margin + 5, currentY + 6);
     
+    // Reset to black for count
+    pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'bold');
     pdf.text(count.toString(), pageWidth - margin - 15, currentY + 6);
     
@@ -524,14 +570,24 @@ export async function exportAnalysisToPDF(
           pdf.setFontSize(9);
           currentY = addTextWithLinks(pdf, cleanTextForPDF(section.content), margin, currentY, pageWidth - 2 * margin);
           currentY += 5;
-        });        // Code sections - show whatever the LLM provided with appropriate formatting
-        if (component.relevantHtml) {
-          const cleanCode = cleanTextForPDF(component.relevantHtml);
+        });        // Code sections - try to get actual HTML from axe results first, then fall back to LLM
+        let actualHtml = null;
+        
+        // Try to find the actual HTML from axe results
+        if (analysisData.axeResults) {
+          actualHtml = findActualHtmlFromAxe(component, analysisData.axeResults);
+        }
+        
+        // Use actual HTML if found, otherwise fall back to LLM's relevantHtml
+        const htmlToShow = actualHtml || component.relevantHtml;
+        
+        if (htmlToShow) {
+          const cleanCode = cleanTextForPDF(htmlToShow);
           
           if (cleanCode.trim()) {
             // Check if this looks like actual HTML markup
-            const isActualHtml = /<\w+[^>]*>/.test(component.relevantHtml) || 
-                                /&lt;\w+[^&]*&gt;/.test(component.relevantHtml);
+            const isActualHtml = /<\w+[^>]*>/.test(htmlToShow) || 
+                                /&lt;\w+[^&]*&gt;/.test(htmlToShow);
             
             // Check if this is just descriptive text with backticks (not actual code)
             const isDescriptiveText = /^The `\w+`/.test(cleanCode.trim()) ||
@@ -542,7 +598,7 @@ export async function exportAnalysisToPDF(
               // Show as formatted code
               pdf.setFont('helvetica', 'bold');
               pdf.setFontSize(9);
-              pdf.text('OFFENDING CODE:', margin, currentY);
+              pdf.text(actualHtml ? 'OFFENDING CODE (from snapshot):' : 'OFFENDING CODE:', margin, currentY);
               currentY += 5;
               
               const codeLines = pdf.splitTextToSize(cleanCode, pageWidth - 2 * margin - 20);
@@ -572,7 +628,7 @@ export async function exportAnalysisToPDF(
               currentY += 5;
             }
           }
-        }        if (component.correctedCode) {
+        }if (component.correctedCode) {
           const cleanSolution = cleanTextForPDF(component.correctedCode);
           
           if (cleanSolution.trim()) {

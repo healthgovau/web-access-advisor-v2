@@ -6,7 +6,7 @@ import { chromium, Page, Browser, BrowserContext } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
-import { GeminiService } from './gemini.js';
+import { GeminiService } from './gemini';
 import type { 
   UserAction, 
   SnapshotData, 
@@ -18,7 +18,7 @@ import type {
   GeminiAnalysis,
   DOMChangeType,
   DOMChangeDetails
-} from './types.js';
+} from './types';
 
 /**
  * Main analysis engine class

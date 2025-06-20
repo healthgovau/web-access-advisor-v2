@@ -3,9 +3,9 @@
  * Shared accessibility analysis engine for CLI and UI modes
  */
 
-export * from './types.js';
-export * from './analyzer.js';
-export * from './gemini.js';
+export * from './types';
+export * from './analyzer';
+export * from './gemini';
 
 // Re-export commonly used types
 export type {
@@ -17,4 +17,4 @@ export type {
   SessionManifest,
   GeminiAnalysis,
   ComponentAccessibilityIssue
-} from './types.js';
+} from './types';
