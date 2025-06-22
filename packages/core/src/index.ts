@@ -3,7 +3,6 @@
  * Shared accessibility analysis engine for CLI and UI modes
  */
 
-export * from './types.js';
 export * from './analyzer.js';
 export * from './gemini.js';
 
