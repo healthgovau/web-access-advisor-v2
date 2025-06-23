@@ -1,5 +1,11 @@
 /**
  * PDF export utilities for accessibility analysis reports
+ * 
+ * IMPORTANT NOTE ABOUT PDF LINKS:
+ * - PDF files cannot force links to open in "new tabs" - this is a fundamental limitation of the PDF format
+ * - Link behavior (new tab, same window, etc.) is controlled by the user's PDF viewer settings, not our code
+ * - Different PDF viewers (Chrome, Adobe Reader, Firefox, etc.) handle links differently
+ * - This is not a bug in our code - it's how PDFs work
  */
 
 import jsPDF from 'jspdf';
@@ -68,6 +74,7 @@ function cleanTextForPDF(text: string): string {
 
 /**
  * Add text with clickable links to PDF
+ * Note: PDFs cannot force links to open in "new tabs" - this is controlled by the user's PDF viewer settings.
  */
 function addTextWithLinks(pdf: jsPDF, text: string, x: number, y: number, maxWidth: number): number {
   // Clean the text first to remove encoding artifacts
@@ -89,15 +96,17 @@ function addTextWithLinks(pdf: jsPDF, text: string, x: number, y: number, maxWid
       // Add text before URL
       const beforeText = remainingText.substring(lastIndex, urlMatch.index);
       if (beforeText) {
-        // Check for WCAG references in the before text
+        // Just add text without trying to parse WCAG patterns
         currentX = addWcagLinks(pdf, beforeText, currentX, currentY);
-      }      // Add the URL as clickable link
+      }
+      
+      // Add the URL as clickable link
       const url = urlMatch[0];
       pdf.setTextColor(0, 0, 255); // Blue color for links
       pdf.text(url, currentX, currentY);
       
       const textWidth = pdf.getTextWidth(url);
-      // Remove target: '_blank' as it doesn't work reliably in PDFs
+      // Note: PDF link behavior is controlled by the user's PDF viewer, not our code
       pdf.link(currentX, currentY - 3, textWidth, 4, { url: url });
       
       currentX += textWidth;
@@ -148,85 +157,51 @@ function addCodeBlock(pdf: jsPDF, code: string, x: number, y: number, maxWidth: 
 }
 
 /**
- * Valid WCAG 2.1 Understanding document slugs - prevents 404s
- */
-const VALID_WCAG_GUIDELINES = new Set([
-  '1-1-1', '1-2-1', '1-2-2', '1-2-3', '1-2-4', '1-2-5', '1-2-6', '1-2-7', '1-2-8', '1-2-9',
-  '1-3-1', '1-3-2', '1-3-3', '1-3-4', '1-3-5', '1-3-6', '1-4-1', '1-4-2', '1-4-3', '1-4-4',
-  '1-4-5', '1-4-6', '1-4-7', '1-4-8', '1-4-9', '1-4-10', '1-4-11', '1-4-12', '1-4-13',
-  '2-1-1', '2-1-2', '2-1-3', '2-1-4', '2-2-1', '2-2-2', '2-2-3', '2-2-4', '2-2-5', '2-2-6',
-  '2-3-1', '2-3-2', '2-3-3', '2-4-1', '2-4-2', '2-4-3', '2-4-4', '2-4-5', '2-4-6', '2-4-7',
-  '2-4-8', '2-4-9', '2-4-10', '2-5-1', '2-5-2', '2-5-3', '2-5-4', '2-5-5', '2-5-6',
-  '3-1-1', '3-1-2', '3-1-3', '3-1-4', '3-1-5', '3-1-6', '3-2-1', '3-2-2', '3-2-3', '3-2-4',
-  '3-2-5', '3-3-1', '3-3-2', '3-3-3', '3-3-4', '3-3-5', '3-3-6',
-  '4-1-1', '4-1-2', '4-1-3'
-]);
-
-/**
- * Add text with WCAG references as clickable links
- * Note: In PDF, links always open in the user's default browser. There is no way to force 'new tab' behavior in a PDF file.
- * The 'target' property is ignored by most PDF viewers. This is not a code bug.
+ * Add text with basic WCAG link detection - only for clear WCAG patterns
+ * Note: PDF links cannot open in "new tabs" - this is a fundamental limitation of the PDF format.
  */
 function addWcagLinks(pdf: jsPDF, text: string, x: number, y: number): number {
   let currentX = x;
-    // More precise regex that only matches actual WCAG guideline formats:
-  // "4.1.2 Name, Role, Value" or "WCAG 4.1.2" but NOT random numbers or partial matches
-  const wcagRegex = /(?:^|\s)((?:WCAG\s+(?:guideline\s+)?)?(\d+\.\d+(?:\.\d+)?)(?:\s+[A-Z][A-Za-z\s,\-&]+)?|wcag(\d)(\d)(\d)?)(?=\s|$|\.|\n)/gi;
   
-  let wcagMatch;
+  // Very restrictive regex that only matches explicit WCAG references:
+  // "WCAG 4.1.2" or "WCAG guideline 4.1.2" or "4.1.2 Success Criterion"
+  // Must have "WCAG" prefix OR "Success Criterion" suffix to avoid false matches
+  const wcagRegex = /\b(?:WCAG\s+(?:guideline\s+)?(\d+\.\d+(?:\.\d+)?)|(\d+\.\d+(?:\.\d+)?)\s+Success\s+Criterion)\b/gi;
+  
   let lastIndex = 0;
+  let match;
   
-  while ((wcagMatch = wcagRegex.exec(text)) !== null) {
+  while ((match = wcagRegex.exec(text)) !== null) {
     // Add text before WCAG reference
-    const beforeText = text.substring(lastIndex, wcagMatch.index);
+    const beforeText = text.substring(lastIndex, match.index);
     if (beforeText) {
       pdf.text(beforeText, currentX, y);
       currentX += pdf.getTextWidth(beforeText);
     }
-      let fullMatch = wcagMatch[1]; // The actual matched text without leading space
-    let guidelineNumber = '';
     
-    // Handle different match patterns
-    if (wcagMatch[2]) {
-      // Standard format like "4.1.2" or "WCAG 4.1.2 Name, Role, Value"
-      guidelineNumber = wcagMatch[2];
-    } else if (wcagMatch[3] && wcagMatch[4]) {
-      // Axe format like "wcag244"
-      guidelineNumber = `${wcagMatch[3]}.${wcagMatch[4]}`;
-      if (wcagMatch[5]) {
-        guidelineNumber += `.${wcagMatch[5]}`;
-      }
-      // For axe format, just show the guideline number
-      fullMatch = `WCAG ${guidelineNumber}`;
-    }
+    const fullMatch = match[0];
+    const guidelineNumber = match[1] || match[2]; // Either capture group
     
-    if (guidelineNumber) {
-      const wcagSlug = guidelineNumber.replace(/\./g, '-');
+    // Create WCAG link for common guidelines only
+    const commonGuidelines = ['1.1.1', '1.2.1', '1.3.1', '1.4.1', '1.4.3', '2.1.1', '2.4.1', '2.4.2', '2.4.3', '2.4.4', '2.4.6', '3.1.1', '3.2.1', '3.3.1', '3.3.2', '4.1.1', '4.1.2', '4.1.3'];
+    
+    if (guidelineNumber && commonGuidelines.includes(guidelineNumber)) {
+      const wcagUrl = `https://www.w3.org/WAI/WCAG21/Understanding/${guidelineNumber.replace(/\./g, '-')}.html`;
+      pdf.setTextColor(0, 0, 255); // Blue color for links
+      pdf.text(fullMatch, currentX, y);
       
-      // Only create links for valid WCAG guidelines to prevent 404s
-      if (VALID_WCAG_GUIDELINES.has(wcagSlug)) {
-        const wcagUrl = `https://www.w3.org/WAI/WCAG21/Understanding/${wcagSlug}.html`;
-        pdf.setTextColor(0, 0, 255); // Blue color for links
-        pdf.text(fullMatch, currentX, y);
-        
-        const textWidth = pdf.getTextWidth(fullMatch);
-        // Remove target: '_blank' as it doesn't work reliably in PDFs
-        pdf.link(currentX, y - 3, textWidth, 4, { url: wcagUrl });
-        
-        currentX += textWidth;
-        pdf.setTextColor(0, 0, 0); // Reset to black
-      } else {
-        // Invalid guideline - show as regular text
-        pdf.text(fullMatch, currentX, y);
-        currentX += pdf.getTextWidth(fullMatch);
-      }
+      const textWidth = pdf.getTextWidth(fullMatch);
+      pdf.link(currentX, y - 3, textWidth, 4, { url: wcagUrl });
+      
+      currentX += textWidth;
+      pdf.setTextColor(0, 0, 0); // Reset to black
     } else {
-      // Fallback - just add as regular text
+      // Not a valid WCAG reference - just add as regular text
       pdf.text(fullMatch, currentX, y);
       currentX += pdf.getTextWidth(fullMatch);
     }
     
-    lastIndex = wcagMatch.index + wcagMatch[0].length;
+    lastIndex = match.index + match[0].length;
   }
   
   // Add remaining text after last WCAG reference
@@ -670,16 +645,29 @@ export async function exportAnalysisToPDF(
               currentY += 5;
             }
           }
-        }// WCAG Reference
-        if (component.wcagRule) {
+        }        // WCAG Reference - use direct URL from LLM if available
+        if (component.wcagRule || component.wcagUrl) {
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(9);
           pdf.text('WCAG GUIDELINE:', margin, currentY);
           currentY += 5;
           
           pdf.setFont('helvetica', 'normal');
-          currentY = addTextWithLinks(pdf, component.wcagRule, margin, currentY, pageWidth - 2 * margin);
-          currentY += 3;
+          if (component.wcagUrl) {
+            // Use the direct URL provided by the LLM
+            pdf.setTextColor(0, 0, 255); // Blue color for links
+            const displayText = component.wcagRule || component.wcagUrl;
+            pdf.text(displayText, margin, currentY);
+            
+            const textWidth = pdf.getTextWidth(displayText);
+            pdf.link(margin, currentY - 3, textWidth, 4, { url: component.wcagUrl });
+            pdf.setTextColor(0, 0, 0); // Reset to black
+            currentY += 8;
+          } else {
+            // Fallback to text with WCAG pattern matching
+            currentY = addTextWithLinks(pdf, component.wcagRule, margin, currentY, pageWidth - 2 * margin);
+            currentY += 3;
+          }
         }
 
         currentY = addSectionDivider(pdf, currentY, margin, pageWidth);
@@ -741,15 +729,13 @@ export async function exportAnalysisToPDF(
         // Reset to black for subsequent content
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'normal');
-        currentY += 8;
-
-        // Rule ID
+        currentY += 8;        // Rule ID
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(9);
         pdf.text('RULE ID:', margin, currentY);
         pdf.setFont('helvetica', 'normal');
         pdf.text(violation.id, margin + 20, currentY);
-        currentY += 8;        // Description
+        currentY += 5;// Description
         pdf.setFont('helvetica', 'bold');
         pdf.text('DESCRIPTION:', margin, currentY);
         currentY += 5;
@@ -773,11 +759,11 @@ export async function exportAnalysisToPDF(
           pdf.link(margin, currentY - 3, textWidth, 4, { url: violation.helpUrl });
           pdf.setTextColor(0, 0, 0); // Reset to black
           currentY += 8;
-        }// Affected elements with better formatting
+        }        // Affected elements with better formatting
         if (violation.nodes && violation.nodes.length > 0) {
           pdf.setFont('helvetica', 'bold');
-          pdf.text(`OFFENDING CODE (${violation.nodes.length} total):`, margin, currentY);
-          currentY += 8;          violation.nodes.forEach((node) => {
+          pdf.text(`OFFENDING CODE (${violation.nodes.length}):`, margin, currentY);
+          currentY += 8;violation.nodes.forEach((node) => {
             // For code display, we want to preserve HTML tags, so use minimal cleaning
             const rawHtml = node.html || '';
             const cleanHtml = rawHtml
