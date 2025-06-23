@@ -756,39 +756,85 @@ Remember:
 - Make explanations user-impact focused (how this affects people with disabilities)
 - Provide implementable solutions in the "Recommended" section, not just general advice`;
   }
-
   /**
    * Parse axe recommendations from LLM response and clean up formatting
    */
   private parseAxeRecommendations(text: string, violations: any[]): Map<string, { explanation: string; recommendation: string }> {
     const results = new Map<string, { explanation: string; recommendation: string }>();
     
+    console.log(`🔍 DEBUG: Original LLM response length: ${text.length}`);
+    console.log(`🔍 DEBUG: LLM response starts with: "${text.substring(0, 200)}..."`);
+    
     // Clean up the response text first
     const cleanText = this.cleanMarkdownFromText(text);
-    
-    // Try to parse structured format
+    console.log(`🔍 DEBUG: Cleaned text length: ${cleanText.length}`);
+    console.log(`🔍 DEBUG: Cleaned text starts with: "${cleanText.substring(0, 200)}..."`);
+      // Try to parse structured format
     const violationBlocks = cleanText.split(/VIOLATION_ID:\s*/i);
+    console.log(`🔍 DEBUG: Found ${violationBlocks.length} violation blocks`);
     
-    violationBlocks.forEach(block => {
+    violationBlocks.forEach((block, blockIndex) => {
+      console.log(`🔍 DEBUG: Processing block ${blockIndex}, length: ${block.length}`);
+      console.log(`🔍 DEBUG: Block ${blockIndex} starts with: "${block.substring(0, 100)}..."`);
+      
+      // Skip empty blocks (the first block before the first VIOLATION_ID is usually empty)
+      if (!block.trim()) {
+        console.log(`🔍 DEBUG: Block ${blockIndex} is empty, skipping`);
+        return;
+      }
+      
       const lines = block.trim().split('\n');
       if (lines.length >= 2) {
         const idLine = lines[0].trim();
-        const explanationIndex = lines.findIndex(line => line.toLowerCase().includes('explanation:'));
+        console.log(`🔍 DEBUG: Block ${blockIndex} ID line: "${idLine}"`);
+          const explanationIndex = lines.findIndex(line => line.toLowerCase().includes('explanation:'));
         const recIndex = lines.findIndex(line => line.toLowerCase().includes('recommendation:'));
         
+        console.log(`🔍 DEBUG: Block ${blockIndex} - explanation index: ${explanationIndex}, recommendation index: ${recIndex}`);
+        
         if (explanationIndex >= 0 && recIndex >= 0) {
-          const explanationLines = lines.slice(explanationIndex + 1, recIndex);
-          const recommendationLines = lines.slice(recIndex + 1);
+          // Get explanation content - check if it's on the same line as "EXPLANATION:" or on following lines
+          let explanation = '';
+          const explanationLine = lines[explanationIndex];
+          const explanationContent = explanationLine.substring(explanationLine.toLowerCase().indexOf('explanation:') + 12).trim();
           
-          const explanation = this.formatRecommendationContent(explanationLines);
+          if (explanationContent) {
+            // Explanation is on the same line as "EXPLANATION:"
+            explanation = explanationContent;
+          } else {
+            // Explanation is on following lines
+            const explanationLines = lines.slice(explanationIndex + 1, recIndex);
+            explanation = this.formatRecommendationContent(explanationLines);
+          }
+          
+          const recommendationLines = lines.slice(recIndex + 1);
           const recommendation = this.formatRecommendationContent(recommendationLines);
           
-          // Find matching violation
-          const violation = violations.find(v => idLine.includes(v.id));
+          console.log(`🔍 DEBUG: Block ${blockIndex} - explanation length: ${explanation.length}, recommendation length: ${recommendation.length}`);
+          
+          console.log(`🔍 DEBUG: Block ${blockIndex} - formatted explanation length: ${explanation.length}, recommendation length: ${recommendation.length}`);
+            // Find matching violation - be more flexible with matching
+          const violation = violations.find(v => {
+            const match = idLine.includes(v.id) || v.id.includes(idLine.trim());
+            console.log(`🔍 DEBUG: Checking violation ${v.id} against ID line "${idLine.trim()}" - match: ${match}`);
+            return match;
+          });
+          console.log(`🔍 DEBUG: Block ${blockIndex} - found matching violation: ${violation ? violation.id : 'none'}`);
+          
           if (violation && explanation && recommendation) {
             results.set(violation.id, { explanation, recommendation });
+            console.log(`✅ DEBUG: Successfully parsed violation ${violation.id}`);
+          } else {
+            console.warn(`❌ DEBUG: Failed to parse block ${blockIndex} - violation: ${!!violation}, explanation: ${!!explanation} (${explanation.length} chars), recommendation: ${!!recommendation} (${recommendation.length} chars)`);
+            if (!violation) console.warn(`❌ DEBUG: No matching violation found for ID line: "${idLine}"`);
+            if (!explanation) console.warn(`❌ DEBUG: Empty explanation for block ${blockIndex}`);
+            if (!recommendation) console.warn(`❌ DEBUG: Empty recommendation for block ${blockIndex}`);
           }
+        } else {
+          console.warn(`❌ DEBUG: Block ${blockIndex} missing expected sections`);
         }
+      } else {
+        console.warn(`❌ DEBUG: Block ${blockIndex} has insufficient lines: ${lines.length}`);
       }
     });
       // Fallback: if parsing failed, generate basic explanations and recommendations
@@ -805,30 +851,31 @@ See: ${violation.helpUrl}`
     }
     
     return results;
-  }
-
-  /**
+  }  /**
    * Clean markdown formatting from text
    */
   private cleanMarkdownFromText(text: string): string {
     return text
-      // Remove markdown bold/italic
+      // Only do minimal cleaning - remove markdown bold/italic but preserve structure
       .replace(/\*\*([^*]+)\*\*/g, '$1')
       .replace(/\*([^*]+)\*/g, '$1')
-      .replace(/_([^_]+)_/g, '$1')
+      // Don't remove underscores - they're part of VIOLATION_ID format
       // Remove markdown headers
       .replace(/#{1,6}\s+/g, '')
-      // Clean up backticks but preserve code blocks
-      .replace(/`([^`]+)`/g, '$1')
-      // Remove extra whitespace
-      .replace(/\n\s*\n/g, '\n\n')
+      // Remove extra whitespace but preserve line structure
+      .replace(/\n\s*\n\s*\n/g, '\n\n')
       .trim();
   }
-
   /**
    * Format recommendation content with proper structure
    */
   private formatRecommendationContent(contentLines: string[]): string {
+    console.log(`🔍 DEBUG formatRecommendationContent: Input lines count: ${contentLines.length}`);
+    if (contentLines.length > 0) {
+      console.log(`🔍 DEBUG formatRecommendationContent: First line: "${contentLines[0]}"`);
+      console.log(`🔍 DEBUG formatRecommendationContent: Last line: "${contentLines[contentLines.length - 1]}"`);
+    }
+    
     const result: string[] = [];
     let inCodeBlock = false;
     let codeLines: string[] = [];
@@ -882,6 +929,10 @@ See: ${violation.helpUrl}`
       result.push('\n' + codeLines.join('\n') + '\n');
     }
     
-    return result.join('\n').trim();
+    const finalResult = result.join('\n').trim();
+    console.log(`🔍 DEBUG formatRecommendationContent: Output length: ${finalResult.length}`);
+    console.log(`🔍 DEBUG formatRecommendationContent: Output preview: "${finalResult.substring(0, 100)}..."`);
+    
+    return finalResult;
   }
 }
