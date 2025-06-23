@@ -2,7 +2,7 @@
  * Saved session selector for loading previously recorded sessions
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface SavedSession {
   sessionId: string;
@@ -22,7 +22,7 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
   const [sessions, setSessions] = useState<SavedSession[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string>('');
   const [loadingSessions, setLoadingSessions] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>('');  const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch saved sessions on component mount
   useEffect(() => {
@@ -52,10 +52,20 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
   const handleSessionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const sessionId = e.target.value;
     setSelectedSessionId(sessionId);
-  };
-
-  const handleLoadSession = () => {
+  };  const handleLoadSession = () => {
     if (selectedSessionId) {
+      // Wait for UI to fully render before scrolling
+      setTimeout(() => {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (rect) {
+          const scrollTop = window.pageYOffset + rect.top;
+          window.scrollTo({
+            top: scrollTop,
+            behavior: 'smooth'
+          });
+        }
+      }, 200); // 200ms delay to allow UI to update
+      
       onSessionSelect(selectedSessionId);
     }
   };
@@ -65,10 +75,9 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
   };
 
   const canLoadSession = selectedSessionId && !isLoading && !loadingSessions;
-
   if (loadingSessions) {
     return (
-      <div className="card rounded-lg p-4">
+      <div ref={containerRef} className="card rounded-lg p-4">
         <h3 className="text-xl font-medium text-brand-dark mb-3 text-center">Load Saved Session</h3>
         <div className="flex justify-center items-center py-8">
           <div className="text-gray-500">Loading saved sessions...</div>
@@ -79,7 +88,7 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
 
   if (error) {
     return (
-      <div className="card rounded-lg p-4">
+      <div ref={containerRef} className="card rounded-lg p-4">
         <h3 className="text-xl font-medium text-brand-dark mb-3 text-center">Load Saved Session</h3>
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <div className="text-red-700 text-sm">
@@ -92,7 +101,7 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
 
   if (sessions.length === 0) {
     return (
-      <div className="card rounded-lg p-4">
+      <div ref={containerRef} className="card rounded-lg p-4">
         <h3 className="text-xl font-medium text-brand-dark mb-3 text-center">Load Saved Session</h3>
         <div className="text-center py-8">
           <div className="text-gray-500 mb-2">No saved sessions found</div>
@@ -105,7 +114,7 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
   }
 
   return (
-    <div className="card rounded-lg p-4">
+    <div ref={containerRef} className="card rounded-lg p-4">
       <h3 className="text-xl font-medium text-brand-dark mb-3 text-center">Load Saved Session</h3>
 
       <div className="space-y-4">

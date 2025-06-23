@@ -369,11 +369,9 @@ function App() {
           </div>
         </div>
       </header>        <main className="mt-8">
-          <div className="space-y-6">
-
-          {/* Session Mode - Always visible */}
-          {state.mode === 'setup' ? (
-            // Interactive session mode toggle during setup
+          <div className="space-y-6">          {/* Session Mode - Always visible */}
+          {state.mode === 'setup' || (state.mode === 'results' && sessionMode === 'load' && !state.analysisResult) ? (
+            // Interactive session mode during setup or when in results mode with loaded session (before analysis)
             <>
               <SessionModeToggle
                 mode={sessionMode}
@@ -395,11 +393,12 @@ function App() {
                 />
               )}
             </>
-          ) : (            // Read-only session mode indicator during processing
+          ) : state.mode === 'analyzing' || (state.mode === 'results' && state.analysisResult) ? (
+            // Read-only session mode indicator during analysis or when analysis is complete
             <div className="bg-white rounded-lg shadow p-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center space-x-3 flex-wrap">
-                  <span className="text-sm font-medium text-gray-700">Session:</span>
+                  <span className="text-sm font-bold text-gray-700">Session:</span>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                     sessionMode === 'new' 
                       ? 'bg-blue-100 text-blue-800' 
@@ -408,18 +407,18 @@ function App() {
                     {sessionMode === 'new' ? 'New Recording' : 'Loaded Session'}
                   </span>                  {state.sessionId && (
                     <span className="text-sm text-gray-600 font-mono">
-                      <span className="font-medium">ID:</span> {state.sessionId}
+                      <span className="font-bold">ID:</span> {state.sessionId}
                     </span>
                   )}
                   {state.url && (
                     <span className="text-sm text-gray-600">
-                      <span className="font-medium">URL:</span> {state.url}
+                      <span className="font-bold">URL:</span> {state.url}
                     </span>
                   )}
                 </div>
               </div>
             </div>
-          )}{/* Three-Phase Status - Always visible */}
+          ) : null}{/* Three-Phase Status - Always visible */}
             <ThreePhaseStatus
               currentStage={state.progress.stage}
               error={state.progress.error}
