@@ -169,13 +169,9 @@ const VALID_WCAG_GUIDELINES = new Set([
  */
 function addWcagLinks(pdf: jsPDF, text: string, x: number, y: number): number {
   let currentX = x;
-  
-  // Enhanced regex to catch various WCAG guideline formats:
-  // "4.1.2 Name, Role, Value"
-  // "WCAG 4.1.2"
-  // "WCAG guideline 4.1.2"
-  // "wcag244" (from axe results)
-  const wcagRegex = /(?:WCAG\s+(?:GUIDELINE\s+)?)?(\d+\.\d+(?:\.\d+)?)\s*([A-Z][A-Za-z\s,\-&]+(?=\s|$|\.|\n))|wcag(\d)(\d)(\d)?/gi;
+    // More precise regex that only matches actual WCAG guideline formats:
+  // "4.1.2 Name, Role, Value" or "WCAG 4.1.2" but NOT random numbers or partial matches
+  const wcagRegex = /(?:^|\s)((?:WCAG\s+(?:guideline\s+)?)?(\d+\.\d+(?:\.\d+)?)(?:\s+[A-Z][A-Za-z\s,\-&]+)?|wcag(\d)(\d)(\d)?)(?=\s|$|\.|\n)/gi;
   
   let wcagMatch;
   let lastIndex = 0;
@@ -187,14 +183,13 @@ function addWcagLinks(pdf: jsPDF, text: string, x: number, y: number): number {
       pdf.text(beforeText, currentX, y);
       currentX += pdf.getTextWidth(beforeText);
     }
-    
-    let fullMatch = wcagMatch[0];
+      let fullMatch = wcagMatch[1]; // The actual matched text without leading space
     let guidelineNumber = '';
     
     // Handle different match patterns
-    if (wcagMatch[1]) {
-      // Standard format like "4.1.2 Name, Role, Value"
-      guidelineNumber = wcagMatch[1];
+    if (wcagMatch[2]) {
+      // Standard format like "4.1.2" or "WCAG 4.1.2 Name, Role, Value"
+      guidelineNumber = wcagMatch[2];
     } else if (wcagMatch[3] && wcagMatch[4]) {
       // Axe format like "wcag244"
       guidelineNumber = `${wcagMatch[3]}.${wcagMatch[4]}`;
@@ -202,7 +197,7 @@ function addWcagLinks(pdf: jsPDF, text: string, x: number, y: number): number {
         guidelineNumber += `.${wcagMatch[5]}`;
       }
       // For axe format, just show the guideline number
-      fullMatch = guidelineNumber;
+      fullMatch = `WCAG ${guidelineNumber}`;
     }
     
     if (guidelineNumber) {
@@ -395,9 +390,10 @@ export async function exportAnalysisToPDF(
     pdf.setFillColor(248, 250, 252);
     const metadataBoxHeight = 50;
     pdf.rect(margin, currentY, pageWidth - 2 * margin, metadataBoxHeight, 'FD');
-    
-    pdf.setFont('helvetica', 'normal');
+      pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+      const metadata = [
       `Session ID: ${cleanTextForPDF(analysisData.sessionId)}`,
       `Website URL: ${cleanTextForPDF(analysisData.manifest?.url || 'Not specified')}`,
       `Generated: ${new Date().toLocaleString()}`,
@@ -769,8 +765,13 @@ export async function exportAnalysisToPDF(
           currentY += 5;
           
           pdf.setFont('helvetica', 'normal');
-          // Use the actual helpUrl which contains the proper WCAG documentation link
-          currentY = addTextWithLinks(pdf, violation.helpUrl, margin, currentY, pageWidth - 2 * margin);
+          pdf.setTextColor(0, 0, 255); // Blue color for links
+          pdf.text(violation.helpUrl, margin, currentY);
+          
+          const textWidth = pdf.getTextWidth(violation.helpUrl);
+          // Use the actual helpUrl directly from axe-core - don't parse it for WCAG patterns
+          pdf.link(margin, currentY - 3, textWidth, 4, { url: violation.helpUrl });
+          pdf.setTextColor(0, 0, 0); // Reset to black
           currentY += 8;
         }// Affected elements with better formatting
         if (violation.nodes && violation.nodes.length > 0) {
