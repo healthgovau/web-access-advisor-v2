@@ -25,6 +25,8 @@ export const analyzeAccessibility = async (
     const model = genAI.getGenerativeModel({ model: modelName });
 
     const prompt = `
+Only analyze and reference the HTML, code, and data provided in this prompt. Do not use any prior knowledge, assumptions, or information not present in the supplied code. Do not reference elements, attributes, or issues unless they are explicitly present in the provided input.
+
 Analyze this web page for accessibility issues:
 
 HTML Content:
@@ -48,7 +50,7 @@ Format your response as a structured analysis with clear sections.
     // TODO: Parse Gemini response into structured AccessibilityIssue format
     return {
       summary: text,
-      issues: [],
+      components: [], // Placeholder, should be parsed from Gemini response
       recommendations: [],
       score: 0
     };
