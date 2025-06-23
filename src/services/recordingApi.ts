@@ -141,3 +141,22 @@ export async function getAnalysisStatus(analysisId: string): Promise<AnalyzeSess
   
   return result;
 }
+
+/**
+ * Load a saved recording session
+ */
+export async function loadSavedSession(sessionId: string): Promise<{
+  sessionId: string;
+  sessionName: string;
+  url: string;
+  actions: UserAction[];
+  actionCount: number;
+}> {
+  const response = await fetch(`${API_BASE}/recordings/${sessionId}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to load session: ${response.statusText}`);
+  }
+
+  return response.json();
+}

@@ -11,6 +11,8 @@ import ThreePhaseStatus from './components/ThreePhaseStatus';
 import AnalysisResults from './components/AnalysisResults';
 import AnalysisControls from './components/AnalysisControls';
 import ErrorDisplay from './components/ErrorDisplay';
+import SessionModeToggle from './components/SessionModeToggle';
+import SessionSelector from './components/SessionSelector';
 import { useAccessibilityAnalysis } from './hooks/useAccessibilityAnalysis';
 import { exportAnalysisToPDF } from './utils/pdfExport';
 import * as recordingApi from './services/recordingApi';
@@ -18,6 +20,9 @@ import type { AppState, ProgressStage } from './types';
 import './App.css';
 
 function App() {
+  // Session mode state
+  const [sessionMode, setSessionMode] = useState<'new' | 'load'>('new');
+  
   // Main application state
   const [state, setState] = useState<AppState>({
     mode: 'setup',
@@ -258,10 +263,10 @@ function App() {
         mode: 'results'
       });
     }
-  };
-  // Reset to start over
+  };  // Reset to start over
   const handleReset = () => {
     stopActionPolling();
+    setSessionMode('new'); // Reset to new recording mode
     updateState({
       mode: 'setup',
       url: '',
@@ -275,6 +280,54 @@ function App() {
         message: 'Ready to start accessibility testing'
       }
     });
+  };
+
+  // Handle session mode change
+  const handleSessionModeChange = (mode: 'new' | 'load') => {
+    setSessionMode(mode);
+    // Reset state when switching modes
+    updateState({
+      mode: 'setup',
+      url: '',
+      sessionId: undefined,
+      actions: [],
+      analysisResult: undefined,
+      error: undefined,
+      loading: false,
+      progress: {
+        stage: 'idle',
+        message: 'Ready to start accessibility testing'
+      }
+    });
+  };
+  // Handle loading a saved session
+  const handleLoadSession = async (sessionId: string) => {
+    try {
+      updateState({ loading: true, error: undefined });
+      updateProgress('preparing-analysis', 'Loading saved session');      const sessionData = await recordingApi.loadSavedSession(sessionId);
+
+      updateProgress('recording-complete', `Session loaded: ${sessionData.actionCount} actions`, undefined, 'Ready for accessibility analysis');
+
+      updateState({
+        mode: 'results',
+        sessionId: sessionData.sessionId,
+        url: sessionData.url,
+        actions: sessionData.actions,
+        loading: false,
+        progress: {
+          stage: 'recording-complete',
+          message: `Session "${sessionData.sessionName}" loaded successfully`,
+          details: 'Ready for accessibility analysis'
+        }
+      });
+
+    } catch (error) {
+      updateProgress('error', 'Failed to load session', undefined, undefined, error instanceof Error ? error.message : 'Unknown error');
+      updateState({
+        error: error instanceof Error ? error.message : 'Failed to load session',
+        loading: false
+      });
+    }
   };
 
   // Clear error after 5 seconds
@@ -315,17 +368,58 @@ function App() {
             Mode: <span className="font-medium capitalize">{state.mode}</span>
           </div>
         </div>
-      </header>
-        <main className="mt-8">
-          <div className="space-y-6">{/* URL Input - Always visible at top */}
-            {state.mode === 'setup' && (
-              <URLInput
-                url={state.url}
-                onUrlChange={handleUrlChange}
-                onNavigate={handleNavigateAndRecord}
-                isLoading={state.loading}
+      </header>        <main className="mt-8">
+          <div className="space-y-6">
+
+          {/* Session Mode - Always visible */}
+          {state.mode === 'setup' ? (
+            // Interactive session mode toggle during setup
+            <>
+              <SessionModeToggle
+                mode={sessionMode}
+                onModeChange={handleSessionModeChange}
+                disabled={state.loading}
               />
-            )}{/* Three-Phase Status - Always visible */}
+              
+              {sessionMode === 'new' ? (
+                <URLInput
+                  url={state.url}
+                  onUrlChange={handleUrlChange}
+                  onNavigate={handleNavigateAndRecord}
+                  isLoading={state.loading}
+                />
+              ) : (
+                <SessionSelector
+                  onSessionSelect={handleLoadSession}
+                  isLoading={state.loading}
+                />
+              )}
+            </>
+          ) : (            // Read-only session mode indicator during processing
+            <div className="bg-white rounded-lg shadow p-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center space-x-3 flex-wrap">
+                  <span className="text-sm font-medium text-gray-700">Session:</span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    sessionMode === 'new' 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {sessionMode === 'new' ? 'New Recording' : 'Loaded Session'}
+                  </span>                  {state.sessionId && (
+                    <span className="text-sm text-gray-600 font-mono">
+                      <span className="font-medium">ID:</span> {state.sessionId}
+                    </span>
+                  )}
+                  {state.url && (
+                    <span className="text-sm text-gray-600">
+                      <span className="font-medium">URL:</span> {state.url}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}{/* Three-Phase Status - Always visible */}
             <ThreePhaseStatus
               currentStage={state.progress.stage}
               error={state.progress.error}
@@ -335,11 +429,8 @@ function App() {
                 return snapshotCount;
               })()}
               warnings={state.analysisResult?.warnings || []}
-            />{/* Error Display */}
-            {state.error && <ErrorDisplay error={state.error} />}{/* Setup Mode - URL input moved above */}
-            {state.mode === 'setup' && (
-              <></>
-            )}
+            />            {/* Error Display */}
+            {state.error && <ErrorDisplay error={state.error} />}
 
             {/* Recording Mode */}
             {state.mode === 'recording' && (
