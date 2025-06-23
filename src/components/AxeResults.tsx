@@ -12,16 +12,12 @@ interface AxeResultsProps {
 }
 
 /**
- * Wraps HTML tags, attributes, URLs, and Markdown bold with appropriate styling and links
+ * Simple text formatter for accessibility recommendations - handles URLs, line breaks, and backtick code
  */
-const formatTextWithCodeTags = (text: string): React.ReactElement => {
-  // First, put "See:" URLs on their own lines
-  const processedText = text.replace(/(\.\s+See:\s+)(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g, '.\n\nSee: $2');
-  
-  // Enhanced pattern to match URLs, HTML tags, attributes, CSS selectors, backtick code, and bold text
-  const pattern = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|`[^`]+`|<\/?[a-zA-Z0-9][^>]*>|&lt;\/?[a-zA-Z0-9][^&]*&gt;|aria-[a-zA-Z-]+(?:="[^"]*")?|role="[^"]*"|class="[^"]*"|id="[^"]*"|data-[a-zA-Z-]+="[^"]*"|\.[a-zA-Z_-][a-zA-Z0-9_-]*|#[a-zA-Z_-][a-zA-Z0-9_-]*|\*\*[^*]+\*\*)/g;
-
-  const parts = processedText.split(pattern);
+const formatTextWithLinks = (text: string): React.ReactElement => {
+  // Split on URLs and backtick code to handle them separately
+  const pattern = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|`[^`]+`)/g;
+  const parts = text.split(pattern);
 
   return (
     <>
@@ -41,28 +37,12 @@ const formatTextWithCodeTags = (text: string): React.ReactElement => {
           );
         }
         
-        // Check if this is bold text (**text**)
-        if (/^\*\*[^*]+\*\*$/.test(part)) {
-          const boldText = part.slice(2, -2); // Remove the ** markers
-          return (
-            <strong key={index} className="font-semibold text-gray-900">
-              {boldText}
-            </strong>
-          );
-        }
-        
-        // Check if this part matches the code pattern (recreate regex to avoid global state)
-        const isCode = /(`[^`]+`|<\/?[a-zA-Z0-9][^>]*>|&lt;\/?[a-zA-Z0-9][^&]*&gt;|aria-[a-zA-Z-]+(?:="[^"]*")?|role="[^"]*"|class="[^"]*"|id="[^"]*"|data-[a-zA-Z-]+="[^"]*"|\.[a-zA-Z_-][a-zA-Z0-9_-]*|#[a-zA-Z_-][a-zA-Z0-9_-]*)/.test(part);
-
-        if (isCode && part.trim()) {
-          // Remove backticks from display but keep the styling
-          const displayText = part.startsWith('`') && part.endsWith('`')
-            ? part.slice(1, -1)
-            : part;
-
+        // Check if this is backtick code
+        if (/^`[^`]+`$/.test(part)) {
+          const codeText = part.slice(1, -1); // Remove backticks
           return (
             <code key={index} className="px-1 py-0.5 bg-gray-100 text-gray-800 rounded text-sm font-mono">
-              {displayText}
+              {codeText}
             </code>
           );
         }
@@ -108,152 +88,40 @@ const formatHtmlCode = (html: string): string => {
 };
 
 /**
- * Parse and render recommendation content with proper formatting matching LLM section
+ * Simple recommendation renderer for general accessibility guidance
  */
 const renderRecommendationContent = (recommendation: string): React.ReactElement => {
-  // Clean up the recommendation text first
-  const cleanedRecommendation = recommendation.trim();
-    // Split by double newlines to identify major sections
-  const sections = cleanedRecommendation.split(/\n\s*\n+/);
+  // Check if the recommendation contains a "See:" link that should be separated
+  const seePattern = /^(.*?)\s*See:\s*(https?:\/\/[^\s]+)$/s;
+  const match = recommendation.match(seePattern);
   
+  if (match) {
+    const [, mainText, url] = match;
+    return (
+      <div className="space-y-4">
+        <div className="text-base text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
+          {formatTextWithLinks(mainText.trim())}
+        </div>
+        <div>
+          <span className="text-base font-medium text-gray-700">Reference: </span>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-base text-info hover:text-matte-blue underline"
+            style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}
+          >
+            {url.includes('dequeuniversity.com') ? 'Deque University Rule Documentation' : 'WCAG Guideline'}
+          </a>
+        </div>
+      </div>
+    );
+  }
+  
+  // For simple recommendations without "See:" links, just format with basic text and link handling
   return (
-    <div className="space-y-6">
-      {sections.map((section, sectionIndex) => {
-        const trimmedSection = section.trim();
-        if (!trimmedSection) return null;
-        
-        // Check if this section contains code examples
-        if (trimmedSection.toLowerCase().includes('before:') && trimmedSection.toLowerCase().includes('after:')) {
-          // Handle before/after code examples
-          const lines = trimmedSection.split('\n');
-          let beforeCode = '';
-          let afterCode = '';
-          let explanationText = '';
-          let currentMode = 'explanation';
-          
-          lines.forEach(line => {
-            const cleanLine = line.trim();
-            if (cleanLine.toLowerCase().startsWith('before:')) {
-              currentMode = 'before';
-              beforeCode = cleanLine.replace(/^before:\s*/i, '');
-            } else if (cleanLine.toLowerCase().startsWith('after:') || cleanLine.toLowerCase().includes('after (')) {
-              currentMode = 'after';
-              afterCode = cleanLine.replace(/^after[^:]*:\s*/i, '');
-            } else if (currentMode === 'before' && cleanLine) {
-              beforeCode += '\n' + cleanLine;
-            } else if (currentMode === 'after' && cleanLine) {
-              afterCode += '\n' + cleanLine;
-            } else if (currentMode === 'explanation' && cleanLine) {
-              explanationText += (explanationText ? '\n' : '') + cleanLine;
-            }
-          });
-            return (
-            <div key={sectionIndex} className="space-y-5">
-              {explanationText && (
-                <div className="text-base text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
-                  {formatTextWithCodeTags(explanationText)}
-                </div>
-              )}
-              
-              {beforeCode.trim() && (
-                <div>
-                  <div className="text-sm font-medium text-gray-700 mb-2">Before:</div>
-                  <pre className="p-3 bg-red-50 border border-red-200 rounded text-sm text-gray-700 overflow-x-auto" style={{ fontFamily: 'Consolas, Monaco, monospace' }}>
-                    <code>{beforeCode.trim()}</code>
-                  </pre>
-                </div>
-              )}
-              
-              {afterCode.trim() && (
-                <div>
-                  <div className="text-sm font-medium text-gray-700 mb-2">After:</div>
-                  <pre className="p-3 bg-green-50 border border-green-200 rounded text-sm text-gray-700 overflow-x-auto" style={{ fontFamily: 'Consolas, Monaco, monospace' }}>
-                    <code>{afterCode.trim()}</code>
-                  </pre>
-                </div>
-              )}
-            </div>
-          );
-        }
-        
-        // Check for numbered lists and format them properly
-        if (/^\d+\./.test(trimmedSection)) {
-          // Split into individual numbered items
-          const numberedItems = trimmedSection.split(/(?=^\d+\.)/m);
-            return (
-            <div key={sectionIndex} className="space-y-4">
-              {numberedItems.map((item, itemIndex) => {
-                const trimmedItem = item.trim();
-                if (!trimmedItem) return null;
-                
-                // Extract number and content
-                const match = trimmedItem.match(/^(\d+\.)\s*(.*)$/s);
-                if (match) {
-                  const [, number, content] = match;
-                  
-                  // Check for sub-steps (a., b., etc.)
-                  const subSteps = content.split(/(?=^\s*[a-z]\.\s)/m);
-                  
-                  if (subSteps.length > 1) {
-                    // Has sub-steps
-                    return (
-                      <div key={itemIndex} className="space-y-3 mb-4">
-                        <div className="text-base text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
-                          <span className="font-semibold">{number}</span> {formatTextWithCodeTags(subSteps[0].trim())}
-                        </div>
-                        {subSteps.slice(1).map((subStep, subIndex) => {
-                          const subMatch = subStep.trim().match(/^([a-z]\.)\s*(.*)$/s);
-                          if (subMatch) {
-                            const [, subNumber, subContent] = subMatch;
-                            return (
-                              <div key={subIndex} className="ml-6 text-base text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
-                                <span className="font-semibold">{subNumber}</span> {formatTextWithCodeTags(subContent)}
-                              </div>
-                            );
-                          }
-                          return null;
-                        })}
-                      </div>
-                    );
-                  } else {
-                    // Regular numbered item
-                    return (
-                      <div key={itemIndex} className="text-base text-gray-600 mb-3" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
-                        <span className="font-semibold">{number}</span> {formatTextWithCodeTags(content)}
-                      </div>
-                    );
-                  }
-                }
-                return null;
-              })}
-            </div>
-          );
-        }
-        
-        // Check for section headings (Testing:, etc.)
-        if (/^(Testing|Note|Important):/i.test(trimmedSection)) {
-          const parts = trimmedSection.split(/^(Testing|Note|Important):\s*/i);
-          if (parts.length >= 3) {
-            const heading = parts[1];
-            const content = parts[2];
-              return (
-              <div key={sectionIndex} className="space-y-4">
-                <div className="text-base font-medium text-gray-700 mb-3">{heading}:</div>
-                <div className="text-base text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
-                  {formatTextWithCodeTags(content)}
-                </div>
-              </div>
-            );
-          }
-        }
-        
-        // Regular paragraph
-        return (
-          <div key={sectionIndex} className="text-base text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
-            {formatTextWithCodeTags(trimmedSection)}
-          </div>
-        );
-      })}
+    <div className="text-base text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
+      {formatTextWithLinks(recommendation)}
     </div>
   );
 };
@@ -404,7 +272,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                     <div className="space-y-6 text-left">                      <div>
                         <span className="text-base font-medium text-gray-700">Issue: </span>
                         <div className="text-base text-gray-600 mt-1" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
-                          {formatTextWithCodeTags(violation.description)}
+                          {formatTextWithLinks(violation.description)}
                         </div>
                       </div>
 
@@ -413,7 +281,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                         <div>
                           <span className="text-base font-medium text-gray-700">Explanation: </span>
                           <div className="text-base text-gray-600 mt-1" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
-                            {formatTextWithCodeTags(violation.explanation)}
+                            {formatTextWithLinks(violation.explanation)}
                           </div>
                         </div>
                       )}{violation.helpUrl && (
@@ -461,22 +329,22 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                                           
                                           // Common rule recommendations
                                           if (ruleId.includes('heading') || ruleId.includes('h1')) {
-                                            return formatTextWithCodeTags('Add an h1 element to provide a main heading for the page content.');
+                                            return formatTextWithLinks('Add an h1 element to provide a main heading for the page content.');
                                           } else if (ruleId.includes('color-contrast')) {
-                                            return formatTextWithCodeTags('Increase the contrast ratio between text and background colors to meet WCAG standards.');
+                                            return formatTextWithLinks('Increase the contrast ratio between text and background colors to meet WCAG standards.');
                                           } else if (ruleId.includes('alt-text') || ruleId.includes('image-alt')) {
-                                            return formatTextWithCodeTags('Add descriptive alt text to images for screen reader users.');
+                                            return formatTextWithLinks('Add descriptive alt text to images for screen reader users.');
                                           } else if (ruleId.includes('label') || ruleId.includes('form')) {
-                                            return formatTextWithCodeTags('Associate form inputs with descriptive labels using the for/id attributes.');
+                                            return formatTextWithLinks('Associate form inputs with descriptive labels using the for/id attributes.');
                                           } else if (ruleId.includes('aria')) {
-                                            return formatTextWithCodeTags('Fix ARIA attributes to ensure they are properly implemented and accessible.');
+                                            return formatTextWithLinks('Fix ARIA attributes to ensure they are properly implemented and accessible.');
                                           } else if (ruleId.includes('landmark') || ruleId.includes('region')) {
-                                            return formatTextWithCodeTags('Add proper landmark elements or ARIA roles to structure the page content.');
+                                            return formatTextWithLinks('Add proper landmark elements or ARIA roles to structure the page content.');
                                           } else if (ruleId.includes('focus') || ruleId.includes('keyboard')) {
-                                            return formatTextWithCodeTags('Ensure all interactive elements are keyboard accessible and have visible focus indicators.');
+                                            return formatTextWithLinks('Ensure all interactive elements are keyboard accessible and have visible focus indicators.');
                                           } else {
                                             // Fallback to cleaned failure summary
-                                            return formatTextWithCodeTags(cleanFailure);
+                                            return formatTextWithLinks(cleanFailure);
                                           }
                                         })()}
                                       </div>

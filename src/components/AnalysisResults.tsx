@@ -14,16 +14,12 @@ interface AnalysisResultsProps {
 }
 
 /**
- * Wraps HTML tags, attributes, and URLs with appropriate styling and links
+ * Simple text formatter for accessibility recommendations - handles URLs, line breaks, and backtick code
  */
-const formatTextWithCodeTags = (text: string): React.ReactElement => {
-  // First, put "See:" URLs on their own lines
-  const processedText = text.replace(/(\.\s+See:\s+)(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g, '.\n\nSee: $2');
-  
-  // Enhanced pattern to match URLs, HTML tags, attributes, CSS selectors, and backtick code
-  const pattern = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|`[^`]+`|<\/?[a-zA-Z0-9][^>]*>|&lt;\/?[a-zA-Z0-9][^&]*&gt;|aria-[a-zA-Z-]+(?:="[^"]*")?|role="[^"]*"|class="[^"]*"|id="[^"]*"|data-[a-zA-Z-]+="[^"]*"|\.[a-zA-Z_-][a-zA-Z0-9_-]*|#[a-zA-Z_-][a-zA-Z0-9_-]*)/g;
-
-  const parts = processedText.split(pattern);
+const formatTextWithLinks = (text: string): React.ReactElement => {
+  // Split on URLs and backtick code to handle them separately
+  const pattern = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+|`[^`]+`)/g;
+  const parts = text.split(pattern);
 
   return (
     <>
@@ -43,18 +39,12 @@ const formatTextWithCodeTags = (text: string): React.ReactElement => {
           );
         }
         
-        // Check if this part matches the code pattern (recreate regex to avoid global state)
-        const isCode = /(`[^`]+`|<\/?[a-zA-Z0-9][^>]*>|&lt;\/?[a-zA-Z0-9][^&]*&gt;|aria-[a-zA-Z-]+(?:="[^"]*")?|role="[^"]*"|class="[^"]*"|id="[^"]*"|data-[a-zA-Z-]+="[^"]*"|\.[a-zA-Z_-][a-zA-Z0-9_-]*|#[a-zA-Z_-][a-zA-Z0-9_-]*)/.test(part);
-
-        if (isCode && part.trim()) {
-          // Remove backticks from display but keep the styling
-          const displayText = part.startsWith('`') && part.endsWith('`')
-            ? part.slice(1, -1)
-            : part;
-
+        // Check if this is backtick code
+        if (/^`[^`]+`$/.test(part)) {
+          const codeText = part.slice(1, -1); // Remove backticks
           return (
             <code key={index} className="px-1 py-0.5 bg-gray-100 text-gray-800 rounded text-sm font-mono">
-              {displayText}
+              {codeText}
             </code>
           );
         }
@@ -74,7 +64,6 @@ const formatTextWithCodeTags = (text: string): React.ReactElement => {
     </>
   );
 };
-
 /**
  * Cleans up HTML formatting for better display with proper indentation
  */
@@ -294,13 +283,13 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                           <div>
                             <span className="text-base font-medium text-gray-700">Issue: </span>
                             <div className="text-base text-gray-600 mt-1" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
-                              {formatTextWithCodeTags(component.issue)}
+                              {formatTextWithLinks(component.issue)}
                             </div>
                           </div>
                           <div>
                             <span className="text-base font-medium text-gray-700">Explanation:</span>
                             <div className="text-base text-gray-600 mt-2" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
-                              {formatTextWithCodeTags(component.explanation)}
+                              {formatTextWithLinks(component.explanation)}
                             </div>
                           </div>
                           {component.relevantHtml && (
@@ -335,7 +324,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                                 </button>
                               </div>
                               <div className="text-base text-gray-600 block mt-2" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
-                                {formatTextWithCodeTags(component.codeChangeSummary)}
+                                {formatTextWithLinks(component.codeChangeSummary)}
                               </div>
                               <pre className="mt-2 p-3 bg-green-50 border border-green-200 rounded text-sm text-gray-700 overflow-x-auto" style={{ fontFamily: 'Consolas, Monaco, monospace' }}>
                                 <code>{formatHtmlCode(component.correctedCode)}</code>

@@ -283,12 +283,17 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
 **Important**: Report ONLY components with identified screen reader accessibility issues.Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
 
 **OUTPUT FORMAT REQUIREMENTS:**
+- RETURN ONLY VALID JSON with no additional text before or after
 - Do NOT use emoji, Unicode symbols, or special characters in any output text
 - Use plain ASCII text only for maximum compatibility with PDF export systems
 - Each component must have a specific, non-generic name
 - Issues must be actionable and specific
+- Start your response with { and end with }
+- Do not include any markdown formatting, code blocks, or explanatory text
 
 **SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
+
+**CRITICAL: Return ONLY the JSON object - no other text.**
 `;
   }
   /**
@@ -433,12 +438,17 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
 - If you cannot identify specific HTML, leave relevantHtml empty
 
 **OUTPUT FORMAT REQUIREMENTS:**
+- RETURN ONLY VALID JSON with no additional text before or after
 - Do NOT use emoji, Unicode symbols, or special characters in any output text
 - Use plain ASCII text only for maximum compatibility with PDF export systems
 - Each component must have a specific, non-generic name
 - Issues must be actionable and specific
+- Start your response with { and end with }
+- Do not include any markdown formatting, code blocks, or explanatory text
 
 **SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
+
+**CRITICAL: Return ONLY the JSON object - no other text.**
 `;
   }
 
@@ -494,54 +504,58 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
 
     console.log(`HTML truncated to: ${result.length} chars`);
     return result;
-  }
-  /**
+  }  /**
    * Parses Gemini response into structured component-based format
    */  private parseGeminiResponse(text: string, context: { step: number }): GeminiAnalysis {
-    try {      // Try to extract JSON from response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        console.log('🔍 Full Gemini response parsed:', JSON.stringify(parsed, null, 2));
-        const validComponents = this.parseComponents(parsed.components || []);
+    console.log(`🔍 DEBUG: Parsing screen reader analysis response, length: ${text.length}`);
+    console.log(`🔍 DEBUG: Full LLM response:`, text);
 
-        // Only return analysis if we have valid components
-        if (validComponents.length > 0) {
-          return {
-            summary: parsed.summary || 'Component analysis completed',
-            components: validComponents,
-            recommendations: parsed.recommendations || [],
-            score: Math.max(0, Math.min(100, parsed.score || 0))
-          };
-        } else {
-          console.warn('⚠️ Gemini analysis returned no valid components, falling back to text parsing');
-        }
-      } else {
-        console.warn('⚠️ No JSON found in Gemini response, falling back to text parsing');
+    try {
+      // Clean up the response text to extract JSON
+      let cleanText = text.trim();
+      
+      // Remove any markdown code block formatting if present
+      cleanText = cleanText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+      cleanText = cleanText.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+      
+      // Try to find JSON object boundaries
+      const jsonStart = cleanText.indexOf('{');
+      const jsonEnd = cleanText.lastIndexOf('}');
+      
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        cleanText = cleanText.substring(jsonStart, jsonEnd + 1);
       }
-    } catch (error) {
-      console.warn('⚠️ Failed to parse Gemini JSON response, using fallback:', error);
-    }
 
-    // Fallback: extract information from text or return empty analysis
-    const fallbackAnalysis = this.parseTextResponse(text, context.step);
+      console.log(`🔍 DEBUG: Cleaned JSON text:`, cleanText);
 
-    // If fallback also has no components, return a minimal valid analysis
-    if (!fallbackAnalysis.components || fallbackAnalysis.components.length === 0) {
-      console.warn('⚠️ Both JSON and text parsing failed to extract meaningful components');
+      const parsed = JSON.parse(cleanText);
+      console.log('🔍 DEBUG: Parsed JSON response:', JSON.stringify(parsed, null, 2));
+      
+      const validComponents = this.parseComponents(parsed.components || []);
+
       return {
-        summary: 'Analysis completed but no specific accessibility issues were identified by AI',
+        summary: parsed.summary || 'Screen reader accessibility analysis completed',
+        components: validComponents,
+        recommendations: parsed.recommendations || [],
+        score: Math.max(0, Math.min(100, parsed.score || 0))
+      };
+
+    } catch (error) {
+      console.error('❌ Failed to parse screen reader analysis JSON response:', error);
+      console.error('❌ Raw response that failed to parse:', text);
+      
+      // Return minimal analysis with error information
+      return {
+        summary: 'Screen reader analysis failed to parse - LLM may have returned invalid JSON',
         components: [],
         recommendations: [
-          'Review the website manually for accessibility issues',
-          'Run automated accessibility tools like axe or Lighthouse',
-          'Test with screen readers and keyboard navigation'
+          'The AI analysis could not be processed due to formatting issues',
+          'Please try running the analysis again',
+          'Review the website manually for accessibility issues'
         ],
-        score: 75 // Neutral score when AI can't provide specific feedback
+        score: 50 // Neutral score when parsing fails
       };
     }
-
-    return fallbackAnalysis;
   }
   /**
    * Validates and formats component accessibility issues
@@ -595,29 +609,6 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
           selector: component.selector?.trim() || undefined
         };
       });
-  }
-  /**
-   * Fallback text parsing when JSON parsing fails
-   */
-  private parseTextResponse(text: string, step: number): GeminiAnalysis {
-    // Extract sections from text response
-    const summaryMatch = text.match(/(?:SUMMARY|Summary):\s*([^\n\r]+)/i);
-    const scoreMatch = text.match(/(?:SCORE|Score):\s*(\d+)/i);
-
-    // Extract recommendations
-    const recommendations: string[] = [];
-    const recMatch = text.match(/(?:RECOMMENDATIONS|Recommendations):(.*?)(?:\n\n|\n[A-Z]|$)/si);
-    if (recMatch) {
-      const recText = recMatch[1];
-      recommendations.push(...recText.split(/\n/).filter(line => line.trim()).map(line => line.trim()));
-    }
-
-    return {
-      summary: summaryMatch?.[1]?.trim() || 'Component accessibility analysis completed',
-      components: [], // Would need more sophisticated parsing for components
-      recommendations,
-      score: scoreMatch ? parseInt(scoreMatch[1]) : 50
-    };
   }  /**
    * Generate explanations and actionable recommendations for specific axe violations
    */
@@ -695,48 +686,36 @@ See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
   /**
    * Build prompt for axe violation recommendations
    */  private buildAxeRecommendationPrompt(violations: any[]): string {
-    return `You are an accessibility expert. For each axe-core violation, provide both an explanation and specific, actionable recommendations.
+    return `You are an accessibility expert. For each axe-core violation, provide both an explanation and a clear, general recommendation statement.
 
 CRITICAL: You MUST respond with content for EVERY violation provided. Do not skip any violations.
 
-For each violation, respond in this exact format:
+Return your response as a valid JSON object with this exact structure:
 
-VIOLATION_ID: [violation.id]
-EXPLANATION: [Clear explanation of why this is an accessibility problem and how it affects users with disabilities - focus on user impact. NEVER leave this empty.]
-RECOMMENDATION: [Start with a brief overview, then provide detailed Recommended section with specific code fixes. NEVER leave this empty.]
+{
+  "violations": [
+    {
+      "id": "violation.id",
+      "explanation": "Clear explanation of why this is an accessibility problem and how it affects users with disabilities - focus on user impact",
+      "recommendation": "A clear, general statement of what needs to be done to fix this type of issue. Keep it concise and actionable but avoid detailed step-by-step instructions."
+    }
+  ]
+}
 
-CRITICAL GUIDELINES FOR RECOMMENDATIONS:
-- ALWAYS examine the actual HTML provided for each violation
-- Structure your RECOMMENDATION with this exact format - DO NOT deviate:
-  Recommended:
-  [Provide specific, actionable steps with numbered list format (1. 2. 3.). Give SPECIFIC fix instructions based on the actual HTML context provided. If the HTML context is insufficient, provide general but detailed guidance with documentation links.]
-
-- CRITICAL: Use the word "Recommended:" exactly ONCE per violation  
-- CRITICAL: Since the HTML Sample is already provided above, do NOT repeat the problematic HTML
-- CRITICAL: Use numbered list format (1. 2. 3.) for the recommended steps
-- CRITICAL: DO NOT include any corrected HTML code examples
-- CRITICAL: Focus on clear, actionable instructions rather than code samples
-- CRITICAL: URLs should be formatted as "See: https://..." with exactly one "See:" prefix
-- For aria-label issues, suggest meaningful labels based on the element's purpose and surrounding context
-- For form elements, suggest appropriate label associations using the actual element structure
-- For heading issues, provide clear guidance on proper heading structure and semantic hierarchy
-- When providing documentation links, put them on separate lines after "See:" (not "See: See:")
-- Make the "Recommended" section actionable and specific, not generic advice
-- Ensure recommendations are contextually relevant to the specific violation and HTML provided
-- Prioritize user impact and practical implementation in your guidance
-
-FORMATTING RULES:
-- Use plain text only, NO markdown formatting anywhere
-- Use the exact section header: "Recommended:" (only once per violation)
-- NEVER include "Testing:" sections, "Code Example:" sections, or "Corrected Code:" sections
-- Use numbered lists (1. 2. 3.) for multi-step instructions within the Recommended section
-- DO NOT include any HTML code examples or corrected code
-- Focus on clear, step-by-step instructions for developers to implement
-- Put documentation links on separate lines after "See:" (exactly one "See:" per link)
-- Ensure each recommendation is specific to the violation and provides actionable guidance
-- Avoid generic advice - tailor recommendations to the actual HTML context provided
-
-Generate practical, implementable solutions with clear, contextually relevant instructions that developers can follow to fix accessibility issues. Focus on user impact and provide specific guidance based on the HTML context and violation details provided.
+CRITICAL GUIDELINES:
+- ALWAYS examine ALL HTML elements provided for each violation (not just the first one)
+- Provide general guidance that addresses the type of accessibility issue
+- Make recommendations clear and actionable but concise
+- Focus on what needs to be done rather than detailed how-to steps
+- For aria-label issues, mention the need for meaningful labels
+- For form elements, mention proper label associations
+- For heading issues, mention proper heading structure
+- Keep recommendations general enough to apply to all instances of the violation type
+- Prioritize user impact and practical guidance
+- Each recommendation should be a clear statement that developers can understand and implement
+- Avoid detailed step-by-step instructions - focus on the core fix needed
+- ALWAYS end recommendations with a reference to the relevant WCAG guideline using the format "See: [WCAG URL]"
+- Use the specific WCAG documentation URL that corresponds to the axe violation being addressed
 
 Violations to analyze:
 ${violations.map((v, i) => `
@@ -745,24 +724,27 @@ VIOLATION ${i + 1}:
 - Impact: ${v.impact}
 - Description: ${v.description}
 - Help: ${v.help}
-- HTML Sample: ${v.nodes?.[0]?.html || 'Not available'}
-- Selector: ${Array.isArray(v.nodes?.[0]?.target) ? v.nodes[0].target.join(' > ') : v.nodes?.[0]?.target || 'Not available'}
-- Failure Details: ${v.nodes?.[0]?.failureSummary || 'Not available'}
+- WCAG Guideline URL: ${v.helpUrl || 'https://dequeuniversity.com/rules/axe/'}
+- Number of affected elements: ${v.nodes?.length || 0}
+- All affected HTML elements:
+${v.nodes?.map((node: any, nodeIndex: number) => `  Element ${nodeIndex + 1}:
+    HTML: ${node.html || 'Not available'}
+    Selector: ${Array.isArray(node.target) ? node.target.join(' > ') : node.target || 'Not available'}
+    Failure: ${node.failureSummary || 'Not available'}`).join('\n') || '  No elements available'}
 `).join('\n')}
 
 Remember: 
-- MANDATORY: Provide both EXPLANATION and RECOMMENDATION for EVERY violation listed
-- Use the actual HTML context to provide SPECIFIC fix instructions in the "Recommended" section
-- If you see specific text or context clues, incorporate them into your recommendations
-- For aria-label suggestions, make them descriptive and meaningful based on the element's context
-- Always include a "Recommended:" section with concrete steps
-- Focus on clear instructions rather than code examples
+- MANDATORY: Provide both explanation and recommendation for EVERY violation listed
+- Use the actual HTML context to understand the violation type
+- Make recommendations general and actionable 
+- Focus on what needs to be done, not detailed implementation steps
 - Make explanations user-impact focused (how this affects people with disabilities)
-- Provide implementable solutions in the "Recommended" section, not just general advice
-- NEVER skip a violation or leave sections empty - if you cannot provide specific guidance, provide general accessibility guidance for that violation type`;
-  }
-  /**
-   * Parse axe recommendations from LLM response and clean up formatting
+- Provide clear guidance that applies to the violation type
+- ALWAYS end each recommendation with "See: [WCAG Guideline URL]" using the URL provided above
+- NEVER skip a violation or leave sections empty
+- Return ONLY valid JSON, no additional text or formatting`;
+  }  /**
+   * Parse axe recommendations from LLM JSON response
    */
   private parseAxeRecommendations(text: string, violations: any[]): Map<string, { explanation: string; recommendation: string }> {
     const results = new Map<string, { explanation: string; recommendation: string }>();
@@ -770,118 +752,82 @@ Remember:
     console.log(`🔍 DEBUG: Original LLM response length: ${text.length}`);
     console.log(`🔍 DEBUG: Full LLM response:`, text);
 
-    // Clean up the response text first
-    const cleanText = this.cleanMarkdownFromText(text);
-    console.log(`🔍 DEBUG: Cleaned text length: ${cleanText.length}`);
-    console.log(`🔍 DEBUG: Full cleaned text:`, cleanText);
-    // Try to parse structured format
-    const violationBlocks = cleanText.split(/VIOLATION_ID:\s*/i);
-    console.log(`🔍 DEBUG: Found ${violationBlocks.length} violation blocks`);
-
-    // Log all blocks for debugging
-    violationBlocks.forEach((block, index) => {
-      console.log(`🔍 DEBUG: Block ${index}:`, block.trim().substring(0, 200) + '...');
-    });
-
-    violationBlocks.forEach((block, blockIndex) => {
-      console.log(`🔍 DEBUG: Processing block ${blockIndex}, length: ${block.length}`);
-      console.log(`🔍 DEBUG: Block ${blockIndex} full content:`, block);
-
-      // Skip empty blocks (the first block before the first VIOLATION_ID is usually empty)
-      if (!block.trim()) {
-        console.log(`🔍 DEBUG: Block ${blockIndex} is empty, skipping`);
-        return;
+    try {
+      // Clean up the response text to extract JSON
+      let cleanText = text.trim();
+      
+      // Remove any markdown code block formatting if present
+      cleanText = cleanText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+      cleanText = cleanText.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+      
+      // Try to find JSON object boundaries
+      const jsonStart = cleanText.indexOf('{');
+      const jsonEnd = cleanText.lastIndexOf('}');
+      
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        cleanText = cleanText.substring(jsonStart, jsonEnd + 1);
       }
 
-      const lines = block.trim().split('\n');
-      if (lines.length >= 2) {
-        const idLine = lines[0].trim();
-        console.log(`🔍 DEBUG: Block ${blockIndex} ID line: "${idLine}"`);
-        const explanationIndex = lines.findIndex(line => line.toLowerCase().includes('explanation:'));
-        const recIndex = lines.findIndex(line => line.toLowerCase().includes('recommendation:'));
+      console.log(`🔍 DEBUG: Cleaned JSON text:`, cleanText);
 
-        console.log(`🔍 DEBUG: Block ${blockIndex} - explanation index: ${explanationIndex}, recommendation index: ${recIndex}`);        if (explanationIndex >= 0 && recIndex >= 0) {
-          // Get explanation content - check if it's on the same line as "EXPLANATION:" or on following lines
-          let explanation = '';
-          const explanationLine = lines[explanationIndex];
-          const explanationContent = explanationLine.substring(explanationLine.toLowerCase().indexOf('explanation:') + 12).trim();
+      const jsonResponse = JSON.parse(cleanText);
+      console.log(`🔍 DEBUG: Parsed JSON response:`, jsonResponse);      if (jsonResponse.violations && Array.isArray(jsonResponse.violations)) {
+        jsonResponse.violations.forEach((violationData: any, index: number) => {
+          const violationId = violationData.id;
+          const explanation = violationData.explanation || '';
+          const recommendation = violationData.recommendation || '';
 
-          if (explanationContent) {
-            // Explanation is on the same line as "EXPLANATION:"
-            explanation = explanationContent;          } else {
-            // Explanation is on following lines
-            const explanationLines = lines.slice(explanationIndex + 1, recIndex);
-            explanation = this.formatRecommendationContent(explanationLines, false);
-          }
-
-          const recommendationLines = lines.slice(recIndex + 1);
-          const recommendation = this.formatRecommendationContent(recommendationLines, true);
-
-          console.log(`🔍 DEBUG: Block ${blockIndex} - raw explanation: "${explanation}"`);
-          console.log(`🔍 DEBUG: Block ${blockIndex} - raw recommendation: "${recommendation}"`);          console.log(`🔍 DEBUG: Block ${blockIndex} - formatted explanation length: ${explanation.length}, recommendation length: ${recommendation.length}`);
-          
-          // Validate that we have meaningful content
-          const hasValidExplanation = explanation && explanation.trim().length > 0;
-          const hasValidRecommendation = recommendation && recommendation.trim().length > 0 && 
-                                       recommendation.toLowerCase() !== 'recommended:' &&
-                                       !recommendation.match(/^recommended:\s*$/i);
-          
-          // Find matching violation - be more flexible with matching
-          const violation = violations.find(v => {
-            const match = idLine.includes(v.id) || v.id.includes(idLine.trim());
-            console.log(`🔍 DEBUG: Checking violation ${v.id} against ID line "${idLine.trim()}" - match: ${match}`);
-            return match;
-          });          console.log(`🔍 DEBUG: Block ${blockIndex} - found matching violation: ${violation ? violation.id : 'none'}`);          if (violation && hasValidExplanation && hasValidRecommendation) {
-            results.set(violation.id, { explanation, recommendation });
-            console.log(`✅ DEBUG: Successfully parsed violation ${violation.id} with explanation: "${explanation.substring(0, 100)}..."`);
-          } else if (violation) {
-            // Create fallback for missing or invalid LLM content
-            const fallbackExplanation = hasValidExplanation ? explanation : 
-              `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`;
-            
-            const fallbackRecommendation = hasValidRecommendation ? recommendation :
-              `${violation.help}
-
-See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`;
-
-            results.set(violation.id, { 
-              explanation: fallbackExplanation, 
-              recommendation: fallbackRecommendation 
+          if (explanation && recommendation) {
+            results.set(violationId, {
+              explanation: explanation.trim(),
+              recommendation: recommendation.trim()
             });
-            console.warn(`⚠️ DEBUG: Using fallback content for violation ${violation.id} - explanation: ${hasValidExplanation ? 'LLM' : 'fallback'}, recommendation: ${hasValidRecommendation ? 'LLM' : 'fallback'}`);
+            console.log(`✅ DEBUG: Successfully parsed violation ${violationId}`);
           } else {
-            console.warn(`❌ DEBUG: Failed to parse block ${blockIndex} - violation: ${!!violation}, explanation: ${hasValidExplanation} (${explanation.length} chars), recommendation: ${hasValidRecommendation} (${recommendation.length} chars)`);
-            if (!violation) console.warn(`❌ DEBUG: No matching violation found for ID line: "${idLine}"`);
-            if (!hasValidExplanation) console.warn(`❌ DEBUG: Invalid explanation for block ${blockIndex}: "${explanation}"`);
-            if (!hasValidRecommendation) console.warn(`❌ DEBUG: Invalid recommendation for block ${blockIndex}: "${recommendation}"`);
+            console.log(`⚠️ DEBUG: Missing content for violation ${violationId}:`, { explanation, recommendation });
           }
-        } else {
-          console.warn(`❌ DEBUG: Block ${blockIndex} missing expected sections - explanationIndex: ${explanationIndex}, recIndex: ${recIndex}`);
-          console.warn(`❌ DEBUG: Block ${blockIndex} lines:`, lines);
-        }
-      } else {
-        console.warn(`❌ DEBUG: Block ${blockIndex} has insufficient lines: ${lines.length}`);
-        console.warn(`❌ DEBUG: Block ${blockIndex} content:`, block);
-      }
-    });
-    // Fallback: if parsing failed, generate basic explanations and recommendations
-    if (results.size === 0) {
-      console.warn(`⚠️ LLM parsing completely failed, using fallback explanations for ${violations.length} violations`);
-      violations.forEach(violation => {
-        results.set(violation.id, {
-          explanation: `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`,
-          recommendation: `${violation.help}
-
-See: ${violation.helpUrl}`
         });
+      }
+
+    } catch (error) {
+      console.error(`❌ DEBUG: JSON parsing failed:`, error);
+      console.log(`❌ DEBUG: Failed to parse text:`, text);
+        // Fallback to basic parsing for any violations that weren't processed
+      violations.forEach((violation, index) => {
+        if (!results.has(violation.id)) {
+          console.log(`🔄 DEBUG: Adding fallback for violation ${violation.id}`);
+          
+          // Generate simple fallback recommendation based on violation type
+          let fallbackRecommendation = '';
+          const ruleId = violation.id;
+          
+          if (ruleId.includes('heading') || ruleId.includes('h1')) {
+            fallbackRecommendation = 'Add proper heading elements to structure the page content hierarchically.';
+          } else if (ruleId.includes('color-contrast')) {
+            fallbackRecommendation = 'Increase the contrast ratio between text and background colors to meet WCAG standards.';
+          } else if (ruleId.includes('alt-text') || ruleId.includes('image-alt')) {
+            fallbackRecommendation = 'Add descriptive alt text to images for screen reader users.';
+          } else if (ruleId.includes('label') || ruleId.includes('form')) {
+            fallbackRecommendation = 'Associate form inputs with descriptive labels using proper labeling techniques.';
+          } else if (ruleId.includes('aria')) {
+            fallbackRecommendation = 'Fix ARIA attributes to ensure they are properly implemented and accessible.';
+          } else if (ruleId.includes('landmark') || ruleId.includes('region')) {
+            fallbackRecommendation = 'Add proper landmark elements or ARIA roles to structure the page content.';
+          } else if (ruleId.includes('focus') || ruleId.includes('keyboard')) {
+            fallbackRecommendation = 'Ensure all interactive elements are keyboard accessible with visible focus indicators.';
+          } else {
+            fallbackRecommendation = 'Review and fix this accessibility issue to ensure compliance with WCAG guidelines.';
+          }
+          
+          results.set(violation.id, {
+            explanation: `This ${violation.impact} accessibility issue affects users with disabilities and needs attention.`,
+            recommendation: fallbackRecommendation
+          });
+        }
       });
     }
 
-    console.log(`🔍 DEBUG: Final results map size: ${results.size}`);
-    results.forEach((value, key) => {
-      console.log(`🔍 DEBUG: Result for ${key} - explanation: "${value.explanation.substring(0, 100)}...", recommendation: "${value.recommendation.substring(0, 100)}..."`);
-    });
-
+    console.log(`🔍 DEBUG: Final results count: ${results.size}`);
     return results;
   }/**
    * Clean markdown formatting from text
