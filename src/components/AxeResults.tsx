@@ -113,12 +113,11 @@ const formatHtmlCode = (html: string): string => {
 const renderRecommendationContent = (recommendation: string): React.ReactElement => {
   // Clean up the recommendation text first
   const cleanedRecommendation = recommendation.trim();
-  
-  // Split by double newlines to identify major sections
+    // Split by double newlines to identify major sections
   const sections = cleanedRecommendation.split(/\n\s*\n+/);
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {sections.map((section, sectionIndex) => {
         const trimmedSection = section.trim();
         if (!trimmedSection) return null;
@@ -148,9 +147,8 @@ const renderRecommendationContent = (recommendation: string): React.ReactElement
               explanationText += (explanationText ? '\n' : '') + cleanLine;
             }
           });
-          
-          return (
-            <div key={sectionIndex} className="space-y-4">
+            return (
+            <div key={sectionIndex} className="space-y-5">
               {explanationText && (
                 <div className="text-base text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                   {formatTextWithCodeTags(explanationText)}
@@ -182,9 +180,8 @@ const renderRecommendationContent = (recommendation: string): React.ReactElement
         if (/^\d+\./.test(trimmedSection)) {
           // Split into individual numbered items
           const numberedItems = trimmedSection.split(/(?=^\d+\.)/m);
-          
-          return (
-            <div key={sectionIndex} className="space-y-3">
+            return (
+            <div key={sectionIndex} className="space-y-4">
               {numberedItems.map((item, itemIndex) => {
                 const trimmedItem = item.trim();
                 if (!trimmedItem) return null;
@@ -200,7 +197,7 @@ const renderRecommendationContent = (recommendation: string): React.ReactElement
                   if (subSteps.length > 1) {
                     // Has sub-steps
                     return (
-                      <div key={itemIndex} className="space-y-2">
+                      <div key={itemIndex} className="space-y-3 mb-4">
                         <div className="text-base text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                           <span className="font-semibold">{number}</span> {formatTextWithCodeTags(subSteps[0].trim())}
                         </div>
@@ -221,7 +218,7 @@ const renderRecommendationContent = (recommendation: string): React.ReactElement
                   } else {
                     // Regular numbered item
                     return (
-                      <div key={itemIndex} className="text-base text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
+                      <div key={itemIndex} className="text-base text-gray-600 mb-3" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                         <span className="font-semibold">{number}</span> {formatTextWithCodeTags(content)}
                       </div>
                     );
@@ -239,10 +236,9 @@ const renderRecommendationContent = (recommendation: string): React.ReactElement
           if (parts.length >= 3) {
             const heading = parts[1];
             const content = parts[2];
-            
-            return (
-              <div key={sectionIndex} className="space-y-3">
-                <div className="text-base font-medium text-gray-700 mb-2">{heading}:</div>
+              return (
+              <div key={sectionIndex} className="space-y-4">
+                <div className="text-base font-medium text-gray-700 mb-3">{heading}:</div>
                 <div className="text-base text-gray-600" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
                   {formatTextWithCodeTags(content)}
                 </div>
@@ -436,7 +432,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                       )}                      {violation.nodes && violation.nodes.length > 0 && (
                         <div>
                           <span className="text-base font-medium text-gray-700 mb-3">Offending Code ({violation.nodes.length}): </span>                          <div className="mt-3 space-y-4">
-                            {violation.nodes.slice(0, 5).map((node, nodeIndex) => (
+                            {violation.nodes.map((node, nodeIndex) => (
                               <div key={nodeIndex} className="bg-gray-50 border border-gray-200 rounded p-3">
                                 <div className="space-y-3">
                                   {node.html && (

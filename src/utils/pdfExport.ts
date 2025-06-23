@@ -701,7 +701,7 @@ export async function exportAnalysisToPDF(
         if (violation.nodes && violation.nodes.length > 0) {
           pdf.setFont('helvetica', 'bold');
           pdf.text(`OFFENDING CODE (${violation.nodes.length} total):`, margin, currentY);
-          currentY += 8;          violation.nodes.slice(0, 5).forEach((node, nodeIndex) => {
+          currentY += 8;          violation.nodes.forEach((node, nodeIndex) => {
             // Clean HTML element for better display
             const cleanHtml = node.html ? cleanTextForPDF(node.html) : '';
             const shortHtml = cleanHtml.length > 120 ? cleanHtml.substring(0, 120) + '...' : cleanHtml;

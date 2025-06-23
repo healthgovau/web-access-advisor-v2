@@ -31,11 +31,12 @@ export class GeminiService {
       domChangeType?: string;
     },
     previousHtml?: string
-  ): Promise<GeminiAnalysis> {    try {
+  ): Promise<GeminiAnalysis> {
+    try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
 
       const prompt = this.buildComponentAnalysisPrompt(htmlContent, axeResults, context, previousHtml);
-      
+
       // Set up timeout for Gemini API call (2 minutes)
       const geminiPromise = model.generateContent(prompt);
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -59,10 +60,10 @@ export class GeminiService {
       };
 
       const analysisResult = this.parseGeminiResponse(text, context);
-      
+
       // Attach debug info to the result
       analysisResult.debug = debugLog;
-      
+
       return analysisResult;
     } catch (error) {
       console.error('Gemini API error:', error);
@@ -86,11 +87,12 @@ export class GeminiService {
       sessionId: string;
       totalSteps: number;
     }
-  ): Promise<GeminiAnalysis> {    try {
+  ): Promise<GeminiAnalysis> {
+    try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
 
       const prompt = this.buildFlowAnalysisPrompt(snapshots, manifest, context);
-      
+
       // Set up timeout for Gemini API call (3 minutes for complex flow analysis)
       const geminiPromise = model.generateContent(prompt);
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -114,10 +116,10 @@ export class GeminiService {
       };
 
       const analysisResult = this.parseGeminiResponse(text, { step: context.totalSteps });
-      
+
       // Attach debug info to the result
       analysisResult.debug = debugLog;
-      
+
       return analysisResult;
 
     } catch (error) {
@@ -132,7 +134,7 @@ export class GeminiService {
           throw new Error('Content was filtered by Gemini safety systems.');
         }
       }
-      
+
       throw new Error(`Gemini AI analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -141,13 +143,13 @@ export class GeminiService {
    * Based on before/after DOM state comparison methodology
    */
   private buildComponentAnalysisPrompt(
-    htmlContent: string, 
-    axeResults: any[], 
+    htmlContent: string,
+    axeResults: any[],
     context: { url: string; action: string; step: number; domChangeType?: string },
     previousHtml?: string
   ): string {
     const hasBeforeAfter = previousHtml && previousHtml !== htmlContent;
-      return `
+    return `
 Your task is to analyze the provided DOM snapshot(s) and corresponding Axe Accessibility Report(s) with a PRIMARY FOCUS on screen reader (ARIA) accessibility and assistive technology compatibility. This tool is specifically designed to ensure interactive components work correctly with screen readers and other assistive technologies.
 
 **PRIMARY OBJECTIVE: SCREEN READER ACCESSIBILITY**
@@ -300,7 +302,7 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
   ): string {
     // Group snapshots by flow context
     const flowGroups = this.groupSnapshotsByFlow(snapshots, manifest);
-      return `
+    return `
 Your task is to analyze a complete user interaction flow consisting of ${context.totalSteps} steps captured during accessibility testing, with a PRIMARY FOCUS on screen reader (ARIA) accessibility and assistive technology compatibility. This analysis ensures that interaction sequences work correctly for screen reader users through proper ARIA implementation and state management.
 
 **PRIMARY OBJECTIVE: SCREEN READER ACCESSIBILITY FLOW ANALYSIS**
@@ -315,11 +317,11 @@ The main requirement is to ensure the entire interaction flow maintains proper s
 **Screen Reader Focused Interaction Flow Analysis:**
 
 ${Object.entries(flowGroups).map(([flowType, steps]: [string, any[]]) => {
-  return `
+      return `
 **${flowType.toUpperCase()} FLOW:**
 ${steps.map((step: any, index: number) => {
-  const stepDetail = manifest.stepDetails.find((s: any) => s.step === step.step);
-  return `
+        const stepDetail = manifest.stepDetails.find((s: any) => s.step === step.step);
+        return `
 Step ${step.step} (Parent: ${stepDetail?.parentStep || 'none'}):
 - Action: ${stepDetail?.action || step.action} 
 - UI State: ${stepDetail?.uiState || 'unknown'}
@@ -332,9 +334,9 @@ ${this.truncateHtml(step.html)}
 Axe Violations:
 ${JSON.stringify(step.axeResults || [], null, 2)}
 `;
-}).join('\n')}
+      }).join('\n')}
 `;
-}).join('\n')}
+    }).join('\n')}
 
 **Analysis Instructions:**
 
@@ -455,7 +457,7 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
     snapshots.forEach((snapshot) => {
       const stepDetail = manifest.stepDetails.find((s: any) => s.step === snapshot.step);
       const flowContext = stepDetail?.flowContext || 'main_flow';
-      
+
       if (groups[flowContext]) {
         groups[flowContext].push(snapshot);
       } else {
@@ -477,19 +479,19 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
   private truncateHtml(html: string): string {
     // Configurable HTML size limit via environment variable (default 1MB)
     const maxLength = parseInt(process.env.GEMINI_HTML_MAX_SIZE || '1048576'); // 1MB default
-    
+
     if (html.length <= maxLength) {
       console.log(`HTML size: ${html.length} chars (under ${maxLength} limit, no truncation)`);
       return html;
     }
 
     console.log(`⚠️ HTML size: ${html.length} chars (exceeds ${maxLength} limit, truncating...)`);
-    
+
     // Try to truncate at element boundaries
     const truncated = html.substring(0, maxLength);
     const lastTag = truncated.lastIndexOf('<');
     const result = lastTag > maxLength - 1000 ? truncated.substring(0, lastTag) : truncated;
-    
+
     console.log(`HTML truncated to: ${result.length} chars`);
     return result;
   }
@@ -502,7 +504,7 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
         const parsed = JSON.parse(jsonMatch[0]);
         console.log('🔍 Full Gemini response parsed:', JSON.stringify(parsed, null, 2));
         const validComponents = this.parseComponents(parsed.components || []);
-        
+
         // Only return analysis if we have valid components
         if (validComponents.length > 0) {
           return {
@@ -523,7 +525,7 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
 
     // Fallback: extract information from text or return empty analysis
     const fallbackAnalysis = this.parseTextResponse(text, context.step);
-    
+
     // If fallback also has no components, return a minimal valid analysis
     if (!fallbackAnalysis.components || fallbackAnalysis.components.length === 0) {
       console.warn('⚠️ Both JSON and text parsing failed to extract meaningful components');
@@ -538,7 +540,7 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
         score: 75 // Neutral score when AI can't provide specific feedback
       };
     }
-    
+
     return fallbackAnalysis;
   }
   /**
@@ -553,13 +555,13 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
     return components
       .filter(component => {
         // Filter out components with no meaningful data
-        const hasValidName = component.componentName && 
-                            component.componentName !== 'Unknown Component' && 
-                            component.componentName.trim().length > 0;
-        const hasValidIssue = component.issue && 
-                             component.issue !== 'No issue description provided' && 
-                             component.issue.trim().length > 0;
-        
+        const hasValidName = component.componentName &&
+          component.componentName !== 'Unknown Component' &&
+          component.componentName.trim().length > 0;
+        const hasValidIssue = component.issue &&
+          component.issue !== 'No issue description provided' &&
+          component.issue.trim().length > 0;
+
         if (!hasValidName || !hasValidIssue) {
           console.warn('🗑️ Filtering out invalid component:', {
             name: component.componentName,
@@ -567,9 +569,10 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
           });
           return false;
         }
-        
+
         return true;
-      })      .map(component => {        console.log('🔍 Processing component from Gemini:', {
+      }).map(component => {
+        console.log('🔍 Processing component from Gemini:', {
           componentName: component.componentName,
           wcagRule: component.wcagRule,
           wcagUrl: component.wcagUrl,
@@ -577,16 +580,16 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
           selector: component.selector,
           hasSelector: !!component.selector
         });
-          return {
+        return {
           componentName: component.componentName.trim(),
           issue: component.issue.trim(),
           explanation: component.explanation?.trim() || 'No detailed explanation provided',
           relevantHtml: component.relevantHtml || '',
           correctedCode: component.correctedCode || '',
           codeChangeSummary: component.codeChangeSummary || '',
-          impact: ['critical', 'serious', 'moderate', 'minor'].includes(component.impact) 
+          impact: ['critical', 'serious', 'moderate', 'minor'].includes(component.impact)
             ? component.impact : 'moderate',
-          wcagRule: component.wcagRule && component.wcagRule !== 'unknown' 
+          wcagRule: component.wcagRule && component.wcagRule !== 'unknown'
             ? component.wcagRule : 'General Accessibility',
           wcagUrl: component.wcagUrl || undefined,
           selector: component.selector?.trim() || undefined
@@ -600,7 +603,7 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
     // Extract sections from text response
     const summaryMatch = text.match(/(?:SUMMARY|Summary):\s*([^\n\r]+)/i);
     const scoreMatch = text.match(/(?:SCORE|Score):\s*(\d+)/i);
-    
+
     // Extract recommendations
     const recommendations: string[] = [];
     const recMatch = text.match(/(?:RECOMMENDATIONS|Recommendations):(.*?)(?:\n\n|\n[A-Z]|$)/si);
@@ -614,12 +617,13 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
       components: [], // Would need more sophisticated parsing for components
       recommendations,
       score: scoreMatch ? parseInt(scoreMatch[1]) : 50
-    };  }  /**
+    };
+  }  /**
    * Generate explanations and actionable recommendations for specific axe violations
    */
   async generateAxeRecommendations(violations: any[]): Promise<Map<string, { explanation: string; recommendation: string }>> {
     console.log(`🤖 generateAxeRecommendations called with ${violations?.length || 0} violations`);
-    
+
     if (!violations || violations.length === 0) {
       console.log('🔍 No violations provided to generateAxeRecommendations');
       return new Map();
@@ -641,41 +645,39 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
 
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
-      
+
       // Use the comprehensive prompt for both explanations and recommendations
       const prompt = this.buildAxeRecommendationPrompt(violations);
-      
+
       console.log(`📤 Sending comprehensive prompt to LLM for ${violations.length} violations...`);
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      
+
       console.log(`📥 Received LLM response (${text.length} chars)`);
       console.log(`🔍 LLM Response Sample:`, text.substring(0, 300) + '...');
-      
+
       // Parse the structured response
       const recommendations = this.parseAxeRecommendations(text, violations);
-      
-      console.log(`Successfully parsed ${recommendations.size} recommendations from LLM`);
-      
-      // Ensure all violations have recommendations (fallback for unparsed ones)
-      violations.forEach(violation => {
-        if (!recommendations.has(violation.id)) {
-          console.warn(`⚠️ Missing LLM recommendation for ${violation.id}, using fallback`);
-          recommendations.set(violation.id, {
-            explanation: `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`,
-            recommendation: `${violation.help}
+
+      console.log(`Successfully parsed ${recommendations.size} recommendations from LLM`);    // Ensure all violations have recommendations (fallback for unparsed ones)
+    violations.forEach(violation => {
+      if (!recommendations.has(violation.id)) {
+        console.warn(`⚠️ Missing LLM recommendation for ${violation.id}, using fallback`);
+        recommendations.set(violation.id, {
+          explanation: `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`,
+          recommendation: `${violation.help}
 
 See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
-          });
-        }
-      });
-      
+        });
+      }
+    });
+
       return recommendations;
-      
+
     } catch (error) {
       console.warn('❌ LLM recommendation generation failed, using fallback for all violations:', error);
-      
+
       // Fallback to basic recommendations for all violations
       const fallbackResults = new Map<string, { explanation: string; recommendation: string }>();
       violations.forEach(violation => {
@@ -686,54 +688,55 @@ See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
 See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
         });
       });
-      
+
       return fallbackResults;
     }
   }
   /**
    * Build prompt for axe violation recommendations
    */  private buildAxeRecommendationPrompt(violations: any[]): string {
-    return `You are an accessibility expert. For each axe-core violation, provide both an explanation and specific, actionable recommendations with concrete code examples.
+    return `You are an accessibility expert. For each axe-core violation, provide both an explanation and specific, actionable recommendations.
+
+CRITICAL: You MUST respond with content for EVERY violation provided. Do not skip any violations.
 
 For each violation, respond in this exact format:
 
 VIOLATION_ID: [violation.id]
-EXPLANATION: [Clear explanation of why this is an accessibility problem and how it affects users with disabilities - focus on user impact]
-RECOMMENDATION: [Start with a brief overview, then provide detailed Recommended section with specific code fixes]
+EXPLANATION: [Clear explanation of why this is an accessibility problem and how it affects users with disabilities - focus on user impact. NEVER leave this empty.]
+RECOMMENDATION: [Start with a brief overview, then provide detailed Recommended section with specific code fixes. NEVER leave this empty.]
 
 CRITICAL GUIDELINES FOR RECOMMENDATIONS:
 - ALWAYS examine the actual HTML provided for each violation
-- Structure your RECOMMENDATION with this exact format:
-
-  Brief overview of what needs to be fixed.
-  
+- Structure your RECOMMENDATION with this exact format - DO NOT deviate:
   Recommended:
-  [Provide specific, actionable steps with code examples. If you can analyze the actual HTML context provided, give SPECIFIC code fixes with BEFORE/AFTER examples. If the HTML context is insufficient, provide general but detailed guidance with documentation links.]
-  
-  Code Example: (only if you have specific code to show)
-  BEFORE:
-  [exact problematic HTML]
-  
-  AFTER:
-  [corrected HTML with accessibility fixes]
-  
-  Testing:
-  [How to verify the fix works with screen readers/accessibility tools]
+  [Provide specific, actionable steps with numbered list format (1. 2. 3.). Give SPECIFIC fix instructions based on the actual HTML context provided. If the HTML context is insufficient, provide general but detailed guidance with documentation links.]
 
+- CRITICAL: Use the word "Recommended:" exactly ONCE per violation  
+- CRITICAL: Since the HTML Sample is already provided above, do NOT repeat the problematic HTML
+- CRITICAL: Use numbered list format (1. 2. 3.) for the recommended steps
+- CRITICAL: DO NOT include any corrected HTML code examples
+- CRITICAL: Focus on clear, actionable instructions rather than code samples
+- CRITICAL: URLs should be formatted as "See: https://..." with exactly one "See:" prefix
 - For aria-label issues, suggest meaningful labels based on the element's purpose and surrounding context
-- For heading hierarchy problems, specify the exact heading level change needed (h3 to h2, etc.)
 - For form elements, suggest appropriate label associations using the actual element structure
-- When providing documentation links, put them on separate lines after "See:"
+- For heading issues, provide clear guidance on proper heading structure and semantic hierarchy
+- When providing documentation links, put them on separate lines after "See:" (not "See: See:")
 - Make the "Recommended" section actionable and specific, not generic advice
+- Ensure recommendations are contextually relevant to the specific violation and HTML provided
+- Prioritize user impact and practical implementation in your guidance
 
 FORMATTING RULES:
-- Use plain text only, NO markdown formatting
-- Use the exact section headers: "Recommended:", "Code Example:", "Testing:"
-- Use simple numbered lists (1. 2. 3.) for multi-step instructions within sections
-- Put documentation links on separate lines after "See:"
-- Be very specific with code examples - show exactly what HTML/attributes to change
+- Use plain text only, NO markdown formatting anywhere
+- Use the exact section header: "Recommended:" (only once per violation)
+- NEVER include "Testing:" sections, "Code Example:" sections, or "Corrected Code:" sections
+- Use numbered lists (1. 2. 3.) for multi-step instructions within the Recommended section
+- DO NOT include any HTML code examples or corrected code
+- Focus on clear, step-by-step instructions for developers to implement
+- Put documentation links on separate lines after "See:" (exactly one "See:" per link)
+- Ensure each recommendation is specific to the violation and provides actionable guidance
+- Avoid generic advice - tailor recommendations to the actual HTML context provided
 
-Generate practical, implementable solutions with actual code that developers can copy and apply immediately.
+Generate practical, implementable solutions with clear, contextually relevant instructions that developers can follow to fix accessibility issues. Focus on user impact and provide specific guidance based on the HTML context and violation details provided.
 
 Violations to analyze:
 ${violations.map((v, i) => `
@@ -748,96 +751,120 @@ VIOLATION ${i + 1}:
 `).join('\n')}
 
 Remember: 
-- Use the actual HTML context to provide SPECIFIC code suggestions in the "Recommended" section
+- MANDATORY: Provide both EXPLANATION and RECOMMENDATION for EVERY violation listed
+- Use the actual HTML context to provide SPECIFIC fix instructions in the "Recommended" section
 - If you see specific text or context clues, incorporate them into your recommendations
 - For aria-label suggestions, make them descriptive and meaningful based on the element's context
 - Always include a "Recommended:" section with concrete steps
-- Give concrete BEFORE/AFTER code examples when possible
+- Focus on clear instructions rather than code examples
 - Make explanations user-impact focused (how this affects people with disabilities)
-- Provide implementable solutions in the "Recommended" section, not just general advice`;
+- Provide implementable solutions in the "Recommended" section, not just general advice
+- NEVER skip a violation or leave sections empty - if you cannot provide specific guidance, provide general accessibility guidance for that violation type`;
   }
   /**
    * Parse axe recommendations from LLM response and clean up formatting
    */
   private parseAxeRecommendations(text: string, violations: any[]): Map<string, { explanation: string; recommendation: string }> {
     const results = new Map<string, { explanation: string; recommendation: string }>();
-    
+
     console.log(`🔍 DEBUG: Original LLM response length: ${text.length}`);
-    console.log(`🔍 DEBUG: LLM response starts with: "${text.substring(0, 200)}..."`);
-    
+    console.log(`🔍 DEBUG: Full LLM response:`, text);
+
     // Clean up the response text first
     const cleanText = this.cleanMarkdownFromText(text);
     console.log(`🔍 DEBUG: Cleaned text length: ${cleanText.length}`);
-    console.log(`🔍 DEBUG: Cleaned text starts with: "${cleanText.substring(0, 200)}..."`);
-      // Try to parse structured format
+    console.log(`🔍 DEBUG: Full cleaned text:`, cleanText);
+    // Try to parse structured format
     const violationBlocks = cleanText.split(/VIOLATION_ID:\s*/i);
     console.log(`🔍 DEBUG: Found ${violationBlocks.length} violation blocks`);
-    
+
+    // Log all blocks for debugging
+    violationBlocks.forEach((block, index) => {
+      console.log(`🔍 DEBUG: Block ${index}:`, block.trim().substring(0, 200) + '...');
+    });
+
     violationBlocks.forEach((block, blockIndex) => {
       console.log(`🔍 DEBUG: Processing block ${blockIndex}, length: ${block.length}`);
-      console.log(`🔍 DEBUG: Block ${blockIndex} starts with: "${block.substring(0, 100)}..."`);
-      
+      console.log(`🔍 DEBUG: Block ${blockIndex} full content:`, block);
+
       // Skip empty blocks (the first block before the first VIOLATION_ID is usually empty)
       if (!block.trim()) {
         console.log(`🔍 DEBUG: Block ${blockIndex} is empty, skipping`);
         return;
       }
-      
+
       const lines = block.trim().split('\n');
       if (lines.length >= 2) {
         const idLine = lines[0].trim();
         console.log(`🔍 DEBUG: Block ${blockIndex} ID line: "${idLine}"`);
-          const explanationIndex = lines.findIndex(line => line.toLowerCase().includes('explanation:'));
+        const explanationIndex = lines.findIndex(line => line.toLowerCase().includes('explanation:'));
         const recIndex = lines.findIndex(line => line.toLowerCase().includes('recommendation:'));
-        
-        console.log(`🔍 DEBUG: Block ${blockIndex} - explanation index: ${explanationIndex}, recommendation index: ${recIndex}`);
-        
-        if (explanationIndex >= 0 && recIndex >= 0) {
+
+        console.log(`🔍 DEBUG: Block ${blockIndex} - explanation index: ${explanationIndex}, recommendation index: ${recIndex}`);        if (explanationIndex >= 0 && recIndex >= 0) {
           // Get explanation content - check if it's on the same line as "EXPLANATION:" or on following lines
           let explanation = '';
           const explanationLine = lines[explanationIndex];
           const explanationContent = explanationLine.substring(explanationLine.toLowerCase().indexOf('explanation:') + 12).trim();
-          
+
           if (explanationContent) {
             // Explanation is on the same line as "EXPLANATION:"
-            explanation = explanationContent;
-          } else {
+            explanation = explanationContent;          } else {
             // Explanation is on following lines
             const explanationLines = lines.slice(explanationIndex + 1, recIndex);
-            explanation = this.formatRecommendationContent(explanationLines);
+            explanation = this.formatRecommendationContent(explanationLines, false);
           }
-          
+
           const recommendationLines = lines.slice(recIndex + 1);
-          const recommendation = this.formatRecommendationContent(recommendationLines);
+          const recommendation = this.formatRecommendationContent(recommendationLines, true);
+
+          console.log(`🔍 DEBUG: Block ${blockIndex} - raw explanation: "${explanation}"`);
+          console.log(`🔍 DEBUG: Block ${blockIndex} - raw recommendation: "${recommendation}"`);          console.log(`🔍 DEBUG: Block ${blockIndex} - formatted explanation length: ${explanation.length}, recommendation length: ${recommendation.length}`);
           
-          console.log(`🔍 DEBUG: Block ${blockIndex} - explanation length: ${explanation.length}, recommendation length: ${recommendation.length}`);
+          // Validate that we have meaningful content
+          const hasValidExplanation = explanation && explanation.trim().length > 0;
+          const hasValidRecommendation = recommendation && recommendation.trim().length > 0 && 
+                                       recommendation.toLowerCase() !== 'recommended:' &&
+                                       !recommendation.match(/^recommended:\s*$/i);
           
-          console.log(`🔍 DEBUG: Block ${blockIndex} - formatted explanation length: ${explanation.length}, recommendation length: ${recommendation.length}`);
-            // Find matching violation - be more flexible with matching
+          // Find matching violation - be more flexible with matching
           const violation = violations.find(v => {
             const match = idLine.includes(v.id) || v.id.includes(idLine.trim());
             console.log(`🔍 DEBUG: Checking violation ${v.id} against ID line "${idLine.trim()}" - match: ${match}`);
             return match;
-          });
-          console.log(`🔍 DEBUG: Block ${blockIndex} - found matching violation: ${violation ? violation.id : 'none'}`);
-          
-          if (violation && explanation && recommendation) {
+          });          console.log(`🔍 DEBUG: Block ${blockIndex} - found matching violation: ${violation ? violation.id : 'none'}`);          if (violation && hasValidExplanation && hasValidRecommendation) {
             results.set(violation.id, { explanation, recommendation });
-            console.log(`✅ DEBUG: Successfully parsed violation ${violation.id}`);
+            console.log(`✅ DEBUG: Successfully parsed violation ${violation.id} with explanation: "${explanation.substring(0, 100)}..."`);
+          } else if (violation) {
+            // Create fallback for missing or invalid LLM content
+            const fallbackExplanation = hasValidExplanation ? explanation : 
+              `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`;
+            
+            const fallbackRecommendation = hasValidRecommendation ? recommendation :
+              `${violation.help}
+
+See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`;
+
+            results.set(violation.id, { 
+              explanation: fallbackExplanation, 
+              recommendation: fallbackRecommendation 
+            });
+            console.warn(`⚠️ DEBUG: Using fallback content for violation ${violation.id} - explanation: ${hasValidExplanation ? 'LLM' : 'fallback'}, recommendation: ${hasValidRecommendation ? 'LLM' : 'fallback'}`);
           } else {
-            console.warn(`❌ DEBUG: Failed to parse block ${blockIndex} - violation: ${!!violation}, explanation: ${!!explanation} (${explanation.length} chars), recommendation: ${!!recommendation} (${recommendation.length} chars)`);
+            console.warn(`❌ DEBUG: Failed to parse block ${blockIndex} - violation: ${!!violation}, explanation: ${hasValidExplanation} (${explanation.length} chars), recommendation: ${hasValidRecommendation} (${recommendation.length} chars)`);
             if (!violation) console.warn(`❌ DEBUG: No matching violation found for ID line: "${idLine}"`);
-            if (!explanation) console.warn(`❌ DEBUG: Empty explanation for block ${blockIndex}`);
-            if (!recommendation) console.warn(`❌ DEBUG: Empty recommendation for block ${blockIndex}`);
+            if (!hasValidExplanation) console.warn(`❌ DEBUG: Invalid explanation for block ${blockIndex}: "${explanation}"`);
+            if (!hasValidRecommendation) console.warn(`❌ DEBUG: Invalid recommendation for block ${blockIndex}: "${recommendation}"`);
           }
         } else {
-          console.warn(`❌ DEBUG: Block ${blockIndex} missing expected sections`);
+          console.warn(`❌ DEBUG: Block ${blockIndex} missing expected sections - explanationIndex: ${explanationIndex}, recIndex: ${recIndex}`);
+          console.warn(`❌ DEBUG: Block ${blockIndex} lines:`, lines);
         }
       } else {
         console.warn(`❌ DEBUG: Block ${blockIndex} has insufficient lines: ${lines.length}`);
+        console.warn(`❌ DEBUG: Block ${blockIndex} content:`, block);
       }
     });
-      // Fallback: if parsing failed, generate basic explanations and recommendations
+    // Fallback: if parsing failed, generate basic explanations and recommendations
     if (results.size === 0) {
       console.warn(`⚠️ LLM parsing completely failed, using fallback explanations for ${violations.length} violations`);
       violations.forEach(violation => {
@@ -849,9 +876,14 @@ See: ${violation.helpUrl}`
         });
       });
     }
-    
+
+    console.log(`🔍 DEBUG: Final results map size: ${results.size}`);
+    results.forEach((value, key) => {
+      console.log(`🔍 DEBUG: Result for ${key} - explanation: "${value.explanation.substring(0, 100)}...", recommendation: "${value.recommendation.substring(0, 100)}..."`);
+    });
+
     return results;
-  }  /**
+  }/**
    * Clean markdown formatting from text
    */
   private cleanMarkdownFromText(text: string): string {
@@ -865,74 +897,123 @@ See: ${violation.helpUrl}`
       // Remove extra whitespace but preserve line structure
       .replace(/\n\s*\n\s*\n/g, '\n\n')
       .trim();
-  }
-  /**
-   * Format recommendation content with proper structure
+  }  /**
+   * Format recommendation content with proper structure and code block formatting
    */
-  private formatRecommendationContent(contentLines: string[]): string {
+  private formatRecommendationContent(contentLines: string[], isRecommendation: boolean = false): string {
     console.log(`🔍 DEBUG formatRecommendationContent: Input lines count: ${contentLines.length}`);
     if (contentLines.length > 0) {
       console.log(`🔍 DEBUG formatRecommendationContent: First line: "${contentLines[0]}"`);
       console.log(`🔍 DEBUG formatRecommendationContent: Last line: "${contentLines[contentLines.length - 1]}"`);
     }
-    
+
     const result: string[] = [];
-    let inCodeBlock = false;
-    let codeLines: string[] = [];
-    
-    for (const line of contentLines) {
+
+    for (let i = 0; i < contentLines.length; i++) {
+      const line = contentLines[i];
       const trimmedLine = line.trim();
-      
-      // Check for code example section
-      if (trimmedLine.toLowerCase().includes('code example:')) {
-        if (codeLines.length > 0) {
-          result.push('\n' + codeLines.join('\n') + '\n');
-          codeLines = [];
+      const lowerLine = trimmedLine.toLowerCase();      // Skip empty lines
+      if (!trimmedLine) continue;
+
+      // For recommendations, skip duplicate "Recommended:" headers
+      if (isRecommendation && lowerLine === 'recommended:') {
+        // Skip if we already have content (this would be a duplicate)
+        if (result.length > 0) {
+          continue;
         }
-        result.push('\nCode Example:');
-        inCodeBlock = true;
+        // Skip the first "Recommended:" header entirely - we don't want it in the output
         continue;
       }
-      
-      // Check for testing section
-      if (trimmedLine.toLowerCase().includes('testing:')) {
-        if (codeLines.length > 0) {
-          result.push('\n' + codeLines.join('\n') + '\n');
-          codeLines = [];
+
+      // Skip Testing sections entirely
+      if (lowerLine.includes('testing:')) {
+        // Skip everything until next major section or end
+        while (i + 1 < contentLines.length) {
+          const nextLine = contentLines[i + 1]?.trim().toLowerCase();
+          if (nextLine && nextLine.startsWith('see:')) {
+            break;
+          }
+          i++;
         }
-        result.push('\nTesting:');
-        inCodeBlock = false;
         continue;
       }
-      
-      // Handle content based on current mode
-      if (inCodeBlock && trimmedLine && !trimmedLine.match(/^\d+\./)) {
-        // This looks like code
-        codeLines.push(trimmedLine);
-      } else {
-        // Add any pending code block
-        if (codeLines.length > 0) {
-          result.push('\n' + codeLines.join('\n') + '\n');
-          codeLines = [];
-          inCodeBlock = false;
+
+      // Skip Code Example sections entirely
+      if (lowerLine.includes('code example:') || lowerLine.includes('corrected code:')) {
+        // Skip everything until next major section or end
+        while (i + 1 < contentLines.length) {
+          const nextLine = contentLines[i + 1]?.trim().toLowerCase();
+          if (nextLine && (nextLine.startsWith('see:') || nextLine.includes('recommended:'))) {
+            break;
+          }
+          i++;
         }
-        
-        // Add regular content
-        if (trimmedLine) {
-          result.push(trimmedLine);
-        }
+        continue;
       }
-    }
+
+      // Process regular content
+      let formattedLine = trimmedLine;
+
+      // Remove any stray backticks or HTML keywords
+      formattedLine = formattedLine.replace(/`+/g, '');
+      formattedLine = formattedLine.replace(/\bhtml\b/gi, '');
+
+      // Fix duplicate "See:" patterns
+      formattedLine = formattedLine.replace(/^(see:\s*)+/gi, 'See: ');
+
+      // Add "See:" prefix to bare URLs
+      if (/^https?:\/\//.test(formattedLine)) {
+        formattedLine = `See: ${formattedLine}`;
+      }
+
+      // Skip lines that look like HTML code
+      if (formattedLine.includes('<') && formattedLine.includes('>')) {
+        continue;
+      }
+
+      formattedLine = formattedLine.replace(/\s+/g, ' ').trim();
+      if (formattedLine) {
+        result.push(formattedLine);
+      }
+    }    let finalResult = result.join('\n').trim();
     
-    // Add any remaining code
-    if (codeLines.length > 0) {
-      result.push('\n' + codeLines.join('\n') + '\n');
+    // Post-process to fix numbered step sequences if this is a recommendation
+    if (isRecommendation && finalResult) {
+      finalResult = this.fixNumberedSteps(finalResult);
     }
-    
-    const finalResult = result.join('\n').trim();
+
     console.log(`🔍 DEBUG formatRecommendationContent: Output length: ${finalResult.length}`);
-    console.log(`🔍 DEBUG formatRecommendationContent: Output preview: "${finalResult.substring(0, 100)}..."`);
-    
-    return finalResult;
+    console.log(`🔍 DEBUG formatRecommendationContent: Output preview: "${finalResult.substring(0, 100)}..."`);    return finalResult;
+  }
+
+  /**
+   * Fix numbered step sequences to ensure they are sequential (1, 2, 3, etc.)
+   */
+  private fixNumberedSteps(text: string): string {
+    const lines = text.split('\n');
+    const result: string[] = [];
+    let stepCounter = 1;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Check if this line starts with a number followed by a period (e.g., "2. ", "4. ")
+      const stepMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+      
+      if (stepMatch) {
+        // Replace the original step number with the sequential counter
+        const stepContent = stepMatch[2];
+        result.push(`${stepCounter}. ${stepContent}`);
+        stepCounter++;
+        console.log(`🔍 DEBUG fixNumberedSteps: Renumbered step from "${trimmed}" to "${stepCounter - 1}. ${stepContent}"`);
+      } else {
+        // Keep non-numbered lines as-is
+        result.push(line);
+      }
+    }
+
+    const fixedText = result.join('\n');
+    console.log(`🔍 DEBUG fixNumberedSteps: Fixed ${stepCounter - 1} numbered steps`);
+    return fixedText;
   }
 }

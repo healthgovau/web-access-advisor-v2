@@ -1,6 +1,14 @@
 # Web Access Advisor - Current Tasks
 
-## ✅ Recently Completed (2025-06-17)
+## ✅ Recently Completed (2025-06-23)
+
+### LLM Accessibility Recommendations Enhancement
+- ✅ **Enhanced paragraph spacing in Axe results UI** - Improved spacing between recommendation sections (space-y-6), numbered items (mb-4, mb-3), and sub-steps for better readability
+- ✅ **Updated LLM prompt for clearer recommendations** - Enhanced prompt to emphasize contextually relevant, specific guidance while removing generic heading level instructions  
+- ✅ **Improved recommendation formatting** - Better visual separation between different types of content (explanations, numbered lists, headings) in the UI
+- ✅ **Emphasized user impact focus** - Updated prompt to prioritize user impact and practical implementation guidance in recommendations
+
+### Previously Completed (2025-06-17)
 
 ### Frontend UI Improvements
 - ✅ **Replaced progress bar with 3-phase status display** - Compact horizontal layout showing Recording, Replay & Capture, and AI Analysis phases simultaneously
