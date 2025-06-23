@@ -91,14 +91,13 @@ function addTextWithLinks(pdf: jsPDF, text: string, x: number, y: number, maxWid
       if (beforeText) {
         // Check for WCAG references in the before text
         currentX = addWcagLinks(pdf, beforeText, currentX, currentY);
-      }
-      
-      // Add the URL as clickable link
+      }      // Add the URL as clickable link
       const url = urlMatch[0];
       pdf.setTextColor(0, 0, 255); // Blue color for links
       pdf.text(url, currentX, currentY);
       
       const textWidth = pdf.getTextWidth(url);
+      // Remove target: '_blank' as it doesn't work reliably in PDFs
       pdf.link(currentX, currentY - 3, textWidth, 4, { url: url });
       
       currentX += textWidth;
@@ -120,7 +119,53 @@ function addTextWithLinks(pdf: jsPDF, text: string, x: number, y: number, maxWid
 }
 
 /**
+ * Add a code block with proper text wrapping and overflow handling
+ */
+function addCodeBlock(pdf: jsPDF, code: string, x: number, y: number, maxWidth: number, backgroundColor: [number, number, number], borderColor: [number, number, number]): number {
+  if (!code.trim()) return y;
+  
+  // Calculate available width for code (accounting for padding)
+  const codeAreaWidth = maxWidth - 16; // 8px padding on each side
+  
+  // Split text with proper width constraint for courier font
+  pdf.setFont('courier', 'normal');
+  pdf.setFontSize(8); // Slightly smaller font to fit better
+  const codeLines = pdf.splitTextToSize(code, codeAreaWidth);
+  const codeHeight = Math.max(codeLines.length * 3.5 + 8, 15); // Tighter line spacing
+  
+  // Code background with border
+  pdf.setFillColor(backgroundColor[0], backgroundColor[1], backgroundColor[2]);
+  pdf.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+  pdf.setLineWidth(0.5);
+  pdf.rect(x, y - 2, maxWidth, codeHeight, 'FD');
+  
+  // Add code text with proper positioning
+  pdf.text(codeLines, x + 8, y + 4);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9); // Reset to default size
+  
+  return y + codeHeight + 5;
+}
+
+/**
+ * Valid WCAG 2.1 Understanding document slugs - prevents 404s
+ */
+const VALID_WCAG_GUIDELINES = new Set([
+  '1-1-1', '1-2-1', '1-2-2', '1-2-3', '1-2-4', '1-2-5', '1-2-6', '1-2-7', '1-2-8', '1-2-9',
+  '1-3-1', '1-3-2', '1-3-3', '1-3-4', '1-3-5', '1-3-6', '1-4-1', '1-4-2', '1-4-3', '1-4-4',
+  '1-4-5', '1-4-6', '1-4-7', '1-4-8', '1-4-9', '1-4-10', '1-4-11', '1-4-12', '1-4-13',
+  '2-1-1', '2-1-2', '2-1-3', '2-1-4', '2-2-1', '2-2-2', '2-2-3', '2-2-4', '2-2-5', '2-2-6',
+  '2-3-1', '2-3-2', '2-3-3', '2-4-1', '2-4-2', '2-4-3', '2-4-4', '2-4-5', '2-4-6', '2-4-7',
+  '2-4-8', '2-4-9', '2-4-10', '2-5-1', '2-5-2', '2-5-3', '2-5-4', '2-5-5', '2-5-6',
+  '3-1-1', '3-1-2', '3-1-3', '3-1-4', '3-1-5', '3-1-6', '3-2-1', '3-2-2', '3-2-3', '3-2-4',
+  '3-2-5', '3-3-1', '3-3-2', '3-3-3', '3-3-4', '3-3-5', '3-3-6',
+  '4-1-1', '4-1-2', '4-1-3'
+]);
+
+/**
  * Add text with WCAG references as clickable links
+ * Note: In PDF, links always open in the user's default browser. There is no way to force 'new tab' behavior in a PDF file.
+ * The 'target' property is ignored by most PDF viewers. This is not a code bug.
  */
 function addWcagLinks(pdf: jsPDF, text: string, x: number, y: number): number {
   let currentX = x;
@@ -161,16 +206,25 @@ function addWcagLinks(pdf: jsPDF, text: string, x: number, y: number): number {
     }
     
     if (guidelineNumber) {
-      const wcagUrl = `https://www.w3.org/WAI/WCAG21/Understanding/${guidelineNumber.replace(/\./g, '-')}.html`;
+      const wcagSlug = guidelineNumber.replace(/\./g, '-');
       
-      pdf.setTextColor(0, 0, 255); // Blue color for links
-      pdf.text(fullMatch, currentX, y);
-      
-      const textWidth = pdf.getTextWidth(fullMatch);
-      pdf.link(currentX, y - 3, textWidth, 4, { url: wcagUrl });
-      
-      currentX += textWidth;
-      pdf.setTextColor(0, 0, 0); // Reset to black
+      // Only create links for valid WCAG guidelines to prevent 404s
+      if (VALID_WCAG_GUIDELINES.has(wcagSlug)) {
+        const wcagUrl = `https://www.w3.org/WAI/WCAG21/Understanding/${wcagSlug}.html`;
+        pdf.setTextColor(0, 0, 255); // Blue color for links
+        pdf.text(fullMatch, currentX, y);
+        
+        const textWidth = pdf.getTextWidth(fullMatch);
+        // Remove target: '_blank' as it doesn't work reliably in PDFs
+        pdf.link(currentX, y - 3, textWidth, 4, { url: wcagUrl });
+        
+        currentX += textWidth;
+        pdf.setTextColor(0, 0, 0); // Reset to black
+      } else {
+        // Invalid guideline - show as regular text
+        pdf.text(fullMatch, currentX, y);
+        currentX += pdf.getTextWidth(fullMatch);
+      }
     } else {
       // Fallback - just add as regular text
       pdf.text(fullMatch, currentX, y);
@@ -344,8 +398,6 @@ export async function exportAnalysisToPDF(
     
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(11);
-    pdf.setTextColor(0, 0, 0);
-      const metadata = [
       `Session ID: ${cleanTextForPDF(analysisData.sessionId)}`,
       `Website URL: ${cleanTextForPDF(analysisData.manifest?.url || 'Not specified')}`,
       `Generated: ${new Date().toLocaleString()}`,
@@ -526,7 +578,22 @@ export async function exportAnalysisToPDF(
           currentY += 5;
         });        // Code sections - show whatever the LLM provided with appropriate formatting
         if (component.relevantHtml) {
-          const cleanCode = cleanTextForPDF(component.relevantHtml);
+          // For code display, we want to preserve HTML tags, so use minimal cleaning (same as Axe section)
+          const rawHtml = component.relevantHtml || '';
+          const cleanCode = rawHtml
+            // Only handle basic HTML entities but preserve tags
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&nbsp;/g, ' ')
+            // Remove only problematic characters that break PDF encoding
+            .replace(/[\u0080-\u009F]/g, '')   // C1 control characters
+            .replace(/[\u00AD]/g, '')          // Soft hyphen
+            .replace(/[^\x20-\x7E\u00A1-\u00FF]/g, ' ') // Non-printable chars to space
+            .replace(/\s+/g, ' ')
+            .trim();
           
           if (cleanCode.trim()) {
             // Check if this looks like actual HTML markup
@@ -537,28 +604,14 @@ export async function exportAnalysisToPDF(
             const isDescriptiveText = /^The `\w+`/.test(cleanCode.trim()) ||
                                      /`\w+` with the/.test(cleanCode) ||
                                      /contains `\w+`/.test(cleanCode);
-            
-            if (isActualHtml && !isDescriptiveText) {
+              if (isActualHtml && !isDescriptiveText) {
               // Show as formatted code
               pdf.setFont('helvetica', 'bold');
               pdf.setFontSize(9);
               pdf.text('OFFENDING CODE:', margin, currentY);
               currentY += 5;
               
-              const codeLines = pdf.splitTextToSize(cleanCode, pageWidth - 2 * margin - 20);
-              const codeHeight = Math.max(codeLines.length * 4 + 8, 15);
-              
-              // Code background with border
-              pdf.setFillColor(254, 242, 242);
-              pdf.setDrawColor(220, 38, 127);
-              pdf.setLineWidth(0.5);
-              pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, codeHeight, 'FD');
-              
-              pdf.setFont('courier', 'normal');
-              pdf.setFontSize(7);
-              pdf.text(codeLines, margin + 8, currentY + 4);
-              pdf.setFont('helvetica', 'normal');
-              currentY += codeHeight + 5;
+              currentY = addCodeBlock(pdf, cleanCode, margin, currentY, pageWidth - 2 * margin, [254, 242, 242], [220, 38, 127]);
             } else {
               // Show as regular content description
               pdf.setFont('helvetica', 'bold');
@@ -573,11 +626,26 @@ export async function exportAnalysisToPDF(
             }
           }
         }        if (component.correctedCode) {
-          const cleanSolution = cleanTextForPDF(component.correctedCode);
+          // For code display, we want to preserve HTML tags, so use minimal cleaning (same as Axe section)
+          const rawSolution = component.correctedCode || '';
+          const cleanSolution = rawSolution
+            // Only handle basic HTML entities but preserve tags
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&nbsp;/g, ' ')
+            // Remove only problematic characters that break PDF encoding
+            .replace(/[\u0080-\u009F]/g, '')   // C1 control characters
+            .replace(/[\u00AD]/g, '')          // Soft hyphen
+            .replace(/[^\x20-\x7E\u00A1-\u00FF]/g, ' ') // Non-printable chars to space
+            .replace(/\s+/g, ' ')
+            .trim();
           
           if (cleanSolution.trim()) {
             // Check if this looks like actual HTML markup
-            const isActualHtml = /<\w+[^>]*>/.test(component.correctedCode) || 
+            const isActualHtml = /<\w+[^>]*>/.test(component.correctedCode) ||
                                 /&lt;\w+[^&]*&gt;/.test(component.correctedCode);
             
             // Check if this is descriptive text rather than code
@@ -595,23 +663,9 @@ export async function exportAnalysisToPDF(
               pdf.setFontSize(9);
               currentY = addTextWithLinks(pdf, cleanTextForPDF(component.codeChangeSummary), margin, currentY, pageWidth - 2 * margin);
               currentY += 3;
-            }
-            
-            if (isActualHtml && !isDescriptiveText) {
+            }            if (isActualHtml && !isDescriptiveText) {
               // Show as formatted code
-              const solutionLines = pdf.splitTextToSize(cleanSolution, pageWidth - 2 * margin - 20);
-              const solutionHeight = Math.max(solutionLines.length * 4 + 8, 15);
-              
-              pdf.setFillColor(240, 253, 244);
-              pdf.setDrawColor(34, 197, 94);
-              pdf.setLineWidth(0.5);
-              pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, solutionHeight, 'FD');
-              
-              pdf.setFont('courier', 'normal');
-              pdf.setFontSize(7);
-              pdf.text(solutionLines, margin + 8, currentY + 4);
-              pdf.setFont('helvetica', 'normal');
-              currentY += solutionHeight + 5;
+              currentY = addCodeBlock(pdf, cleanSolution, margin, currentY, pageWidth - 2 * margin, [240, 253, 244], [34, 197, 94]);
             } else {
               // Show as regular text description
               pdf.setFont('helvetica', 'normal');
@@ -667,16 +721,26 @@ export async function exportAnalysisToPDF(
         }        // Violation header
         const styling = getImpactStyling(violation.impact);
         
+        // Calculate available width for heading (leave space for severity label)
+        const severityWidth = pdf.getTextWidth(styling.text) + 10; // Add some padding
+        const maxHeadingWidth = pageWidth - 2 * margin - severityWidth;
+          // Truncate heading if needed to avoid collision with severity label
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(12);
-        pdf.setTextColor(styling.color[0], styling.color[1], styling.color[2]);
-        pdf.text(`${index + 1}. ${violation.help}`, margin, currentY);
+        const fullHeading = `${index + 1}. ${violation.help}`;
+        const truncatedHeading = pdf.splitTextToSize(fullHeading, maxHeadingWidth)[0] || fullHeading;
         
-        // Keep impact label colored
+        // Add ellipses if the heading was truncated
+        const displayHeading = truncatedHeading.length < fullHeading.length ? 
+          truncatedHeading.replace(/\s+$/, '') + '...' : truncatedHeading;
+          // Violation title and severity on same line
+        pdf.setTextColor(styling.color[0], styling.color[1], styling.color[2]);
+        pdf.text(displayHeading, margin, currentY);
+        
+        // Severity label on same line, right-aligned
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(9);
-        pdf.setTextColor(styling.color[0], styling.color[1], styling.color[2]);
-        pdf.text(styling.text, pageWidth - margin - 30, currentY);
+        pdf.text(styling.text, pageWidth - margin - severityWidth + 10, currentY);
         
         // Reset to black for subsequent content
         pdf.setTextColor(0, 0, 0);
@@ -697,36 +761,43 @@ export async function exportAnalysisToPDF(
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
         currentY = addTextWithLinks(pdf, cleanTextForPDF(violation.description), margin, currentY, pageWidth - 2 * margin);
-        currentY += 8;        // Affected elements with better formatting
+        currentY += 8;        // WCAG Guideline (matching screen reader section format)
+        if (violation.helpUrl) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(9);
+          pdf.text('WCAG GUIDELINE:', margin, currentY);
+          currentY += 5;
+          
+          pdf.setFont('helvetica', 'normal');
+          // Use the actual helpUrl which contains the proper WCAG documentation link
+          currentY = addTextWithLinks(pdf, violation.helpUrl, margin, currentY, pageWidth - 2 * margin);
+          currentY += 8;
+        }// Affected elements with better formatting
         if (violation.nodes && violation.nodes.length > 0) {
           pdf.setFont('helvetica', 'bold');
           pdf.text(`OFFENDING CODE (${violation.nodes.length} total):`, margin, currentY);
-          currentY += 8;          violation.nodes.forEach((node, nodeIndex) => {
-            // Clean HTML element for better display
-            const cleanHtml = node.html ? cleanTextForPDF(node.html) : '';
-            const shortHtml = cleanHtml.length > 120 ? cleanHtml.substring(0, 120) + '...' : cleanHtml;
-            
-            // Code lines for sizing
-            const codeLines = pdf.splitTextToSize(shortHtml, pageWidth - 2 * margin - 20);
-            const elementHeight = Math.max(codeLines.length * 4 + 12, 20);
-            
-            // Element background with border
-            pdf.setFillColor(254, 242, 242);
-            pdf.setDrawColor(220, 38, 127);
-            pdf.setLineWidth(0.3);
-            pdf.rect(margin, currentY - 2, pageWidth - 2 * margin, elementHeight, 'FD');
-            
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(8);
-            pdf.text(`Element ${nodeIndex + 1}:`, margin + 5, currentY + 4);
-            
-            if (shortHtml) {
-              pdf.setFont('courier', 'normal');
-              pdf.setFontSize(7);
-              pdf.text(codeLines, margin + 5, currentY + 10);
+          currentY += 8;          violation.nodes.forEach((node) => {
+            // For code display, we want to preserve HTML tags, so use minimal cleaning
+            const rawHtml = node.html || '';
+            const cleanHtml = rawHtml
+              // Only handle basic HTML entities but preserve tags
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/&nbsp;/g, ' ')
+              // Remove only problematic characters that break PDF encoding
+              .replace(/[\u0080-\u009F]/g, '')   // C1 control characters
+              .replace(/[\u00AD]/g, '')          // Soft hyphen
+              .replace(/[^\x20-\x7E\u00A1-\u00FF]/g, ' ') // Non-printable chars to space
+              .replace(/\s+/g, ' ')
+              .trim();
+              
+            // Show code directly without "Element X:" label
+            if (cleanHtml) {
+              currentY = addCodeBlock(pdf, cleanHtml, margin, currentY, pageWidth - 2 * margin, [254, 242, 242], [220, 38, 127]);
             }
-            
-            currentY += elementHeight + 5;
           });
           if (violation.nodes.length > 5) {
             pdf.setFont('helvetica', 'italic');
@@ -741,13 +812,83 @@ export async function exportAnalysisToPDF(
           pdf.text('RECOMMENDED:', margin, currentY);
           currentY += 5;
           
-          // Parse and render recommendation with proper formatting
+          // Parse and render recommendation with proper formatting - check for "See:" links
           const recommendation = cleanTextForPDF(violation.recommendation);
-          const paragraphs = recommendation.split(/\n\s*\n/);
+          const seePattern = /^(.*?)\s*See:\s*(https?:\/\/[^\s]+)$/s;
+          const match = recommendation.match(seePattern);
           
-          paragraphs.forEach(paragraph => {
-            const trimmedParagraph = paragraph.trim();
-            if (!trimmedParagraph) return;
+          if (match) {
+            const [, mainText, url] = match;
+            
+            // Render main recommendation text
+            const paragraphs = mainText.trim().split(/\n\s*\n/);
+            
+            paragraphs.forEach(paragraph => {
+              const trimmedParagraph = paragraph.trim();
+              if (!trimmedParagraph) return;
+              
+              // Handle different paragraph types (same as before)
+              if (trimmedParagraph.toLowerCase().includes('code example:')) {
+                const lines = trimmedParagraph.split('\n');
+                const codeExampleIndex = lines.findIndex(line => line.toLowerCase().includes('code example:'));
+                
+                if (codeExampleIndex !== -1) {
+                  const beforeCode = lines.slice(0, codeExampleIndex).join('\n').trim();
+                  const codeContent = lines.slice(codeExampleIndex + 1).join('\n').trim();
+                    if (beforeCode) {
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(9);
+                    currentY = addTextWithLinks(pdf, beforeCode, margin, currentY, pageWidth - 2 * margin);
+                    currentY += 3;
+                  }
+                    if (codeContent) {
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(9);
+                    pdf.text('Code Example:', margin, currentY);
+                    currentY += 5;
+                      
+                    currentY = addCodeBlock(pdf, cleanTextForPDF(codeContent), margin, currentY, pageWidth - 2 * margin, [248, 249, 250], [156, 163, 175]);
+                  }}
+              }
+              else if (/^Testing:/i.test(trimmedParagraph)) {
+                const headingContent = trimmedParagraph.replace(/^Testing:\s*/i, '').trim();
+                
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(9);
+                pdf.text('Testing:', margin, currentY);
+                currentY += 4;
+                
+                if (headingContent) {
+                  pdf.setFont('helvetica', 'normal');
+                  pdf.setFontSize(9);
+                  currentY = addTextWithLinks(pdf, headingContent, margin, currentY, pageWidth - 2 * margin);
+                  currentY += 3;                }
+              }
+              else {
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(9);
+                currentY = addTextWithLinks(pdf, trimmedParagraph, margin, currentY, pageWidth - 2 * margin);
+                currentY += 3;
+              }
+            });
+              // Add Reference section (matching screen reader section format)
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(9);
+            pdf.text('REFERENCE:', margin, currentY);
+            currentY += 5;
+            
+            pdf.setFont('helvetica', 'normal');
+            // Show the actual URL as clickable link instead of generic text
+            currentY = addTextWithLinks(pdf, url, margin, currentY, pageWidth - 2 * margin);
+            currentY += 3;
+            
+          } else {
+            // No "See:" link found, render as before
+            const paragraphs = recommendation.split(/\n\s*\n/);
+            
+            paragraphs.forEach(paragraph => {
+              const trimmedParagraph = paragraph.trim();
+              if (!trimmedParagraph) return;
             
             // Check for code examples - only show code box if there's actual code content
             if (trimmedParagraph.toLowerCase().includes('code example:')) {
@@ -757,40 +898,23 @@ export async function exportAnalysisToPDF(
               if (codeExampleIndex !== -1) {
                 const beforeCode = lines.slice(0, codeExampleIndex).join('\n').trim();
                 const codeContent = lines.slice(codeExampleIndex + 1).join('\n').trim();
-                
-                // Add text before code if present
+                  // Add text before code if present
                 if (beforeCode) {
                   pdf.setFont('helvetica', 'normal');
                   pdf.setFontSize(9);
-                  currentY = addTextWithLinks(pdf, beforeCode, margin + 5, currentY, pageWidth - 2 * margin - 10);
+                  currentY = addTextWithLinks(pdf, beforeCode, margin, currentY, pageWidth - 2 * margin);
                   currentY += 3;
                 }
-                
-                // Only add code box if there's actual code content
-                if (codeContent) {                  // Code example header
+                  // Only add code box if there's actual code content
+                if (codeContent) {
+                  // Code example header
                   pdf.setFont('helvetica', 'bold');
                   pdf.setFontSize(9);
-                  pdf.text('Code Example:', margin + 5, currentY);
+                  pdf.text('Code Example:', margin, currentY);
                   currentY += 5;
                   
-                  // Clean and format code for better display
-                  const cleanCodeContent = cleanTextForPDF(codeContent);
-                  const codeLines = pdf.splitTextToSize(cleanCodeContent, pageWidth - 2 * margin - 25);
-                  const codeHeight = Math.max(codeLines.length * 4 + 8, 15);
-                  
-                  // Code background with border
-                  pdf.setFillColor(248, 249, 250);
-                  pdf.setDrawColor(156, 163, 175);
-                  pdf.setLineWidth(0.5);
-                  pdf.rect(margin + 5, currentY - 2, pageWidth - 2 * margin - 10, codeHeight, 'FD');
-                  
-                  pdf.setFont('courier', 'normal');
-                  pdf.setFontSize(7);
-                  pdf.text(codeLines, margin + 10, currentY + 4);
-                  pdf.setFont('helvetica', 'normal');
-                  currentY += codeHeight + 5;
-                }
-              }
+                  currentY = addCodeBlock(pdf, cleanTextForPDF(codeContent), margin, currentY, pageWidth - 2 * margin, [248, 249, 250], [156, 163, 175]);
+                }}
             }
             // Check if this is a section heading (Testing:, etc.)
             else if (/^Testing:/i.test(trimmedParagraph)) {
@@ -798,54 +922,24 @@ export async function exportAnalysisToPDF(
               
               pdf.setFont('helvetica', 'bold');
               pdf.setFontSize(9);
-              pdf.text('Testing:', margin + 5, currentY);
+              pdf.text('Testing:', margin, currentY);
               currentY += 4;
               
               if (headingContent) {
                 pdf.setFont('helvetica', 'normal');
                 pdf.setFontSize(9);
-                currentY = addTextWithLinks(pdf, headingContent, margin + 5, currentY, pageWidth - 2 * margin - 10);
+                currentY = addTextWithLinks(pdf, headingContent, margin, currentY, pageWidth - 2 * margin);
                 currentY += 3;
-              }
-            }
-            // Handle numbered lists with bold numbers
-            else if (/^\d+\./.test(trimmedParagraph)) {
-              const numberedItems = trimmedParagraph.split(/(?=\d+\.)/);
-              
-              numberedItems.forEach(item => {
-                const trimmedItem = item.trim();
-                if (!trimmedItem) return;
-                
-                const match = trimmedItem.match(/^(\d+\.)(.*)$/s);
-                if (match) {
-                  const [, number, content] = match;
-                  
-                  // Bold number
-                  pdf.setFont('helvetica', 'bold');
-                  pdf.setFontSize(9);
-                  pdf.text(number, margin + 5, currentY);
-                  
-                  // Regular content
-                  pdf.setFont('helvetica', 'normal');
-                  const numberWidth = pdf.getTextWidth(number + ' ');
-                  currentY = addTextWithLinks(pdf, content.trim(), margin + 5 + numberWidth, currentY, pageWidth - 2 * margin - 10 - numberWidth);
-                  currentY += 3;
-                } else {
-                  pdf.setFont('helvetica', 'normal');
-                  pdf.setFontSize(9);
-                  currentY = addTextWithLinks(pdf, trimmedItem, margin + 5, currentY, pageWidth - 2 * margin - 10);
-                  currentY += 3;
-                }
-              });
-            }
+              }            }
             // Regular paragraph
             else {
               pdf.setFont('helvetica', 'normal');
               pdf.setFontSize(9);
-              currentY = addTextWithLinks(pdf, trimmedParagraph, margin + 5, currentY, pageWidth - 2 * margin - 10);
+              currentY = addTextWithLinks(pdf, trimmedParagraph, margin, currentY, pageWidth - 2 * margin);
               currentY += 3;
             }
           });
+          }
           
           currentY += 5;
         }
