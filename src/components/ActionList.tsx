@@ -154,16 +154,15 @@ const ActionList: React.FC<ActionListProps> = ({ actions, isRecording, sessionId
                 key={index}
                 className="flex items-center space-x-4 p-3 border-b border-neutral-light last:border-b-0 hover:bg-neutral-xx-light"
               >
-                <span className="text-md text-gray-500 font-mono flex-shrink-0">
-                  #{index + 1}
-                </span>
                 <span className="text-xl flex-shrink-0">{getActionIcon(action.type)}</span>
 
                 <div className="flex-1 min-w-0 flex items-center justify-between">
                   <div className="text-base font-medium text-neutral-black break-words flex-1 mr-4">
                     {formatActionDescription(action)}
                   </div>
-
+                  <span className="text-md text-gray-500 font-mono flex-shrink-0 mr-2">
+                    #{index + 1}
+                  </span>
                   <div className="text-sm text-slate flex-shrink-0">
                     {new Date(action.timestamp).toLocaleTimeString()}
                   </div>
