@@ -280,7 +280,7 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
 - If you cannot identify specific HTML, leave relevantHtml empty
 - The relevantHtml field is for CODE ONLY, not page text content
 
-**Important**: Report ONLY components with identified screen reader accessibility issues.Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
+**Important**: Report ONLY components with identified screen reader accessibility issues. Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
 
 **OUTPUT FORMAT REQUIREMENTS:**
 - RETURN ONLY VALID JSON with no additional text before or after
@@ -513,15 +513,15 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
     try {
       // Clean up the response text to extract JSON
       let cleanText = text.trim();
-      
+
       // Remove any markdown code block formatting if present
       cleanText = cleanText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
       cleanText = cleanText.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-      
+
       // Try to find JSON object boundaries
       const jsonStart = cleanText.indexOf('{');
       const jsonEnd = cleanText.lastIndexOf('}');
-      
+
       if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
         cleanText = cleanText.substring(jsonStart, jsonEnd + 1);
       }
@@ -530,7 +530,7 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
 
       const parsed = JSON.parse(cleanText);
       console.log('🔍 DEBUG: Parsed JSON response:', JSON.stringify(parsed, null, 2));
-      
+
       const validComponents = this.parseComponents(parsed.components || []);
 
       return {
@@ -543,7 +543,7 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
     } catch (error) {
       console.error('❌ Failed to parse screen reader analysis JSON response:', error);
       console.error('❌ Raw response that failed to parse:', text);
-      
+
       // Return minimal analysis with error information
       return {
         summary: 'Screen reader analysis failed to parse - LLM may have returned invalid JSON',
@@ -652,17 +652,17 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
       const recommendations = this.parseAxeRecommendations(text, violations);
 
       console.log(`Successfully parsed ${recommendations.size} recommendations from LLM`);    // Ensure all violations have recommendations (fallback for unparsed ones)
-    violations.forEach(violation => {
-      if (!recommendations.has(violation.id)) {
-        console.warn(`⚠️ Missing LLM recommendation for ${violation.id}, using fallback`);
-        recommendations.set(violation.id, {
-          explanation: `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`,
-          recommendation: `${violation.help}
+      violations.forEach(violation => {
+        if (!recommendations.has(violation.id)) {
+          console.warn(`⚠️ Missing LLM recommendation for ${violation.id}, using fallback`);
+          recommendations.set(violation.id, {
+            explanation: `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`,
+            recommendation: `${violation.help}
 
-See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
-        });
-      }
-    });
+Reference: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
+          });
+        }
+      });
 
       return recommendations;
 
@@ -676,7 +676,7 @@ See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
           explanation: `This accessibility violation affects users with disabilities. ${violation.description} This can prevent proper access to content and functionality for people using assistive technologies.`,
           recommendation: `${violation.help}
 
-See: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
+Reference: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
         });
       });
 
@@ -714,7 +714,7 @@ CRITICAL GUIDELINES:
 - Prioritize user impact and practical guidance
 - Each recommendation should be a clear statement that developers can understand and implement
 - Avoid detailed step-by-step instructions - focus on the core fix needed
-- ALWAYS end recommendations with a reference to the relevant WCAG guideline using the format "See: [WCAG URL]"
+- ALWAYS end recommendations with a reference to the relevant dequeuniversity guideline"
 - Use the specific WCAG documentation URL that corresponds to the axe violation being addressed
 
 Violations to analyze:
@@ -724,7 +724,7 @@ VIOLATION ${i + 1}:
 - Impact: ${v.impact}
 - Description: ${v.description}
 - Help: ${v.help}
-- WCAG Guideline URL: ${v.helpUrl || 'https://dequeuniversity.com/rules/axe/'}
+- Reference: ${v.helpUrl || 'https://dequeuniversity.com/rules/axe/'}
 - Number of affected elements: ${v.nodes?.length || 0}
 - All affected HTML elements:
 ${v.nodes?.map((node: any, nodeIndex: number) => `  Element ${nodeIndex + 1}:
@@ -740,7 +740,7 @@ Remember:
 - Focus on what needs to be done, not detailed implementation steps
 - Make explanations user-impact focused (how this affects people with disabilities)
 - Provide clear guidance that applies to the violation type
-- ALWAYS end each recommendation with "See: [WCAG Guideline URL]" using the URL provided above
+- ALWAYS end each recommendation with "Reference: [Dequeuniversity Guideline URL]" using the URL provided above
 - NEVER skip a violation or leave sections empty
 - Return ONLY valid JSON, no additional text or formatting`;
   }  /**
@@ -755,15 +755,15 @@ Remember:
     try {
       // Clean up the response text to extract JSON
       let cleanText = text.trim();
-      
+
       // Remove any markdown code block formatting if present
       cleanText = cleanText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
       cleanText = cleanText.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
-      
+
       // Try to find JSON object boundaries
       const jsonStart = cleanText.indexOf('{');
       const jsonEnd = cleanText.lastIndexOf('}');
-      
+
       if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
         cleanText = cleanText.substring(jsonStart, jsonEnd + 1);
       }
@@ -771,7 +771,7 @@ Remember:
       console.log(`🔍 DEBUG: Cleaned JSON text:`, cleanText);
 
       const jsonResponse = JSON.parse(cleanText);
-      console.log(`🔍 DEBUG: Parsed JSON response:`, jsonResponse);      if (jsonResponse.violations && Array.isArray(jsonResponse.violations)) {
+      console.log(`🔍 DEBUG: Parsed JSON response:`, jsonResponse); if (jsonResponse.violations && Array.isArray(jsonResponse.violations)) {
         jsonResponse.violations.forEach((violationData: any, index: number) => {
           const violationId = violationData.id;
           const explanation = violationData.explanation || '';
@@ -792,15 +792,15 @@ Remember:
     } catch (error) {
       console.error(`❌ DEBUG: JSON parsing failed:`, error);
       console.log(`❌ DEBUG: Failed to parse text:`, text);
-        // Fallback to basic parsing for any violations that weren't processed
+      // Fallback to basic parsing for any violations that weren't processed
       violations.forEach((violation, index) => {
         if (!results.has(violation.id)) {
           console.log(`🔄 DEBUG: Adding fallback for violation ${violation.id}`);
-          
+
           // Generate simple fallback recommendation based on violation type
           let fallbackRecommendation = '';
           const ruleId = violation.id;
-          
+
           if (ruleId.includes('heading') || ruleId.includes('h1')) {
             fallbackRecommendation = 'Add proper heading elements to structure the page content hierarchically.';
           } else if (ruleId.includes('color-contrast')) {
@@ -818,7 +818,7 @@ Remember:
           } else {
             fallbackRecommendation = 'Review and fix this accessibility issue to ensure compliance with WCAG guidelines.';
           }
-          
+
           results.set(violation.id, {
             explanation: `This ${violation.impact} accessibility issue affects users with disabilities and needs attention.`,
             recommendation: fallbackRecommendation
@@ -829,137 +829,5 @@ Remember:
 
     console.log(`🔍 DEBUG: Final results count: ${results.size}`);
     return results;
-  }/**
-   * Clean markdown formatting from text
-   */
-  private cleanMarkdownFromText(text: string): string {
-    return text
-      // Only do minimal cleaning - remove markdown bold/italic but preserve structure
-      .replace(/\*\*([^*]+)\*\*/g, '$1')
-      .replace(/\*([^*]+)\*/g, '$1')
-      // Don't remove underscores - they're part of VIOLATION_ID format
-      // Remove markdown headers
-      .replace(/#{1,6}\s+/g, '')
-      // Remove extra whitespace but preserve line structure
-      .replace(/\n\s*\n\s*\n/g, '\n\n')
-      .trim();
-  }  /**
-   * Format recommendation content with proper structure and code block formatting
-   */
-  private formatRecommendationContent(contentLines: string[], isRecommendation: boolean = false): string {
-    console.log(`🔍 DEBUG formatRecommendationContent: Input lines count: ${contentLines.length}`);
-    if (contentLines.length > 0) {
-      console.log(`🔍 DEBUG formatRecommendationContent: First line: "${contentLines[0]}"`);
-      console.log(`🔍 DEBUG formatRecommendationContent: Last line: "${contentLines[contentLines.length - 1]}"`);
-    }
-
-    const result: string[] = [];
-
-    for (let i = 0; i < contentLines.length; i++) {
-      const line = contentLines[i];
-      const trimmedLine = line.trim();
-      const lowerLine = trimmedLine.toLowerCase();      // Skip empty lines
-      if (!trimmedLine) continue;
-
-      // For recommendations, skip duplicate "Recommended:" headers
-      if (isRecommendation && lowerLine === 'recommended:') {
-        // Skip if we already have content (this would be a duplicate)
-        if (result.length > 0) {
-          continue;
-        }
-        // Skip the first "Recommended:" header entirely - we don't want it in the output
-        continue;
-      }
-
-      // Skip Testing sections entirely
-      if (lowerLine.includes('testing:')) {
-        // Skip everything until next major section or end
-        while (i + 1 < contentLines.length) {
-          const nextLine = contentLines[i + 1]?.trim().toLowerCase();
-          if (nextLine && nextLine.startsWith('see:')) {
-            break;
-          }
-          i++;
-        }
-        continue;
-      }
-
-      // Skip Code Example sections entirely
-      if (lowerLine.includes('code example:') || lowerLine.includes('corrected code:')) {
-        // Skip everything until next major section or end
-        while (i + 1 < contentLines.length) {
-          const nextLine = contentLines[i + 1]?.trim().toLowerCase();
-          if (nextLine && (nextLine.startsWith('see:') || nextLine.includes('recommended:'))) {
-            break;
-          }
-          i++;
-        }
-        continue;
-      }
-
-      // Process regular content
-      let formattedLine = trimmedLine;
-
-      // Remove any stray backticks or HTML keywords
-      formattedLine = formattedLine.replace(/`+/g, '');
-      formattedLine = formattedLine.replace(/\bhtml\b/gi, '');
-
-      // Fix duplicate "See:" patterns
-      formattedLine = formattedLine.replace(/^(see:\s*)+/gi, 'See: ');
-
-      // Add "See:" prefix to bare URLs
-      if (/^https?:\/\//.test(formattedLine)) {
-        formattedLine = `See: ${formattedLine}`;
-      }
-
-      // Skip lines that look like HTML code
-      if (formattedLine.includes('<') && formattedLine.includes('>')) {
-        continue;
-      }
-
-      formattedLine = formattedLine.replace(/\s+/g, ' ').trim();
-      if (formattedLine) {
-        result.push(formattedLine);
-      }
-    }    let finalResult = result.join('\n').trim();
-    
-    // Post-process to fix numbered step sequences if this is a recommendation
-    if (isRecommendation && finalResult) {
-      finalResult = this.fixNumberedSteps(finalResult);
-    }
-
-    console.log(`🔍 DEBUG formatRecommendationContent: Output length: ${finalResult.length}`);
-    console.log(`🔍 DEBUG formatRecommendationContent: Output preview: "${finalResult.substring(0, 100)}..."`);    return finalResult;
-  }
-
-  /**
-   * Fix numbered step sequences to ensure they are sequential (1, 2, 3, etc.)
-   */
-  private fixNumberedSteps(text: string): string {
-    const lines = text.split('\n');
-    const result: string[] = [];
-    let stepCounter = 1;
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      
-      // Check if this line starts with a number followed by a period (e.g., "2. ", "4. ")
-      const stepMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
-      
-      if (stepMatch) {
-        // Replace the original step number with the sequential counter
-        const stepContent = stepMatch[2];
-        result.push(`${stepCounter}. ${stepContent}`);
-        stepCounter++;
-        console.log(`🔍 DEBUG fixNumberedSteps: Renumbered step from "${trimmed}" to "${stepCounter - 1}. ${stepContent}"`);
-      } else {
-        // Keep non-numbered lines as-is
-        result.push(line);
-      }
-    }
-
-    const fixedText = result.join('\n');
-    console.log(`🔍 DEBUG fixNumberedSteps: Fixed ${stepCounter - 1} numbered steps`);
-    return fixedText;
   }
 }
