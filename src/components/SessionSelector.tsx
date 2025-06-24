@@ -153,7 +153,7 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
             disabled={!canLoadSession}
             className="btn-primary"
           >
-            {isLoading ? 'Loading...' : 'Load Session'}
+           Load Session
           </button>
         </div>
       </div>
