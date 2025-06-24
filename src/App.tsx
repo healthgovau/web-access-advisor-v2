@@ -365,7 +365,7 @@ function App() {
             </p>
           </div>
           <div className="text-base text-slate">
-            Mode: <span className="font-medium capitalize">{state.mode}</span>
+            Service Mode: <span className="font-medium capitalize">{state.mode}</span>
           </div>
         </div>
       </header>        <main className="mt-8">
