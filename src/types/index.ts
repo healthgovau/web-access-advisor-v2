@@ -47,6 +47,8 @@ export interface AxeViolation {
   tags: string[];
   explanation?: string; // LLM-generated detailed explanation of why this is a problem
   recommendation?: string; // LLM-generated actionable fix recommendation
+  step?: number; // Step index in the session (for per-issue URL)
+  url?: string;  // URL at which the issue was found
 }
 
 export interface AxeNode {
@@ -113,6 +115,8 @@ export interface ComponentAccessibilityIssue {
   wcagRule: string;
   wcagUrl?: string;
   selector?: string; // CSS selector for the problematic element
+  step?: number; // Step index in the session (for per-issue URL)
+  url?: string;  // URL at which the issue was found
 }
 
 export interface AccessibilityIssue {

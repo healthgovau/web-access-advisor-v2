@@ -198,6 +198,16 @@ export class AccessibilityAnalyzer {
         console.log(`⚠️ No snapshots captured - skipping AI analysis`);
       }
 
+      // After Gemini analysis is generated, assign step and url to each component if possible
+      if (geminiAnalysis && Array.isArray(geminiAnalysis.components) && snapshots.length > 0) {
+        geminiAnalysis.components.forEach(component => {
+          // Try to match by selector or other context if available, fallback to first/only snapshot
+          // For now, assign step/url from the first snapshot (improve if more context is available)
+          component.step = snapshots[0].step;
+          component.url = (snapshots[0].axeContext && snapshots[0].axeContext.url) || undefined;
+        });
+      }
+
       // Generate final report
       onProgress?.('generating-report', 'Generating final accessibility report...', undefined, undefined, snapshots.length);
       
@@ -515,43 +525,20 @@ export class AccessibilityAnalyzer {
    * Consolidate axe results from all snapshots, removing duplicates and adding LLM recommendations
    */
   private async consolidateAxeResults(snapshots: SnapshotData[]): Promise<any[]> {
-    const violationMap = new Map<string, any>();
-
+    // Instead of deduplicating by id, flatten all violations with their originating step and url
+    const violations: any[] = [];
     snapshots.forEach(snapshot => {
       if (snapshot.axeResults && Array.isArray(snapshot.axeResults)) {
         snapshot.axeResults.forEach(violation => {
-          if (violation && violation.id) {
-            const existingViolation = violationMap.get(violation.id);
-            
-            if (existingViolation) {
-              // Merge nodes from duplicate violations
-              const existingNodes = existingViolation.nodes || [];
-              const newNodes = violation.nodes || [];
-              
-              // Deduplicate nodes by target selector
-              const nodeMap = new Map();
-              [...existingNodes, ...newNodes].forEach(node => {
-                if (node && node.target) {
-                  const targetKey = Array.isArray(node.target) ? node.target.join('|') : String(node.target);
-                  nodeMap.set(targetKey, node);
-                }
-              });
-              
-              existingViolation.nodes = Array.from(nodeMap.values());
-            } else {
-              // First occurrence of this violation
-              violationMap.set(violation.id, {
-                ...violation,
-                nodes: violation.nodes || []
-              });
-            }
-          }
+          violations.push({
+            ...violation,
+            step: snapshot.step,
+            url: (snapshot.axeContext && snapshot.axeContext.url) || undefined
+          });
         });
       }
     });
 
-    const violations = Array.from(violationMap.values());
-    
     // Generate LLM recommendations if Gemini is available
     if (this.geminiService && violations.length > 0) {
       try {

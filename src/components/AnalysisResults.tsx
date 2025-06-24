@@ -273,7 +273,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                           </span>
                         </div>
                         <p className="text-sm text-gray-500 text-left">
-                          URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{analysisData.manifest?.url || 'Unknown'}</code>
+                          URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{component.url || (component.step != null && analysisData.manifest?.url ? analysisData.manifest.url : analysisData.manifest?.url || 'Unknown')}</code>
                         </p>
                       </div>
 
@@ -395,7 +395,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
 
       {/* Automated Accessibility Scan Results */}
       {analysisData.axeResults && (
-        <AxeResults axeResults={analysisData.axeResults} url={analysisData.manifest?.url} />
+        <AxeResults axeResults={analysisData.axeResults} manifest={analysisData.manifest} />
       )}
     </div>
   );

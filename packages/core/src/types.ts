@@ -140,6 +140,8 @@ export interface ComponentAccessibilityIssue {
   wcagRule: string;
   wcagUrl?: string;
   selector?: string; // CSS selector for the problematic element
+  step?: number; // Step index in the session (for per-issue URL)
+  url?: string;  // URL at which the issue was found
 }
 
 export interface AccessibilityIssue {

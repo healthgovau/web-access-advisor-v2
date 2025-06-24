@@ -670,6 +670,15 @@ export async function exportAnalysisToPDF(
           }
         }
 
+        // URL for this issue
+        const issueUrl = component.url || (component.step != null && analysisData.manifest?.url ? analysisData.manifest.url : analysisData.manifest?.url || 'Unknown');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.text('URL:', margin, currentY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(issueUrl, margin + 15, currentY);
+        currentY += 5;
+
         currentY = addSectionDivider(pdf, currentY, margin, pageWidth);
       });
     }

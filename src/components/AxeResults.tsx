@@ -4,11 +4,11 @@
 
 import React, { useState } from 'react';
 import { html as beautifyHtml } from 'js-beautify';
-import type { AxeViolation } from '../types';
+import type { AxeViolation, SessionManifest } from '../types';
 
 interface AxeResultsProps {
   axeResults: AxeViolation[];
-  url?: string;
+  manifest?: SessionManifest;
 }
 
 /**
@@ -128,10 +128,10 @@ const renderRecommendationContent = (recommendation: string): React.ReactElement
 
 interface AxeResultsProps {
   axeResults: AxeViolation[];
-  url?: string;
+  manifest?: SessionManifest;
 }
 
-const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
+const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [severityFilters, setSeverityFilters] = useState<Record<string, boolean>>({
     critical: true,
@@ -169,6 +169,16 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
         : 'bg-blue-100 border-blue-200 text-blue-700 opacity-60'
     };
     return baseClasses[severity as keyof typeof baseClasses] || baseClasses.minor;
+  };
+
+  // Helper to get URL for a violation
+  const getViolationUrl = (violation: AxeViolation): string => {
+    if (violation.url) return violation.url;
+    if (violation.step != null && manifest?.stepDetails) {
+      // No per-step URL, fallback to manifest.url
+      return manifest.url || 'Unknown';
+    }
+    return manifest?.url || 'Unknown';
   };
 
   if (axeResults.length === 0) {
@@ -263,7 +273,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, url }) => {
                       </span>
                     </div>
                     <p className="text-sm text-gray-500 text-left">
-                      URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{url || 'Unknown'}</code>
+                      URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{getViolationUrl(violation)}</code>
                     </p>
                   </div>
 
