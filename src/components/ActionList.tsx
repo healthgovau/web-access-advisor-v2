@@ -157,7 +157,7 @@ const ActionList: React.FC<ActionListProps> = ({ actions, isRecording, sessionId
                 <span className="text-xl flex-shrink-0">{getActionIcon(action.type)}</span>
 
                 <div className="flex-1 min-w-0 flex items-center justify-between">
-                  <div className="text-base font-medium text-neutral-black break-words flex-1 mr-4">
+                  <div className="text-base font-medium text-gray-700 break-words flex-1 mr-4">
                     {formatActionDescription(action)}
                   </div>
                   <span className="text-md text-gray-500 font-mono flex-shrink-0 mr-2">
