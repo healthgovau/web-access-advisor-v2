@@ -114,10 +114,11 @@ export class AccessibilityAnalyzer {
         console.log(`Processing step ${i + 1}: ${action.type}`);
 
         // Update progress for current step
-        onProgress?.('replaying-actions', `Replaying step ${i + 1}: ${action.type}`, i + 1, actions.length, snapshots.length);
-
-        // Execute the action
+        onProgress?.('replaying-actions', `Replaying step ${i + 1}: ${action.type}`, i + 1, actions.length, snapshots.length);        // Execute the action
         await this.executeAction(this.page, action);
+
+        // RELIABILITY: Wait for action to settle before snapshot capture
+        await this.waitForActionSettlement(this.page, action);
 
         // Wait for stability if requested (with timeout)
         if (waitForStability) {
@@ -360,7 +361,7 @@ export class AccessibilityAnalyzer {
       // Don't throw - continue with analysis even if action fails
     }
   }  /**
-   * Capture accessibility snapshot
+   * Capture accessibility snapshot with retry logic for reliability
    */
   private async captureSnapshot(
     page: Page,
@@ -389,8 +390,11 @@ export class AccessibilityAnalyzer {
       }
     };
 
-    // Capture HTML content
-    const htmlContent = await page.content();
+    // RELIABILITY: Validate page readiness before capture
+    await this.validatePageReadiness(page);
+
+    // RELIABILITY: Capture HTML with retry logic
+    const htmlContent = await this.captureHtmlWithRetry(page);
     const htmlFile = path.join(stepDir, 'snapshot.html');
     await writeFile(htmlFile, htmlContent);
     snapshot.html = htmlContent;
@@ -409,16 +413,8 @@ export class AccessibilityAnalyzer {
       snapshot.axeResults = [];
     }
 
-    // Capture axe context
-    const axeContext = await page.evaluate(() => {
-      return {
-        include: [['html']],
-        exclude: [],
-        elementCount: document.querySelectorAll('*').length,
-        title: document.title,
-        url: window.location.href
-      };
-    });
+    // RELIABILITY: Capture axe context with retry and validation
+    const axeContext = await this.captureAxeContextWithRetry(page);
     
     const axeFile = path.join(stepDir, 'axe_context.json');
     await writeFile(axeFile, JSON.stringify(axeContext, null, 2));
@@ -433,8 +429,117 @@ export class AccessibilityAnalyzer {
       snapshot.files.screenshot = screenshotFile;
     }
 
-    console.log(`Snapshot captured for step ${stepNumber}`);
+    console.log(`✅ Reliable snapshot captured for step ${stepNumber} - URL: ${axeContext.url}`);
     return snapshot;
+  }
+
+  /**
+   * Validate page is ready for reliable snapshot capture
+   */
+  private async validatePageReadiness(page: Page): Promise<void> {
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const readiness = await page.evaluate(() => ({
+          readyState: document.readyState,
+          url: window.location.href,
+          hasBody: !!document.body,
+          bodyChildren: document.body?.children.length || 0
+        }));
+        
+        if (readiness.readyState === 'complete' && readiness.hasBody && readiness.bodyChildren > 0) {
+          console.log(`🔍 Page ready for capture: ${readiness.url}`);
+          return;
+        }
+        
+        console.log(`⏳ Page not ready (attempt ${attempt}/${maxAttempts}):`, readiness);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.warn(`⚠️ Page readiness check failed (attempt ${attempt}/${maxAttempts}):`, error);
+        if (attempt === maxAttempts) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  }
+
+  /**
+   * Capture HTML with retry logic for reliability
+   */
+  private async captureHtmlWithRetry(page: Page): Promise<string> {
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const html = await page.content();
+        if (html && html.length > 100 && html.includes('<body')) {
+          console.log(`✅ HTML captured successfully (${html.length} chars)`);
+          return html;
+        }
+        console.warn(`⚠️ Invalid HTML captured (attempt ${attempt}/${maxAttempts}): length=${html.length}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.warn(`⚠️ HTML capture failed (attempt ${attempt}/${maxAttempts}):`, error);
+        if (attempt === maxAttempts) {
+          return '<html><head><title>HTML Capture Failed</title></head><body><p>Failed to capture HTML content</p></body></html>';
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    return '';
+  }
+
+  /**
+   * Capture axe context with retry and validation to prevent "Unknown" URLs
+   */
+  private async captureAxeContextWithRetry(page: Page): Promise<AxeContext> {
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const context = await page.evaluate(() => {
+          return {
+            include: [['html']],
+            exclude: [],
+            elementCount: document.querySelectorAll('*').length,
+            title: document.title || 'Untitled',
+            url: window.location.href
+          };
+        });
+        
+        // Validate captured context
+        if (context.url && context.url !== 'about:blank' && context.elementCount > 0) {
+          console.log(`✅ Valid axe context captured: ${context.url} (${context.elementCount} elements)`);
+          return context;
+        }
+        
+        console.warn(`⚠️ Invalid axe context (attempt ${attempt}/${maxAttempts}):`, {
+          url: context.url,
+          elementCount: context.elementCount,
+          title: context.title
+        });
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.warn(`⚠️ Axe context capture failed (attempt ${attempt}/${maxAttempts}):`, error);
+        if (attempt === maxAttempts) {
+          // Return fallback context to prevent "Unknown" URLs
+          return {
+            include: [['html']],
+            exclude: [],
+            elementCount: 0,
+            title: 'Context Capture Failed',
+            url: 'unknown'
+          };
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    // Final fallback
+    return {
+      include: [['html']],
+      exclude: [],
+      elementCount: 0,
+      title: 'Context Capture Failed',
+      url: 'unknown'
+    };
   }
 
   /**
@@ -609,6 +714,50 @@ export class AccessibilityAnalyzer {
       const bOrder = impactOrder[b.impact as keyof typeof impactOrder] ?? 4;
       return aOrder - bOrder;
     });
+  }
+
+  /**
+   * Wait for action to settle before capturing snapshot to ensure reliability
+   */
+  private async waitForActionSettlement(page: Page, action: UserAction): Promise<void> {
+    const baseDelay = 500; // Base delay for all actions
+    
+    try {
+      switch (action.type) {
+        case 'navigate':
+          // Navigation needs more time for page loads
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          await page.waitForLoadState('domcontentloaded', { timeout: 10000 });
+          break;
+          
+        case 'click':
+          // Clicks may trigger dynamic content loads
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          break;
+          
+        case 'fill':
+        case 'select':
+          // Form inputs may trigger validation or dynamic updates
+          await new Promise(resolve => setTimeout(resolve, 750));
+          break;
+          
+        default:
+          // Standard delay for other actions
+          await new Promise(resolve => setTimeout(resolve, baseDelay));
+      }
+      
+      // Additional wait for any pending network requests to settle
+      try {
+        await page.waitForLoadState('networkidle', { timeout: 3000 });
+      } catch (error) {
+        // Network idle timeout is not critical - continue
+        console.log(`  Network idle timeout for ${action.type} - continuing`);
+      }
+      
+    } catch (error) {
+      console.warn(`⚠️ Action settlement failed for ${action.type}:`, error);
+      // Don't fail - just continue with snapshot capture
+    }
   }
 }
 
