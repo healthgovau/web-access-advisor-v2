@@ -200,11 +200,41 @@ export class AccessibilityAnalyzer {
 
       // After Gemini analysis is generated, assign step and url to each component if possible
       if (geminiAnalysis && Array.isArray(geminiAnalysis.components) && snapshots.length > 0) {
+        // Build a lookup from step to url using the manifest (stepDetails)
+        const manifest = await this.generateManifest(sessionId, actions, snapshots);
+        const stepUrlMap = new Map<number, string>();
+        for (const stepDetail of manifest.stepDetails) {
+          stepUrlMap.set(stepDetail.step, stepDetail.url);
+        }
         geminiAnalysis.components.forEach(component => {
-          // Try to match by selector or other context if available, fallback to first/only snapshot
-          // For now, assign step/url from the first snapshot (improve if more context is available)
-          component.step = snapshots[0].step;
-          component.url = (snapshots[0].axeContext && snapshots[0].axeContext.url) || undefined;
+          // Try to match the component to the correct snapshot step by selector or other context
+          let matchedStep = undefined;
+          if (component.selector) {
+            // Try to find the most recent snapshot whose HTML contains the selector
+            for (let i = snapshots.length - 1; i >= 0; i--) {
+              const snap = snapshots[i];
+              if (snap.html && snap.html.includes(component.selector.replace(/^[.#]/, ''))) {
+                matchedStep = snap.step;
+                break;
+              }
+            }
+          }
+          // Fallback: if not matched by selector, use the step from the manifest with the closest url
+          if (!matchedStep && component.url) {
+            for (let i = snapshots.length - 1; i >= 0; i--) {
+              const snap = snapshots[i];
+              if (snap.axeContext && snap.axeContext.url === component.url) {
+                matchedStep = snap.step;
+                break;
+              }
+            }
+          }
+          // If still not matched, fallback to the first snapshot
+          if (!matchedStep) {
+            matchedStep = snapshots[0].step;
+          }
+          component.step = matchedStep;
+          component.url = stepUrlMap.get(matchedStep) || (snapshots[0].axeContext && snapshots[0].axeContext.url) || undefined;
         });
       }
 
@@ -428,10 +458,12 @@ export class AccessibilityAnalyzer {
         interactionTarget: actions[index].selector,
         flowContext: this.determineFlowContext(actions[index], actions, index),
         uiState: this.determineUIState(actions[index], actions, index),
-        timestamp: snapshot.timestamp,        htmlFile: path.basename(snapshot.files.html),
+        timestamp: snapshot.timestamp,
+        htmlFile: path.basename(snapshot.files.html),
         axeFile: path.basename(snapshot.files.axeContext),
         axeResultsFile: path.basename(snapshot.files.axeResults),
         screenshotFile: snapshot.files.screenshot ? path.basename(snapshot.files.screenshot) : undefined,
+        url: snapshot.axeContext?.url || 'unknown',
         domChangeType: snapshot.domChangeType,
         domChanges: snapshot.domChangeDetails.description,
         tokenEstimate: this.estimateTokens(snapshot)

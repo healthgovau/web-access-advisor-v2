@@ -81,6 +81,7 @@ export interface StepDetail {
   axeFile: string;
   axeResultsFile: string;
   screenshotFile?: string;
+  url: string; // URL at the time of this step
   domChangeType: DOMChangeType;
   domChanges: string;
   tokenEstimate: number;

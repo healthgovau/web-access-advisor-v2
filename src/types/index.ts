@@ -95,6 +95,7 @@ export interface StepDetail {
   screenshotFile?: string;
   domChanges: string;
   tokenEstimate: number;
+  url: string; // URL at the time of this step
 }
 
 export interface GeminiAnalysis {

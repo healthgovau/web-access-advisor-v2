@@ -119,10 +119,24 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
     }));
   };
 
-  // Filter components based on selected severities
-  const filteredComponents = analysisData?.analysis?.components.filter(component =>
+  // Filter components based on selected severities and sort by step
+  const filteredComponents = (analysisData?.analysis?.components.filter(component =>
     severityFilters[component.impact]
-  ) || [];
+  ) || []).slice().sort((a, b) => {
+    // Sort by step, fallback to 0 if missing
+    const stepA = typeof a.step === 'number' ? a.step : 0;
+    const stepB = typeof b.step === 'number' ? b.step : 0;
+    return stepA - stepB;
+  });
+
+  // Helper to get the correct URL for a given step from manifest.stepDetails
+  const getStepUrl = (step: number | string | undefined) => {
+    if (!analysisData || !analysisData.manifest || !Array.isArray(analysisData.manifest.stepDetails) || step === undefined || step === null) {
+      return 'Unknown';
+    }
+    let url = analysisData.manifest.stepDetails.find((s: any) => s.step === step)?.url || 'Unknown';
+    return url;
+  };
 
   if (isLoading) {
     return (
@@ -273,7 +287,9 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                           </span>
                         </div>
                         <p className="text-sm text-gray-500 text-left">
-                          URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">{component.url || (component.step != null && analysisData.manifest?.url ? analysisData.manifest.url : analysisData.manifest?.url || 'Unknown')}</code>
+                          URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">
+                            {getStepUrl(component.step)}
+                          </code>
                         </p>
                       </div>
 
@@ -392,11 +408,14 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
           </div>
         </div>
       )}
-
+      
       {/* Automated Accessibility Scan Results */}
       {analysisData.axeResults && (
         <AxeResults axeResults={analysisData.axeResults} manifest={analysisData.manifest} />
       )}
+
+      {/* DEBUG: Log screen reader issues and manifest stepDetails */}
+      {/* (debug useEffect is now at the top of the component, not rendered here) */}
     </div>
   );
 };
