@@ -130,23 +130,23 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
   };
 
   // Helper to check if a component is from an authentication step and should be filtered out
-  const isAuthComponent = (step: number | string | undefined) => {
+  function isAuthComponent(step: number | string | undefined) {
     if (step === undefined || step === null) return false;
     
     const url = getStepUrl(step);
     if (url === 'Unknown') return false;
     
     return isAuthUrl(url).isAuthStep;
-  };
+  }
 
-  // Filter components based on selected severities, exclude auth steps, and sort by step
+  // Filter components based on selected severities, exclude auth steps, and sort by step (capture order)
   const filteredComponents = (analysisData?.analysis?.components.filter(component =>
     severityFilters[component.impact] && !isAuthComponent(component.step)
   ) || []).slice().sort((a, b) => {
-    // Sort by step, fallback to 0 if missing
+    // Sort by step in ascending order (capture order), fallback to 0 if missing
     const stepA = typeof a.step === 'number' ? a.step : 0;
     const stepB = typeof b.step === 'number' ? b.step : 0;
-    return stepA - stepB;
+    return stepA - stepB; // Ascending order: step 1, step 2, step 3, etc.
   });
 
   if (isLoading) {

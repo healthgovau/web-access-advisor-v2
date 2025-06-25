@@ -158,10 +158,15 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
     return isAuthUrl(url).isAuthStep;
   };
 
-  // Filter violations by severity and exclude auth steps
+  // Filter violations by severity and exclude auth steps, then sort by step (capture order)
   const filteredViolations = axeResults.filter(violation => 
     severityFilters[violation.impact] && !isAuthViolation(violation)
-  );
+  ).sort((a, b) => {
+    // Sort by step in ascending order (capture order), fallback to 0 if missing
+    const stepA = typeof a.step === 'number' ? a.step : 0;
+    const stepB = typeof b.step === 'number' ? b.step : 0;
+    return stepA - stepB; // Ascending order: step 1, step 2, step 3, etc.
+  });
 
   const handleSeverityFilterChange = (severity: string, checked: boolean) => {
     setSeverityFilters(prev => ({
@@ -191,11 +196,16 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
 
   // Helper to get URL for a violation
   const getViolationUrl = (violation: AxeViolation): string => {
+    // First check if violation has a direct URL
     if (violation.url) return violation.url;
-    if (violation.step != null && manifest?.stepDetails) {
-      // No per-step URL, fallback to manifest.url
-      return manifest.url || 'Unknown';
+    
+    // If violation has a step, try to find the corresponding URL in manifest
+    if (violation.step != null && manifest?.stepDetails && Array.isArray(manifest.stepDetails)) {
+      const stepDetail = manifest.stepDetails.find((s: any) => s.step === violation.step);
+      if (stepDetail?.url) return stepDetail.url;
     }
+    
+    // Fallback to main manifest URL
     return manifest?.url || 'Unknown';
   };
 
@@ -219,7 +229,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
   }  return (    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card -mx-6">
       <div className="flex items-center justify-center py-5 px-4 relative">
         <h2 className="text-xl font-medium text-gray-900 text-center">
-          Axe Accessibility Issues ({axeResults.length})
+          Axe Accessibility Issues ({filteredViolations.length})
         </h2><button
           onClick={() => setIsExpanded(!isExpanded)}
           className="text-base text-slate hover:text-neutral-black underline absolute right-4"

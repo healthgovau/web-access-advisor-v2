@@ -412,7 +412,7 @@ function App() {
                   )}
                   {state.url && (
                     <span className="text-sm text-gray-600">
-                      <span className="font-bold">URL:</span> {state.url}
+                      <span className="font-bold">Start URL:</span> {state.url}
                     </span>
                   )}
                 </div>
