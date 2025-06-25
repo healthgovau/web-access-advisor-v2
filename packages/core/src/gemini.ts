@@ -431,31 +431,6 @@ ${hasBeforeAfter ? `- State transition accuracy between before/after snapshots
 - Focus management container structure
 - Live region preparation for content updates`}
 
-**2. ARIA Implementation Analysis**: For each identified component, examine CRITICAL screen reader attributes:
-   - **Roles**: Ensure proper semantic roles (button, menu, dialog, etc.)
-   - **States**: Check aria-expanded, aria-selected, aria-checked, aria-pressed
-   - **Properties**: Verify aria-label, aria-labelledby, aria-describedby
-   - **Relationships**: Confirm aria-controls, aria-owns, aria-activedescendant
-   - **Live Regions**: Validate aria-live, aria-atomic for dynamic content
-   - **Keyboard Support**: Ensure proper tabindex and focus management
-
-${hasBeforeAfter ? `**3. Screen Reader State Changes**: Since both before and after snapshots are provided, focus on how ARIA attributes change during interaction from a screen reader perspective:
-   - Does aria-expanded correctly update when dropdowns open/close?
-   - Do aria-selected attributes change when tabs are activated?
-   - Are aria-live regions properly announcing dynamic content changes?
-   - Is focus management working correctly for screen readers?` : `**3. Screen Reader State Analysis**: Analyze the component's ARIA implementation for screen reader compatibility in the current state.`}
-
-**4. Screen Reader Accessibility Issues**: Identify problems that specifically impact screen reader users:
-   - Missing or incorrect ARIA roles that prevent proper component identification
-   - Missing ARIA states/properties that hide component functionality from screen readers
-   - Incorrect ARIA relationships that break screen reader navigation
-   - Missing aria-live regions for dynamic content announcements
-   - Poor focus management that traps or loses screen reader focus
-   - Missing semantic structure (headings, landmarks, lists)
-   - Inadequate labeling that leaves screen reader users without context
-   - Failed ARIA attribute updates during state changes
-   - Relevant Axe violations that impact screen reader functionality
-
 **COMPREHENSIVE ANALYSIS REQUIREMENTS:**
 Based on the above comprehensive framework, identify ALL accessibility issues that can be determined from the HTML markup and Axe results. This includes:
 - Semantic HTML foundation problems (missing landmarks, improper heading hierarchy, incorrect element usage)
