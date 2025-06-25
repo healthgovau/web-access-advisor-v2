@@ -201,7 +201,7 @@ export class GeminiService {
   ): string {
     const hasBeforeAfter = previousHtml && previousHtml !== htmlContent;
     return `
-Your task is to analyze the provided DOM snapshot(s) and corresponding Axe Accessibility Report(s) with a PRIMARY FOCUS on screen reader (ARIA) accessibility and assistive technology compatibility. This tool is specifically designed to ensure interactive components work correctly with screen readers and other assistive technologies.
+Analyze the provided DOM snapshot(s) and Axe Accessibility Report(s) with a primary focus on screen reader (ARIA) accessibility and compatibility with assistive technologies. Your objective is to identify deficiencies in the code that hinder optimal support for screen readers and related tools, and to recommend precise, actionable code fixes to address these issues.
 
 **SCREEN READER TECHNOLOGY CONTEXT:**
 This analysis targets compatibility with leading screen reader technologies including:
@@ -213,11 +213,10 @@ This analysis targets compatibility with leading screen reader technologies incl
 - **Windows Narrator** - Built-in Windows screen reader
 
 **ANALYSIS METHODOLOGY:**
-You are analyzing HTML markup and Axe accessibility test results to assess screen reader compatibility. You do NOT have access to actual screen reader testing, user behavior, or live interaction data. Your analysis must be based ENTIRELY on code structure, semantic markup, ARIA implementation, and static accessibility patterns that can be determined from HTML snapshots.
+You are analyzing HTML markup and Axe accessibility test results to assess screen reader compatibility. You do NOT have access to actual screen reader testing, user behavior, or live interaction data. Your analysis must be based ENTIRELY on code structure, semantic markup, ARIA implementation, and static accessibility patterns that can be determined from HTML snapshots and Axe analysis summaries.
 
 **PRIMARY OBJECTIVE: COMPREHENSIVE SCREEN READER CODE ANALYSIS**
-Ensure all interactive components are fully accessible to screen reader users through proper ARIA implementation, semantic HTML structure, and correct assistive technology compatibility patterns - as determined through code analysis alone.
-
+Identify and address all barriers in the code that prevent the entire page—including structure, content, and interactive elements—from being fully accessible to screen reader users. Focus on ARIA usage, semantic HTML, and best practices for assistive technology support, based solely on analysis of the provided code and accessibility reports.
 **Context:**
 - URL: ${context.url}
 - User Action: ${context.action}
