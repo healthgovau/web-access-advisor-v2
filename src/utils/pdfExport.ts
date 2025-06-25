@@ -533,6 +533,14 @@ export async function exportAnalysisToPDF(
         pdf.setFont('helvetica', 'normal');
         currentY += 10;
 
+        // Page URL directly below title (ensuring every screen reader issue has a page URL)
+        const pageUrl = analysisData.manifest?.url || 'Page URL not available';
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(0, 0, 0); // Black color for page URL
+        pdf.text(pageUrl, margin, currentY);
+        currentY += 8;
+
         // Issue details in structured format
         const sections = [
           { label: 'ISSUE', content: component.issue },
@@ -547,7 +555,24 @@ export async function exportAnalysisToPDF(
           pdf.setFontSize(9);
           currentY = addTextWithLinks(pdf, cleanTextForPDF(section.content), margin, currentY, pageWidth - 2 * margin);
           currentY += 5;
-        });        // Code sections - show whatever the LLM provided with appropriate formatting
+        });
+
+        // WCAG Reference (guideline link)
+        const wcagUrl = component.wcagUrl || 'https://www.w3.org/WAI/WCAG21/Understanding/';
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.text('WCAG REFERENCE:', margin, currentY);
+        currentY += 5;
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(0, 0, 255); // Blue color for links
+        pdf.text(wcagUrl, margin, currentY);
+        
+        const wcagTextWidth = pdf.getTextWidth(wcagUrl);
+        pdf.link(margin, currentY - 3, wcagTextWidth, 4, { url: wcagUrl });
+        pdf.setTextColor(0, 0, 0); // Reset to black
+        currentY += 8;        // Code sections - show whatever the LLM provided with appropriate formatting
         if (component.relevantHtml) {
           // For code display, we want to preserve HTML tags, so use minimal cleaning (same as Axe section)
           const rawHtml = component.relevantHtml || '';
@@ -645,32 +670,9 @@ export async function exportAnalysisToPDF(
               currentY += 5;
             }
           }
-        }        // WCAG Reference - use direct URL from LLM if available
-        if (component.wcagRule || component.wcagUrl) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(9);
-          pdf.text('WCAG GUIDELINE:', margin, currentY);
-          currentY += 5;
-          
-          pdf.setFont('helvetica', 'normal');
-          if (component.wcagUrl) {
-            // Use the direct URL provided by the LLM
-            pdf.setTextColor(0, 0, 255); // Blue color for links
-            const displayText = component.wcagRule || component.wcagUrl;
-            pdf.text(displayText, margin, currentY);
-            
-            const textWidth = pdf.getTextWidth(displayText);
-            pdf.link(margin, currentY - 3, textWidth, 4, { url: component.wcagUrl });
-            pdf.setTextColor(0, 0, 0); // Reset to black
-            currentY += 8;
-          } else {
-            // Fallback to text with WCAG pattern matching
-            currentY = addTextWithLinks(pdf, component.wcagRule, margin, currentY, pageWidth - 2 * margin);
-            currentY += 3;
-          }
         }
 
-        // URL for this issue
+        // URL for this issue (keeping this section for additional context)
         const issueUrl = component.url || (component.step != null && analysisData.manifest?.url ? analysisData.manifest.url : analysisData.manifest?.url || 'Unknown');
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(9);
@@ -738,6 +740,14 @@ export async function exportAnalysisToPDF(
         // Reset to black for subsequent content
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'normal');
+        currentY += 8;
+
+        // Page URL directly below title (ensuring every axe issue has a page URL)
+        const pageUrl = analysisData.manifest?.url || 'Page URL not available';
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(0, 0, 0); // Black color for page URL
+        pdf.text(pageUrl, margin, currentY);
         currentY += 8;        // Rule ID
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(9);
@@ -752,23 +762,24 @@ export async function exportAnalysisToPDF(
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
         currentY = addTextWithLinks(pdf, cleanTextForPDF(violation.description), margin, currentY, pageWidth - 2 * margin);
-        currentY += 8;        // WCAG Guideline (matching screen reader section format)
-        if (violation.helpUrl) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(9);
-          pdf.text('WCAG GUIDELINE:', margin, currentY);
-          currentY += 5;
-          
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor(0, 0, 255); // Blue color for links
-          pdf.text(violation.helpUrl, margin, currentY);
-          
-          const textWidth = pdf.getTextWidth(violation.helpUrl);
-          // Use the actual helpUrl directly from axe-core - don't parse it for WCAG patterns
-          pdf.link(margin, currentY - 3, textWidth, 4, { url: violation.helpUrl });
-          pdf.setTextColor(0, 0, 0); // Reset to black
-          currentY += 8;
-        }        // Affected elements with better formatting
+        currentY += 8;
+
+        // Deque Reference (guideline link)
+        const helpUrl = violation.helpUrl || `https://dequeuniversity.com/rules/axe/4.10/${violation.id}`;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.text('DEQUE REFERENCE:', margin, currentY);
+        currentY += 5;
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(0, 0, 255); // Blue color for links
+        pdf.text(helpUrl, margin, currentY);
+        
+        const textWidth = pdf.getTextWidth(helpUrl);
+        pdf.link(margin, currentY - 3, textWidth, 4, { url: helpUrl });
+        pdf.setTextColor(0, 0, 0); // Reset to black
+        currentY += 8;        // Affected elements with better formatting
         if (violation.nodes && violation.nodes.length > 0) {
           pdf.setFont('helvetica', 'bold');
           pdf.text(`OFFENDING CODE (${violation.nodes.length}):`, margin, currentY);

@@ -47,17 +47,28 @@ export class GeminiService {
       const response = await result.response;
       const text = response.text();
 
-      // Create debug log
+      // Calculate original vs filtered sizes for logging
+      const originalHtmlSize = htmlContent.length;
+      const originalAxeSize = JSON.stringify(axeResults).length;
+      
+      // Create debug log with filtering statistics
       const debugLog: LLMDebugLog = {
         type: 'component',
         prompt,
         response: text,
         promptSize: prompt.length,
         responseSize: text.length,
-        htmlSize: htmlContent.length,
+        htmlSize: originalHtmlSize,
         axeResultsCount: axeResults.length,
         timestamp: new Date().toISOString()
       };
+
+      // Log filtering statistics
+      console.log(`📊 LLM Prompt Data Sizes:
+- Original HTML: ${originalHtmlSize} chars
+- Original Axe: ${originalAxeSize} chars  
+- Final Prompt: ${prompt.length} chars
+- Data Reduction: ${((originalHtmlSize + originalAxeSize - prompt.length) / (originalHtmlSize + originalAxeSize) * 100).toFixed(1)}%`);
 
       const analysisResult = this.parseGeminiResponse(text, context);
 
@@ -103,17 +114,29 @@ export class GeminiService {
       const response = await result.response;
       const text = response.text();
 
-      // Create debug log
+      // Calculate original vs filtered sizes for logging
+      const originalHtmlSize = snapshots.reduce((total, snap) => total + snap.html.length, 0);
+      const originalAxeSize = snapshots.reduce((total, snap) => 
+        total + JSON.stringify(snap.axeResults || []).length, 0);
+      
+      // Create debug log with filtering statistics
       const debugLog: LLMDebugLog = {
         type: 'flow',
         prompt,
         response: text,
         promptSize: prompt.length,
         responseSize: text.length,
-        htmlSize: snapshots.reduce((total, snap) => total + snap.html.length, 0),
+        htmlSize: originalHtmlSize,
         axeResultsCount: snapshots.reduce((total, snap) => total + (snap.axeResults?.length || 0), 0),
         timestamp: new Date().toISOString()
       };
+
+      // Log filtering statistics
+      console.log(`📊 LLM Prompt Data Sizes:
+- Original HTML: ${originalHtmlSize} chars
+- Original Axe: ${originalAxeSize} chars  
+- Final Prompt: ${prompt.length} chars
+- HTML Reduction: ${((originalHtmlSize - prompt.length) / originalHtmlSize * 100).toFixed(1)}%`);
 
       const analysisResult = this.parseGeminiResponse(text, { step: context.totalSteps });
 
@@ -167,8 +190,8 @@ ${this.truncateHtml(htmlContent)}
 ${hasBeforeAfter ? `**Previous State DOM Snapshot:**
 ${this.truncateHtml(previousHtml)}` : ''}
 
-**Axe-core Accessibility Report:**
-${JSON.stringify(axeResults, null, 2)}
+**Axe-core Accessibility Report (Violations Only):**
+${JSON.stringify(this.filterAxeResultsForAnalysis(axeResults), null, 2)}
 
 **SCREEN READER FOCUSED ANALYSIS INSTRUCTIONS:**
 
@@ -321,10 +344,11 @@ The main requirement is to ensure the entire interaction flow maintains proper s
 
 **Screen Reader Focused Interaction Flow Analysis:**
 
-${Object.entries(flowGroups).map(([flowType, steps]: [string, any[]]) => {
+${Object.entries(flowGroups).map(([flowType, steps]) => {
+      const typedSteps = steps as any[];
       return `
 **${flowType.toUpperCase()} FLOW:**
-${steps.map((step: any, index: number) => {
+${typedSteps.map((step: any, index: number) => {
         const stepDetail = manifest.stepDetails.find((s: any) => s.step === step.step);
         return `
 Step ${step.step} (Parent: ${stepDetail?.parentStep || 'none'}):
@@ -336,8 +360,8 @@ Step ${step.step} (Parent: ${stepDetail?.parentStep || 'none'}):
 DOM Snapshot (truncated):
 ${this.truncateHtml(step.html)}
 
-Axe Violations:
-${JSON.stringify(step.axeResults || [], null, 2)}
+Axe Violations (Filtered):
+${JSON.stringify(this.filterAxeResultsForAnalysis(step.axeResults || []), null, 2)}
 `;
       }).join('\n')}
 `;
@@ -428,14 +452,15 @@ GOOD: relevantHtml shows <div class="content"> and correctedCode shows <div clas
 BAD: relevantHtml shows <html> but issue is missing main landmark  
 GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode shows <body><main><div class="page-content">
 
-Focus on actionable screen reader accessibility issues that can be addressed by developers, prioritizing critical ARIA barriers that impact assistive technology users.
-
 **CRITICAL: relevantHtml MUST BE ACTUAL HTML CODE:**
-- NEVER provide text content like "Skip to main content" or page descriptions
+- NEVER provide text content like "Skip to main content" or "New Aged Care Act"
 - ALWAYS provide HTML markup with < > angle brackets
 - Example GOOD: <button class="nav-btn">Skip to content</button>
 - Example BAD: Skip to main content
 - If you cannot identify specific HTML, leave relevantHtml empty
+- The relevantHtml field is for CODE ONLY, not page text content
+
+**Important**: Report ONLY components with identified screen reader accessibility issues. Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
 
 **OUTPUT FORMAT REQUIREMENTS:**
 - RETURN ONLY VALID JSON with no additional text before or after
@@ -453,57 +478,144 @@ Focus on actionable screen reader accessibility issues that can be addressed by 
   }
 
   /**
-   * Group snapshots by flow type for organized analysis
+   * Groups snapshots by interaction flow for better analysis structure
    */
   private groupSnapshotsByFlow(snapshots: any[], manifest: any): Record<string, any[]> {
+    // Simple grouping logic - can be enhanced based on manifest data
     const groups: Record<string, any[]> = {
-      main_flow: [],
-      modal_flow: [],
-      form_flow: [],
-      navigation_flow: [],
-      sub_flow: []
+      main: snapshots
     };
-
-    snapshots.forEach((snapshot) => {
-      const stepDetail = manifest.stepDetails.find((s: any) => s.step === snapshot.step);
-      const flowContext = stepDetail?.flowContext || 'main_flow';
-
-      if (groups[flowContext]) {
-        groups[flowContext].push(snapshot);
-      } else {
-        groups.main_flow.push(snapshot);
-      }
-    });
-
-    // Remove empty groups
-    Object.keys(groups).forEach(key => {
-      if (groups[key].length === 0) {
-        delete groups[key];
-      }
-    });
-
+    
+    // If manifest has flow information, use it; otherwise default to single flow
+    if (manifest?.flows) {
+      return manifest.flows;
+    }
+    
     return groups;
-  }  /**
-   * Truncates HTML content for analysis while preserving important accessibility attributes
+  }
+
+  /**
+   * Filters and truncates HTML content for analysis while preserving important accessibility attributes
+   * Removes script/link/style tags and focuses on semantic content
    */
   private truncateHtml(html: string): string {
-    // Configurable HTML size limit via environment variable (default 1MB)
-    const maxLength = parseInt(process.env.GEMINI_HTML_MAX_SIZE || '1048576'); // 1MB default
+    console.log(`Original HTML size: ${html.length} chars`);
+    
+    // First, filter out unnecessary content
+    const filtered = this.filterHtmlForAnalysis(html);
+    console.log(`Filtered HTML size: ${filtered.length} chars (removed ${html.length - filtered.length} chars)`);
+    
+    // Configurable HTML size limit via environment variable (default 512KB, reduced from 1MB)
+    const maxLength = parseInt(process.env.GEMINI_HTML_MAX_SIZE || '524288'); // 512KB default
 
-    if (html.length <= maxLength) {
-      console.log(`HTML size: ${html.length} chars (under ${maxLength} limit, no truncation)`);
-      return html;
+    if (filtered.length <= maxLength) {
+      console.log(`HTML size: ${filtered.length} chars (under ${maxLength} limit, no truncation)`);
+      return filtered;
     }
 
-    console.log(`⚠️ HTML size: ${html.length} chars (exceeds ${maxLength} limit, truncating...)`);
+    console.log(`⚠️ HTML size: ${filtered.length} chars (exceeds ${maxLength} limit, truncating...)`);
 
     // Try to truncate at element boundaries
-    const truncated = html.substring(0, maxLength);
+    const truncated = filtered.substring(0, maxLength);
     const lastTag = truncated.lastIndexOf('<');
     const result = lastTag > maxLength - 1000 ? truncated.substring(0, lastTag) : truncated;
 
     console.log(`HTML truncated to: ${result.length} chars`);
     return result;
+  }
+
+  /**
+   * Filters HTML content to remove unnecessary elements while preserving semantic structure
+   * Removes scripts, links, styles and focuses on body content with accessibility attributes
+   */
+  private filterHtmlForAnalysis(html: string): string {
+    try {
+      // Remove large CSS blocks and scripts first (simple regex approach)
+      let filtered = html
+        // Remove script tags and their content
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        // Remove style tags and their content  
+        .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+        // Remove link tags (CSS, icons, etc.)
+        .replace(/<link\b[^>]*>/gi, '')
+        // Remove meta tags (keep some for context but remove most)
+        .replace(/<meta\b(?![^>]*(?:viewport|charset|og:))[^>]*>/gi, '')
+        // Remove comments
+        .replace(/<!--[\s\S]*?-->/g, '')
+        // Remove Google Tag Manager and analytics scripts
+        .replace(/<!-- Google Tag Manager -->[\s\S]*?<!-- End Google Tag Manager -->/gi, '')
+        // Clean up excessive whitespace
+        .replace(/\s{3,}/g, ' ')
+        .replace(/\n\s*\n\s*\n/g, '\n\n');
+
+      // Try to extract body content if possible, otherwise return filtered HTML
+      const bodyMatch = filtered.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+      if (bodyMatch) {
+        // Keep essential head elements and body content
+        const headMatch = filtered.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+        const essentialHead = headMatch ? this.extractEssentialHeadContent(headMatch[1]) : '';
+        
+        const result = `<!DOCTYPE html>
+<html${this.extractHtmlAttributes(filtered)}>
+<head>
+${essentialHead}
+</head>
+<body${this.extractBodyAttributes(filtered)}>
+${bodyMatch[1]}
+</body>
+</html>`;
+        
+        console.log(`Extracted body content: ${result.length} chars`);
+        return result;
+      }
+
+      console.log(`Fallback filtered HTML: ${filtered.length} chars`);
+      return filtered;
+    } catch (error) {
+      console.warn('HTML filtering failed, using original:', error);
+      return html;
+    }
+  }
+
+  /**
+   * Extracts essential head content for accessibility analysis
+   */
+  private extractEssentialHeadContent(headContent: string): string {
+    const essential = [];
+    
+    // Keep charset
+    const charsetMatch = headContent.match(/<meta[^>]*charset[^>]*>/i);
+    if (charsetMatch) essential.push(charsetMatch[0]);
+    
+    // Keep viewport
+    const viewportMatch = headContent.match(/<meta[^>]*viewport[^>]*>/i);
+    if (viewportMatch) essential.push(viewportMatch[0]);
+    
+    // Keep title
+    const titleMatch = headContent.match(/<title[^>]*>.*?<\/title>/i);
+    if (titleMatch) essential.push(titleMatch[0]);
+    
+    // Keep essential meta tags (og:, description, etc.)
+    const metaMatches = headContent.match(/<meta[^>]*(?:og:|twitter:|description|keywords)[^>]*>/gi);
+    if (metaMatches) essential.push(...metaMatches.slice(0, 5)); // Limit to 5 essential meta tags
+    
+    return essential.join('\n');
+  }
+
+  /**
+   * Extracts HTML tag attributes
+   */
+  private extractHtmlAttributes(html: string): string {
+    const htmlMatch = html.match(/<html([^>]*)>/i);
+    return htmlMatch ? htmlMatch[1] : ' lang="en"';
+  }
+
+  /**
+   * Extracts body tag attributes
+   */
+  private extractBodyAttributes(html: string): string {
+    const bodyMatch = html.match(/<body([^>]*)>/i);
+    return bodyMatch ? bodyMatch[1] : '';
   }  /**
    * Parses Gemini response into structured component-based format
    */  private parseGeminiResponse(text: string, context: { step: number }): GeminiAnalysis {
@@ -829,5 +941,61 @@ Remember:
 
     console.log(`🔍 DEBUG: Final results count: ${results.size}`);
     return results;
+  }
+
+  /**
+   * Filters axe results to include only violations and essential properties for LLM analysis
+   * Removes verbose data while preserving critical accessibility information
+   */
+  private filterAxeResultsForAnalysis(axeResults: any[]): any {
+    if (!Array.isArray(axeResults)) {
+      console.log('Axe results not an array, returning as-is');
+      return axeResults;
+    }
+
+    console.log(`Original axe results: ${JSON.stringify(axeResults).length} chars`);
+
+    const filtered = {
+      violations: axeResults.filter(result => result.impact && result.nodes?.length > 0).map((violation: any) => ({
+        id: violation.id,
+        impact: violation.impact,
+        description: violation.description,
+        help: violation.help,
+        helpUrl: violation.helpUrl,
+        tags: violation.tags,
+        nodes: violation.nodes?.slice(0, 5).map((node: any) => ({ // Limit to 5 nodes per violation
+          html: node.html?.substring(0, 500), // Truncate node HTML to 500 chars
+          target: node.target,
+          failureSummary: node.failureSummary,
+          any: node.any?.slice(0, 3).map((check: any) => ({ // Limit checks
+            id: check.id,
+            message: check.message,
+            data: typeof check.data === 'string' ? check.data.substring(0, 200) : check.data
+          })),
+          all: node.all?.slice(0, 3).map((check: any) => ({
+            id: check.id,
+            message: check.message,
+            data: typeof check.data === 'string' ? check.data.substring(0, 200) : check.data
+          })),
+          none: node.none?.slice(0, 3).map((check: any) => ({
+            id: check.id,
+            message: check.message,
+            data: typeof check.data === 'string' ? check.data.substring(0, 200) : check.data
+          }))
+        }))
+      })),
+      summary: {
+        totalViolations: axeResults.length,
+        criticalCount: axeResults.filter((r: any) => r.impact === 'critical').length,
+        seriousCount: axeResults.filter((r: any) => r.impact === 'serious').length,
+        moderateCount: axeResults.filter((r: any) => r.impact === 'moderate').length,
+        minorCount: axeResults.filter((r: any) => r.impact === 'minor').length
+      }
+    };
+
+    const filteredSize = JSON.stringify(filtered).length;
+    console.log(`Filtered axe results: ${filteredSize} chars (reduced by ${JSON.stringify(axeResults).length - filteredSize} chars)`);
+    
+    return filtered;
   }
 }

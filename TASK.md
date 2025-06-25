@@ -2,6 +2,9 @@
 
 ## ✅ Recently Completed (2025-06-23)
 
+### URL Display and Interaction Enhancement
+- ✅ **Made URLs clickable with tooltips** - URLs in both AnalysisResults and AxeResults components are now clickable links that open in new tabs, with tooltips showing the full URL on hover for truncated URLs
+
 ### LLM Accessibility Recommendations Enhancement
 - ✅ **Enhanced paragraph spacing in Axe results UI** - Improved spacing between recommendation sections (space-y-6), numbered items (mb-4, mb-3), and sub-steps for better readability
 - ✅ **Updated LLM prompt for clearer recommendations** - Enhanced prompt to emphasize contextually relevant, specific guidance while removing generic heading level instructions  

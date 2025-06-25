@@ -278,19 +278,39 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                       <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">
                         <div className="flex items-start justify-between mb-2">
                           <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
-                          <span className={`text-xs font-medium px-2 py-1 rounded-full ml-4 ${component.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
-                            component.impact === 'serious' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
-                              component.impact === 'moderate' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
-                                'bg-blue-100 text-blue-800 border border-blue-300'
-                            }`}>
-                            {component.impact.toUpperCase()} IMPACT
+                          <div className="ml-4 text-right">
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${component.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
+                              component.impact === 'serious' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
+                                component.impact === 'moderate' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
+                                  'bg-blue-100 text-blue-800 border border-blue-300'
+                              }`}>
+                              {component.impact.toUpperCase()} IMPACT
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-sm text-gray-500">
+                          <div className="flex items-center">
+                            <span>URL: </span>
+                            {(() => {
+                              const url = getStepUrl(component.step);
+                              const displayUrl = url.length > 60 ? url.substring(0, 57) + '...' : url;
+                              return (
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={url}
+                                  className="px-1 py-0.5 bg-white text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded text-sm font-mono border border-gray-200 ml-1 underline cursor-pointer"
+                                >
+                                  {displayUrl}
+                                </a>
+                              );
+                            })()}
+                          </div>
+                          <span className="text-xs text-gray-400 mr-1">
+                            screen reader accessibility
                           </span>
                         </div>
-                        <p className="text-sm text-gray-500 text-left">
-                          URL: <code className="px-1 py-0.5 bg-white text-gray-800 rounded text-sm font-mono border border-gray-200">
-                            {getStepUrl(component.step)}
-                          </code>
-                        </p>
                       </div>
 
                       {/* Content Section */}
