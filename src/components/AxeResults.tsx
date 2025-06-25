@@ -413,11 +413,6 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
                               </div>
                             ))}
 
-                            {violation.nodes.length > 5 && (
-                              <div className="text-sm text-gray-500 italic text-center py-2">
-                                ... and {violation.nodes.length - 5} more elements
-                              </div>
-                            )}
                           </div>
                         </div>
                       )}                      {/* LLM-generated recommendation */}
