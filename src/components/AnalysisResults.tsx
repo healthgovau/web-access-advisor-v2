@@ -120,16 +120,6 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
     }));
   };
 
-  // Filter components based on selected severities, exclude auth steps, and sort by step
-  const filteredComponents = (analysisData?.analysis?.components.filter(component =>
-    severityFilters[component.impact] && !isAuthComponent(component.step)
-  ) || []).slice().sort((a, b) => {
-    // Sort by step, fallback to 0 if missing
-    const stepA = typeof a.step === 'number' ? a.step : 0;
-    const stepB = typeof b.step === 'number' ? b.step : 0;
-    return stepA - stepB;
-  });
-
   // Helper to get the correct URL for a given step from manifest.stepDetails
   const getStepUrl = (step: number | string | undefined) => {
     if (!analysisData || !analysisData.manifest || !Array.isArray(analysisData.manifest.stepDetails) || step === undefined || step === null) {
@@ -148,6 +138,16 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
     
     return isAuthUrl(url).isAuthStep;
   };
+
+  // Filter components based on selected severities, exclude auth steps, and sort by step
+  const filteredComponents = (analysisData?.analysis?.components.filter(component =>
+    severityFilters[component.impact] && !isAuthComponent(component.step)
+  ) || []).slice().sort((a, b) => {
+    // Sort by step, fallback to 0 if missing
+    const stepA = typeof a.step === 'number' ? a.step : 0;
+    const stepB = typeof b.step === 'number' ? b.step : 0;
+    return stepA - stepB;
+  });
 
   if (isLoading) {
     return (

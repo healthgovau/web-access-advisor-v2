@@ -339,7 +339,7 @@ function getActionDescription(action: any): string {
 }
 
 /**
- * Helper to get the correct URL for a given step from manifest
+ * Helper to get the correct URL for a given step from manifest.stepDetails
  */
 function getStepUrl(analysisData: AnalysisResult, step: number | string | undefined): string {
   if (!analysisData.manifest || !Array.isArray(analysisData.manifest.stepDetails) || step === undefined || step === null) {
@@ -349,33 +349,39 @@ function getStepUrl(analysisData: AnalysisResult, step: number | string | undefi
 }
 
 /**
- * Filter out authentication-related components and violations from analysis data
+ * Helper to check if a component/violation is from an authentication step and should be filtered out
+ */
+function isAuthIssue(analysisData: AnalysisResult, step: number | string | undefined, url?: string): boolean {
+  // Use provided URL or get it from the step
+  const issueUrl = url || getStepUrl(analysisData, step);
+  if (issueUrl === 'Unknown') return false;
+  
+  return isAuthUrl(issueUrl).isAuthStep;
+}
+
+/**
+ * Filters out authentication-related issues from analysis data
  */
 function filterAuthIssues(analysisData: AnalysisResult): {
   screenReaderComponents: any[];
   axeViolations: any[];
 } {
+  // Filter screen reader components (LLM analysis)
   const screenReaderComponents = (analysisData.analysis?.components || []).filter(component => {
-    const url = getStepUrl(analysisData, component.step);
-    if (url === 'Unknown') return true; // Keep if we can't determine URL
-    
-    const isAuth = isAuthUrl(url).isAuthStep;
-    if (isAuth) {
-      console.log(`🔐 PDF: Filtering out auth component from step ${component.step}`);
+    if (isAuthIssue(analysisData, component.step, component.url)) {
+      console.log(`🔐 PDF: Filtering auth component from step ${component.step}: ${component.componentName}`);
+      return false;
     }
-    return !isAuth;
+    return true;
   });
 
+  // Filter axe violations  
   const axeViolations = (analysisData.axeResults || []).filter(violation => {
-    // Use the violation's URL if available, otherwise get it from the step
-    const url = violation.url || getStepUrl(analysisData, violation.step);
-    if (url === 'Unknown') return true; // Keep if we can't determine URL
-    
-    const isAuth = isAuthUrl(url).isAuthStep;
-    if (isAuth) {
-      console.log(`🔐 PDF: Filtering out auth violation from step ${violation.step}`);
+    if (isAuthIssue(analysisData, violation.step, violation.url)) {
+      console.log(`🔐 PDF: Filtering auth violation from step ${violation.step}: ${violation.id}`);
+      return false;
     }
-    return !isAuth;
+    return true;
   });
 
   console.log(`🔐 PDF: Filtered components ${analysisData.analysis?.components?.length || 0} → ${screenReaderComponents.length}`);
