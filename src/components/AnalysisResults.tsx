@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { html as beautifyHtml } from 'js-beautify';
 import type { AnalysisResult } from '../types';
 import AxeResults from './AxeResults';
+import { isAuthUrl } from '../utils/authDetection';
 
 interface AnalysisResultsProps {
   analysisData: AnalysisResult | null;
@@ -119,9 +120,9 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
     }));
   };
 
-  // Filter components based on selected severities and sort by step
+  // Filter components based on selected severities, exclude auth steps, and sort by step
   const filteredComponents = (analysisData?.analysis?.components.filter(component =>
-    severityFilters[component.impact]
+    severityFilters[component.impact] && !isAuthComponent(component.step)
   ) || []).slice().sort((a, b) => {
     // Sort by step, fallback to 0 if missing
     const stepA = typeof a.step === 'number' ? a.step : 0;
@@ -136,6 +137,16 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
     }
     let url = analysisData.manifest.stepDetails.find((s: any) => s.step === step)?.url || 'Unknown';
     return url;
+  };
+
+  // Helper to check if a component is from an authentication step and should be filtered out
+  const isAuthComponent = (step: number | string | undefined) => {
+    if (step === undefined || step === null) return false;
+    
+    const url = getStepUrl(step);
+    if (url === 'Unknown') return false;
+    
+    return isAuthUrl(url).isAuthStep;
   };
 
   if (isLoading) {

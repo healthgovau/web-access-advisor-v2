@@ -5,6 +5,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { GeminiAnalysis, ComponentAccessibilityIssue, LLMDebugLog } from './types.js';
+import { isAuthUrl, isAuthAction, type SessionAction } from './authDetection.js';
 
 export class GeminiService {
   private genAI: GoogleGenerativeAI;
@@ -33,6 +34,27 @@ export class GeminiService {
     previousHtml?: string
   ): Promise<GeminiAnalysis> {
     try {
+      // Check if this is an authentication step that should be skipped
+      if (this.isAuthenticationStep(context)) {
+        console.log(`⏭️ Skipping auth step ${context.step} - returning empty analysis`);
+        return {
+          summary: 'Authentication step - analysis skipped',
+          components: [],
+          recommendations: ['Authentication steps are automatically filtered from analysis'],
+          score: 100, // Auth steps don't affect accessibility score
+          debug: {
+            type: 'component',
+            prompt: 'Authentication step skipped',
+            response: 'Authentication step skipped',
+            promptSize: 0,
+            responseSize: 0,
+            htmlSize: htmlContent.length,
+            axeResultsCount: axeResults.length,
+            timestamp: new Date().toISOString()
+          }
+        };
+      }
+
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
 
       const prompt = this.buildComponentAnalysisPrompt(htmlContent, axeResults, context, previousHtml);
@@ -100,9 +122,15 @@ export class GeminiService {
     }
   ): Promise<GeminiAnalysis> {
     try {
+      // Filter out authentication steps from snapshots
+      const filteredSnapshots = this.filterAuthStepsFromSnapshots(snapshots, manifest);
+      if (filteredSnapshots.length !== snapshots.length) {
+        console.log(`🔐 Filtered out ${snapshots.length - filteredSnapshots.length} auth steps from flow analysis`);
+      }
+
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
 
-      const prompt = this.buildFlowAnalysisPrompt(snapshots, manifest, context);
+      const prompt = this.buildFlowAnalysisPrompt(filteredSnapshots, manifest, context);
 
       // Set up timeout for Gemini API call (3 minutes for complex flow analysis)
       const geminiPromise = model.generateContent(prompt);
@@ -475,6 +503,28 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
 
 **CRITICAL: Return ONLY the JSON object - no other text.**
 `;
+  }
+
+  /**
+   * Checks if the current context/step is authentication-related and should be filtered out
+   */
+  private isAuthenticationStep(context: { url: string; action: string; step: number }): boolean {
+    // Create a session action from the context
+    const action: SessionAction = {
+      type: 'navigate', // We don't have type info in context, so assume navigate
+      url: context.url,
+      step: context.step,
+      value: context.action
+    };
+
+    const authResult = isAuthAction(action);
+    if (authResult.isAuthStep) {
+      console.log(`🔐 Filtering out auth step ${context.step}: ${authResult.authType} (confidence: ${authResult.confidence.toFixed(2)})`);
+      console.log(`   URL: ${context.url}`);
+      console.log(`   Reasons: ${authResult.reasons.join(', ')}`);
+    }
+    
+    return authResult.isAuthStep;
   }
 
   /**
@@ -998,4 +1048,42 @@ Remember:
     
     return filtered;
   }
+
+  /**
+   * Filters out authentication-related steps from snapshots
+   */
+  private filterAuthStepsFromSnapshots(snapshots: any[], manifest: any): any[] {
+    // Extract actions from manifest to determine auth steps
+    const actions = manifest.actions || [];
+    const authSteps = new Set<number>();
+
+    // Identify auth steps using the actions
+    for (const action of actions) {
+      const sessionAction: SessionAction = {
+        type: action.type,
+        url: action.url,
+        selector: action.selector,
+        value: action.value,
+        step: action.step,
+        metadata: action.metadata
+      };
+
+      if (isAuthAction(sessionAction).isAuthStep) {
+        authSteps.add(action.step);
+      }
+    }
+
+    // Filter snapshots
+    const filteredSnapshots = snapshots.filter(snapshot => {
+      if (authSteps.has(snapshot.step)) {
+        console.log(`🔐 Filtering out auth step ${snapshot.step} from flow analysis`);
+        return false;
+      }
+      return true;
+    });
+
+    console.log(`🔐 Flow analysis: filtered ${snapshots.length - filteredSnapshots.length} auth steps, analyzing ${filteredSnapshots.length} steps`);
+    return filteredSnapshots;
+  }
+
 }

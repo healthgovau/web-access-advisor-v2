@@ -10,6 +10,7 @@
 
 import jsPDF from 'jspdf';
 import type { AnalysisResult } from '../types';
+import { isAuthUrl } from './authDetection';
 
 /**
  * Clean text for PDF output - preserve backticks and important content
@@ -338,6 +339,52 @@ function getActionDescription(action: any): string {
 }
 
 /**
+ * Helper to get the correct URL for a given step from manifest
+ */
+function getStepUrl(analysisData: AnalysisResult, step: number | string | undefined): string {
+  if (!analysisData.manifest || !Array.isArray(analysisData.manifest.stepDetails) || step === undefined || step === null) {
+    return 'Unknown';
+  }
+  return analysisData.manifest.stepDetails.find((s: any) => s.step === step)?.url || 'Unknown';
+}
+
+/**
+ * Filter out authentication-related components and violations from analysis data
+ */
+function filterAuthIssues(analysisData: AnalysisResult): {
+  screenReaderComponents: any[];
+  axeViolations: any[];
+} {
+  const screenReaderComponents = (analysisData.analysis?.components || []).filter(component => {
+    const url = getStepUrl(analysisData, component.step);
+    if (url === 'Unknown') return true; // Keep if we can't determine URL
+    
+    const isAuth = isAuthUrl(url).isAuthStep;
+    if (isAuth) {
+      console.log(`🔐 PDF: Filtering out auth component from step ${component.step}`);
+    }
+    return !isAuth;
+  });
+
+  const axeViolations = (analysisData.axeResults || []).filter(violation => {
+    // Use the violation's URL if available, otherwise get it from the step
+    const url = violation.url || getStepUrl(analysisData, violation.step);
+    if (url === 'Unknown') return true; // Keep if we can't determine URL
+    
+    const isAuth = isAuthUrl(url).isAuthStep;
+    if (isAuth) {
+      console.log(`🔐 PDF: Filtering out auth violation from step ${violation.step}`);
+    }
+    return !isAuth;
+  });
+
+  console.log(`🔐 PDF: Filtered components ${analysisData.analysis?.components?.length || 0} → ${screenReaderComponents.length}`);
+  console.log(`🔐 PDF: Filtered violations ${analysisData.axeResults?.length || 0} → ${axeViolations.length}`);
+
+  return { screenReaderComponents, axeViolations };
+}
+
+/**
  * Generate comprehensive PDF from analysis results
  */
 export async function exportAnalysisToPDF(
@@ -345,6 +392,9 @@ export async function exportAnalysisToPDF(
   actions: any[] = []
 ): Promise<void> {
   try {
+    // Filter out authentication-related issues from the analysis
+    const { screenReaderComponents, axeViolations } = filterAuthIssues(analysisData);
+    
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
@@ -373,7 +423,7 @@ export async function exportAnalysisToPDF(
       `Website URL: ${cleanTextForPDF(analysisData.manifest?.url || 'Not specified')}`,
       `Generated: ${new Date().toLocaleString()}`,
       `Snapshots Analyzed: ${analysisData.snapshotCount}`,
-      `Total Issues Found: ${(analysisData.analysis?.components?.length || 0) + (analysisData.axeResults?.length || 0)}`
+      `Total Issues Found: ${screenReaderComponents.length + axeViolations.length}`
     ];
     
     metadata.forEach((line, index) => {
@@ -383,21 +433,12 @@ export async function exportAnalysisToPDF(
     currentY += metadataBoxHeight + 20;
 
     // Executive Summary
-    if (analysisData.analysis?.components || analysisData.axeResults) {
+    if (screenReaderComponents.length > 0 || axeViolations.length > 0) {
       currentY = addStyledHeader(pdf, 'SUMMARY', currentY, margin, pageWidth, 14);
       
-      let totalIssues = 0;
-      let criticalCount = 0;
-      
-      if (analysisData.analysis?.components) {
-        totalIssues += analysisData.analysis.components.length;
-        criticalCount += analysisData.analysis.components.filter(c => c.impact === 'critical').length;
-      }
-      
-      if (analysisData.axeResults) {
-        totalIssues += analysisData.axeResults.length;
-        criticalCount += analysisData.axeResults.filter(v => v.impact === 'critical').length;
-      }      pdf.setFontSize(11);
+      const totalIssues = screenReaderComponents.length + axeViolations.length;
+      const criticalCount = screenReaderComponents.filter(c => c.impact === 'critical').length + 
+                           axeViolations.filter(v => v.impact === 'critical').length;      pdf.setFontSize(11);
       
       // Key metrics box
       pdf.setDrawColor(59, 130, 246);
@@ -491,11 +532,11 @@ export async function exportAnalysisToPDF(
       
       currentY += 15;
     }    // ===== SCREEN READER ACCESSIBILITY ISSUES =====
-    if (analysisData.analysis?.components && analysisData.analysis.components.length > 0) {
-      currentY = addStyledHeader(pdf, `SCREEN READER ACCESSIBILITY ISSUES (${analysisData.analysis.components.length})`, currentY, margin, pageWidth);
+    if (screenReaderComponents.length > 0) {
+      currentY = addStyledHeader(pdf, `SCREEN READER ACCESSIBILITY ISSUES (${screenReaderComponents.length})`, currentY, margin, pageWidth);
       
       // Summary table
-      const llmCounts = analysisData.analysis.components.reduce((acc, component) => {
+      const llmCounts = screenReaderComponents.reduce((acc, component) => {
         acc[component.impact] = (acc[component.impact] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
@@ -509,7 +550,7 @@ export async function exportAnalysisToPDF(
       pdf.text('Detailed Analysis', margin, currentY);
       currentY += 10;
 
-      analysisData.analysis.components.forEach((component, index) => {
+      screenReaderComponents.forEach((component, index) => {
         // Check if we need a new page
         if (currentY > pageHeight - 80) {
           pdf.addPage();
@@ -686,15 +727,15 @@ export async function exportAnalysisToPDF(
     }
 
     // ===== AUTOMATED ACCESSIBILITY SCAN (AXE RESULTS) =====
-    if (analysisData.axeResults && analysisData.axeResults.length > 0) {
+    if (axeViolations.length > 0) {
       // New page for axe results
       pdf.addPage();
       currentY = margin;
       
-      currentY = addStyledHeader(pdf, `Axe Accessibility Issues (${analysisData.axeResults.length})`, currentY, margin, pageWidth);
+      currentY = addStyledHeader(pdf, `Axe Accessibility Issues (${axeViolations.length})`, currentY, margin, pageWidth);
 
       // Axe summary table
-      const axeCounts = analysisData.axeResults.reduce((acc, violation) => {
+      const axeCounts = axeViolations.reduce((acc, violation) => {
         acc[violation.impact] = (acc[violation.impact] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
@@ -708,7 +749,7 @@ export async function exportAnalysisToPDF(
       pdf.text('Detailed Scan Results', margin, currentY);
       currentY += 10;
 
-      analysisData.axeResults.forEach((violation, index) => {
+      axeViolations.forEach((violation, index) => {
         // Check if we need a new page
         if (currentY > pageHeight - 80) {
           pdf.addPage();

@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { html as beautifyHtml } from 'js-beautify';
 import type { AxeViolation, SessionManifest } from '../types';
+import { isAuthUrl } from '../utils/authDetection';
 
 interface AxeResultsProps {
   axeResults: AxeViolation[];
@@ -140,9 +141,26 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
     minor: true
   });
 
-  // Filter violations by severity
+  // Helper to get the correct URL for a given step from manifest.stepDetails
+  const getStepUrl = (step: number | string | undefined) => {
+    if (!manifest || !Array.isArray(manifest.stepDetails) || step === undefined || step === null) {
+      return 'Unknown';
+    }
+    return manifest.stepDetails.find((s: any) => s.step === step)?.url || 'Unknown';
+  };
+
+  // Helper to check if a violation is from an authentication step and should be filtered out
+  const isAuthViolation = (violation: AxeViolation) => {
+    // Use the violation's URL if available, otherwise get it from the step
+    const url = violation.url || getStepUrl(violation.step);
+    if (url === 'Unknown') return false;
+    
+    return isAuthUrl(url).isAuthStep;
+  };
+
+  // Filter violations by severity and exclude auth steps
   const filteredViolations = axeResults.filter(violation => 
-    severityFilters[violation.impact]
+    severityFilters[violation.impact] && !isAuthViolation(violation)
   );
 
   const handleSeverityFilterChange = (severity: string, checked: boolean) => {
