@@ -555,8 +555,8 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
     const filtered = this.filterHtmlForAnalysis(html);
     console.log(`Filtered HTML size: ${filtered.length} chars (removed ${html.length - filtered.length} chars)`);
     
-    // Configurable HTML size limit via environment variable (default 512KB, reduced from 1MB)
-    const maxLength = parseInt(process.env.GEMINI_HTML_MAX_SIZE || '524288'); // 512KB default
+    // Configurable HTML size limit via environment variable (default 512KB)
+    const maxLength = parseInt(process.env.MAX_SCREEN_READER_HTML_SIZE || '524288'); // 512KB default
 
     if (filtered.length <= maxLength) {
       console.log(`HTML size: ${filtered.length} chars (under ${maxLength} limit, no truncation)`);
@@ -577,8 +577,17 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
   /**
    * Filters HTML content to remove unnecessary elements while preserving semantic structure
    * Removes scripts, links, styles and focuses on body content with accessibility attributes
+   * Can be controlled via FILTER_AUTH_CONTENT environment variable (default: true)
    */
   private filterHtmlForAnalysis(html: string): string {
+    // Check environment variable to enable/disable filtering
+    const enableFiltering = process.env.FILTER_AUTH_CONTENT !== 'false';
+    
+    if (!enableFiltering) {
+      console.log('🔧 Auth content filtering disabled via FILTER_AUTH_CONTENT=false');
+      return html;
+    }
+
     try {
       // Remove large CSS blocks and scripts first (simple regex approach)
       let filtered = html
@@ -996,8 +1005,17 @@ Remember:
   /**
    * Filters axe results to include only violations and essential properties for LLM analysis
    * Removes verbose data while preserving critical accessibility information
+   * Can be controlled via FILTER_AUTH_CONTENT environment variable (default: true)
    */
   private filterAxeResultsForAnalysis(axeResults: any[]): any {
+    // Check environment variable to enable/disable filtering
+    const enableFiltering = process.env.FILTER_AUTH_CONTENT !== 'false';
+    
+    if (!enableFiltering) {
+      console.log('🔧 Auth content filtering disabled via FILTER_AUTH_CONTENT=false');
+      return axeResults;
+    }
+
     if (!Array.isArray(axeResults)) {
       console.log('Axe results not an array, returning as-is');
       return axeResults;
