@@ -203,8 +203,20 @@ export class GeminiService {
     return `
 Your task is to analyze the provided DOM snapshot(s) and corresponding Axe Accessibility Report(s) with a PRIMARY FOCUS on screen reader (ARIA) accessibility and assistive technology compatibility. This tool is specifically designed to ensure interactive components work correctly with screen readers and other assistive technologies.
 
-**PRIMARY OBJECTIVE: SCREEN READER ACCESSIBILITY**
-The main requirement for this analysis is to ensure all interactive components are fully accessible to screen reader users through proper ARIA implementation, semantic HTML, and correct assistive technology behavior.
+**SCREEN READER TECHNOLOGY CONTEXT:**
+This analysis targets compatibility with leading screen reader technologies including:
+- **JAWS (Job Access With Speech)** - Most widely used Windows screen reader
+- **NVDA (NonVisual Desktop Access)** - Popular open-source Windows screen reader  
+- **VoiceOver** - Built-in macOS and iOS screen reader
+- **TalkBack** - Android's built-in screen reader
+- **Dragon NaturallySpeaking** - Voice control and dictation software
+- **Windows Narrator** - Built-in Windows screen reader
+
+**ANALYSIS METHODOLOGY:**
+You are analyzing HTML markup and Axe accessibility test results to assess screen reader compatibility. You do NOT have access to actual screen reader testing, user behavior, or live interaction data. Your analysis must be based ENTIRELY on code structure, semantic markup, ARIA implementation, and static accessibility patterns that can be determined from HTML snapshots.
+
+**PRIMARY OBJECTIVE: COMPREHENSIVE SCREEN READER CODE ANALYSIS**
+Ensure all interactive components are fully accessible to screen reader users through proper ARIA implementation, semantic HTML structure, and correct assistive technology compatibility patterns - as determined through code analysis alone.
 
 **Context:**
 - URL: ${context.url}
@@ -221,27 +233,208 @@ ${this.truncateHtml(previousHtml)}` : ''}
 **Axe-core Accessibility Report (Violations Only):**
 ${JSON.stringify(this.filterAxeResultsForAnalysis(axeResults), null, 2)}
 
-**SCREEN READER FOCUSED ANALYSIS INSTRUCTIONS:**
+**COMPREHENSIVE SCREEN READER CODE ANALYSIS INSTRUCTIONS:**
 
-1. **Identify Screen Reader Critical Components**: Prioritize components that directly impact screen reader navigation and interaction:
-   - Expandable/Collapsible Content (aria-expanded, aria-controls)
-   - Dropdown Menus (role="menu", aria-haspopup, aria-expanded)
-   - Tab Panels (role="tablist", aria-selected, aria-controls)
-   - Modal Dialogs (role="dialog", aria-modal, focus management)
-   - Autocomplete/Suggestion Lists (aria-autocomplete, aria-activedescendant)
-   - Error Handling (aria-invalid, aria-describedby)
-   - Dynamic Content Updates (aria-live regions)
-   - Keyboard Navigation indicators (focus management, tabindex)
-   - Carousels/Sliders (aria-roledescription, aria-live)
-   - Tree Views (role="tree", aria-expanded, aria-selected)
-   - Data Tables (proper header associations, scope)
-   - Sortable Tables (aria-sort attributes)
-   - Tooltips/Popovers (role="tooltip", aria-describedby)
-   - Context Menus (role="menu", keyboard navigation)
-   - Validation Messages (aria-describedby, error announcements)
-   - Live Regions (aria-live, aria-atomic)
+**1. SEMANTIC HTML FOUNDATION ASSESSMENT**
+Analyze the HTML structure for semantic markup that screen readers rely on for navigation and context:
 
-2. **ARIA Implementation Analysis**: For each identified component, examine CRITICAL screen reader attributes:
+**Document Structure & Landmarks:**
+- Missing landmarks: Verify presence of main, header, nav, footer, aside, section elements
+- Landmark hierarchy: Check logical nesting and organization of page regions for screen reader landmark navigation
+- Skip navigation: Identify presence and proper targeting of skip links for keyboard and screen reader efficiency
+- Page structure: Assess logical document outline that supports screen reader navigation patterns
+
+**Heading Hierarchy Analysis:**
+- Heading presence: Every page must have an h1 element for screen reader page identification
+- Heading sequence: Verify no skipped levels (h1→h2→h3, not h1→h3) for proper screen reader navigation
+- Heading purpose: Confirm headings describe content sections, not just visual styling
+- Heading nesting: Check hierarchical relationships that screen readers use for page structure
+
+**List and Grouping Semantics:**
+- List usage: Identify where ul, ol, dl should be used instead of div for grouped items
+- List structure: Verify proper li nesting that screen readers announce as "list with X items"
+- Definition lists: Check dl, dt, dd usage for term-definition pairs
+- Content grouping: Assess section, article, aside for semantic organization
+
+**Form Semantics:**
+- Label associations: Verify every form control has associated label or aria-label for screen reader identification
+- Fieldset grouping: Check related form controls are grouped with fieldset and legend
+- Required indicators: Confirm required attribute and proper indication for screen reader announcement
+- Input types: Verify appropriate type attributes (email, tel, date, etc.) for screen reader context
+- Form validation: Check error association with aria-describedby for screen reader error reading
+
+**Table Semantics:**
+- Table headers: Verify th elements with proper scope attributes for screen reader table navigation
+- Table captions: Check caption elements for table purpose description
+- Complex tables: Assess id/headers associations for complex data relationships
+- Table structure: Verify thead, tbody, tfoot organization for screen reader table understanding
+
+**2. ARIA IMPLEMENTATION EXCELLENCE**
+Analyze ARIA attributes and patterns for screen reader compatibility:
+
+**Roles and Widget Patterns:**
+- Button semantics: Assess button vs div role="button" appropriateness for screen reader interaction
+- Link semantics: Check a vs button usage (links for navigation, buttons for actions)
+- Custom widgets: Verify proper implementation of combobox, grid, slider, tree, menu patterns
+- Widget completeness: Confirm all required ARIA attributes are present for chosen patterns
+- Role hierarchy: Assess appropriate role selection for component function and screen reader interpretation
+
+**States and Properties Analysis:**
+- Dynamic states: Check aria-expanded, aria-selected, aria-checked, aria-pressed for component state communication
+- Descriptive properties: Verify aria-label, aria-labelledby, aria-describedby for screen reader context
+- Relationship properties: Assess aria-controls, aria-owns, aria-activedescendant for component relationships
+- Input properties: Check aria-required, aria-invalid, aria-autocomplete for form field context
+- Presentation properties: Verify aria-hidden, aria-readonly, aria-disabled for appropriate content filtering
+
+**Live Regions and Dynamic Content:**
+- Live region types: Assess aria-live="polite" vs aria-live="assertive" for appropriate announcement behavior
+- Live region scope: Check aria-atomic for complete vs partial announcement control
+- Status updates: Verify role="status", role="alert" for different message types
+- Progress indication: Check role="progressbar" with aria-valuenow, aria-valuemin, aria-valuemax
+
+**3. DYNAMIC INTERACTION CODE ANALYSIS**
+${hasBeforeAfter ? `When before/after snapshots are provided, analyze state transitions and interaction patterns:
+
+**State Transition Validation:**
+- ARIA state updates: Compare aria-expanded, aria-selected, aria-checked changes between snapshots
+- Visibility coordination: Verify ARIA states match actual element visibility changes
+- Focus state management: Check aria-activedescendant updates during component navigation
+- Selection coordination: Assess multiple elements maintaining consistent selection states
+
+**Component Behavior Assessment:**
+- Modal/Dialog behavior: 
+  - Before: Modal absent, hidden, or improperly structured
+  - After: Modal present with role="dialog", aria-modal="true", proper focus management structure
+- Dropdown behavior:
+  - Before: aria-expanded="false", controlled menu hidden or absent
+  - After: aria-expanded="true", menu visible and properly associated with aria-controls
+- Tab behavior:
+  - Before: One tab aria-selected="true", corresponding panel visible
+  - After: Selection moved to different tab, panel content updated, proper aria-controls relationships
+- Form validation:
+  - Before: Field without validation state
+  - After: aria-invalid="true" with error message properly associated via aria-describedby
+
+**Content Update Assessment:**
+- Live region updates: Verify content changes appear in properly configured aria-live regions
+- Error message handling: Check error appearance/disappearance with proper ARIA associations
+- Loading state management: Assess progress indicators and loading state announcements
+- Dynamic content: Verify new content appears with proper semantic structure and ARIA attributes` : `Analyze the single snapshot for proper ARIA implementation and semantic structure:`}
+
+**4. CONTENT ACCESSIBILITY ASSESSMENT**
+Evaluate content patterns for screen reader compatibility:
+
+**Alternative Text Strategy:**
+- Image alt text: Check descriptive, contextual alternative text for informative images
+- Decorative images: Verify alt="" or role="presentation" for decorative content
+- Complex images: Assess long descriptions via aria-describedby or adjacent text
+- Icon accessibility: Check aria-label for functional icons, aria-hidden="true" for decorative icons
+
+**Link and Button Content:**
+- Link purpose: Verify links make sense out of context, avoid generic "click here" text
+- Button labeling: Check clear action-oriented button text or aria-label
+- Link vs button usage: Confirm links for navigation, buttons for actions
+- External links: Assess indication of external destinations
+
+**Language and Internationalization:**
+- Language declaration: Check lang attribute on html and foreign language content
+- Direction support: Verify dir attribute for right-to-left content when applicable
+
+**5. NAVIGATION AND INTERACTION STRUCTURE**
+Analyze markup patterns that support screen reader navigation:
+
+**Keyboard Navigation Structure:**
+- Tab order: Assess logical tabindex values, verify reliance on natural DOM order
+- Skip links: Check functional skip navigation with proper target elements
+- Focus management: Verify modal dialogs have proper focus containment structure
+- Focus indicators: Assess sufficient visual focus indication (via CSS analysis)
+
+**Navigation Efficiency:**
+- Landmark navigation: Verify sufficient landmarks for efficient screen reader navigation
+- Heading navigation: Check heading structure supports quick page scanning
+- List navigation: Confirm grouped content uses proper list markup for screen reader list navigation
+- Table navigation: Verify row/column headers support efficient table reading
+
+**6. ADVANCED VALIDATION PATTERNS**
+Assess complex accessibility patterns:
+
+**ARIA Pattern Compliance:**
+- WAI-ARIA Authoring Practices: Verify implementation follows established widget patterns
+- Required properties: Check all required ARIA properties are present for chosen roles
+- Prohibited attributes: Identify invalid ARIA attribute combinations
+- Pattern completeness: Assess full implementation of chosen ARIA design patterns
+
+**Error Prevention and Recovery:**
+- Input validation: Verify clear requirements and format expectations in markup
+- Error identification: Check specific, actionable error descriptions
+- Error location: Confirm errors are properly associated with problematic fields
+- Recovery guidance: Assess clear instructions for fixing validation errors
+
+**7. SCREEN READER CRITICAL COMPONENTS**
+Prioritize analysis of components that directly impact screen reader navigation and interaction:
+**7. SCREEN READER CRITICAL COMPONENTS**
+Prioritize analysis of components that directly impact screen reader navigation and interaction:
+
+- Expandable/Collapsible Content (aria-expanded, aria-controls implementation)
+- Dropdown Menus (role="menu", aria-haspopup, aria-expanded coordination)
+- Tab Panels (role="tablist", aria-selected, aria-controls relationships)
+- Modal Dialogs (role="dialog", aria-modal, focus containment structure)
+- Autocomplete/Suggestion Lists (aria-autocomplete, aria-activedescendant patterns)
+- Error Handling (aria-invalid, aria-describedby error associations)
+- Dynamic Content Updates (aria-live regions and announcement patterns)
+- Keyboard Navigation indicators (focus management, logical tabindex usage)
+- Carousels/Sliders (aria-roledescription, aria-live implementation)
+- Tree Views (role="tree", aria-expanded, aria-selected hierarchical structure)
+- Data Tables (proper header associations, scope attributes, caption usage)
+- Sortable Tables (aria-sort attributes and state management)
+- Tooltips/Popovers (role="tooltip", aria-describedby relationships)
+- Context Menus (role="menu", keyboard navigation structure)
+- Validation Messages (aria-describedby associations, error announcements)
+- Live Regions (aria-live, aria-atomic configuration)
+
+**8. COMPREHENSIVE ISSUE IDENTIFICATION**
+For each identified component, examine ALL of these screen reader compatibility factors:
+
+**Semantic Foundation:**
+- Proper element choice (button vs div, a vs button, h1-h6 vs div)
+- Required landmark elements (main, nav, header, footer presence)
+- Heading hierarchy completeness and logical structure
+- List markup for grouped content instead of generic divs
+- Form label associations and fieldset grouping
+- Table header relationships and caption information
+
+**ARIA Implementation:**
+- Correct role assignments for custom components
+- Complete state management (expanded, selected, checked, pressed)
+- Proper descriptive properties (label, labelledby, describedby)
+- Accurate relationship properties (controls, owns, activedescendant)
+- Appropriate presentation properties (hidden, readonly, disabled)
+- Live region configuration for dynamic content
+
+**Content Quality:**
+- Descriptive alternative text for images and complex content
+- Clear, contextual link and button text
+- Proper language declaration for all content
+- Icon accessibility (functional vs decorative treatment)
+- Form input context and requirements
+
+**Navigation Structure:**
+- Logical tab order following visual layout
+- Skip link presence and proper targeting
+- Focus management structure in complex components
+- Keyboard navigation patterns for custom widgets
+
+**Dynamic Behavior Evidence:**
+${hasBeforeAfter ? `- State transition accuracy between before/after snapshots
+- Visibility coordination with ARIA state changes
+- Focus management structure in modal/dialog interactions
+- Content update patterns in live regions
+- Error state management during form validation` : `- Static structure supporting proper dynamic behavior
+- ARIA attributes configured for state management
+- Focus management container structure
+- Live region preparation for content updates`}
+
+**2. ARIA Implementation Analysis**: For each identified component, examine CRITICAL screen reader attributes:
    - **Roles**: Ensure proper semantic roles (button, menu, dialog, etc.)
    - **States**: Check aria-expanded, aria-selected, aria-checked, aria-pressed
    - **Properties**: Verify aria-label, aria-labelledby, aria-describedby
@@ -265,6 +458,20 @@ ${hasBeforeAfter ? `3. **Screen Reader State Changes**: Since both before and af
    - Inadequate labeling that leaves screen reader users without context
    - Failed ARIA attribute updates during state changes
    - Relevant Axe violations that impact screen reader functionality
+
+**COMPREHENSIVE ANALYSIS REQUIREMENTS:**
+Based on the above comprehensive framework, identify ALL accessibility issues that can be determined from the HTML markup and Axe results. This includes:
+- Semantic HTML foundation problems (missing landmarks, improper heading hierarchy, incorrect element usage)
+- ARIA implementation gaps (missing attributes, incorrect values, broken relationships)  
+- Content accessibility issues (poor alt text, generic link text, missing language attributes)
+- Navigation structure problems (poor tab order, missing skip links, inadequate focus management)
+- Dynamic interaction issues (when before/after comparison is available)
+
+**ANALYSIS PRIORITY:**
+1. **Critical Issues** (Block task completion): Missing form labels, keyboard traps, missing focus management, broken ARIA relationships, missing required landmarks
+2. **Serious Issues** (Significantly impair experience): Poor heading hierarchy, inadequate alt text, missing live regions, incorrect ARIA states, poor error handling  
+3. **Moderate Issues** (Create barriers): Generic link text, missing skip links, suboptimal ARIA patterns, missing language declarations
+4. **Minor Issues** (Polish and optimization): Redundant ARIA attributes, non-essential semantic improvements
 
 **Output Format:**
 Respond with a JSON object with this exact structure:
