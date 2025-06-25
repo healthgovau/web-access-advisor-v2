@@ -72,7 +72,7 @@ export class GeminiService {
       // Calculate original vs filtered sizes for logging
       const originalHtmlSize = htmlContent.length;
       const originalAxeSize = JSON.stringify(axeResults).length;
-      
+
       // Create debug log with filtering statistics
       const debugLog: LLMDebugLog = {
         type: 'component',
@@ -144,9 +144,9 @@ export class GeminiService {
 
       // Calculate original vs filtered sizes for logging
       const originalHtmlSize = snapshots.reduce((total, snap) => total + snap.html.length, 0);
-      const originalAxeSize = snapshots.reduce((total, snap) => 
+      const originalAxeSize = snapshots.reduce((total, snap) =>
         total + JSON.stringify(snap.axeResults || []).length, 0);
-      
+
       // Create debug log with filtering statistics
       const debugLog: LLMDebugLog = {
         type: 'flow',
@@ -216,7 +216,8 @@ This analysis targets compatibility with leading screen reader technologies incl
 You are analyzing HTML markup and Axe accessibility test results to assess screen reader compatibility. You do NOT have access to actual screen reader testing, user behavior, or live interaction data. Your analysis must be based ENTIRELY on code structure, semantic markup, ARIA implementation, and static accessibility patterns that can be determined from HTML snapshots and Axe analysis summaries.
 
 **PRIMARY OBJECTIVE: COMPREHENSIVE SCREEN READER CODE ANALYSIS**
-Identify and address all barriers in the code that prevent the entire page—including structure, content, and interactive elements—from being fully accessible to screen reader users. Focus on ARIA usage, semantic HTML, and best practices for assistive technology support, based solely on analysis of the provided code and accessibility reports.
+Identify and address all barriers in the code that prevent the entire page — including structure, content, and interactive elements — from being fully accessible to screen reader users. Focus on ARIA usage, semantic HTML, and best practices for assistive technology support, based solely on analysis of the provided code and accessibility reports.
+
 **Context:**
 - URL: ${context.url}
 - User Action: ${context.action}
@@ -371,9 +372,6 @@ Assess complex accessibility patterns:
 
 **7. SCREEN READER CRITICAL COMPONENTS**
 Prioritize analysis of components that directly impact screen reader navigation and interaction:
-**7. SCREEN READER CRITICAL COMPONENTS**
-Prioritize analysis of components that directly impact screen reader navigation and interaction:
-
 - Expandable/Collapsible Content (aria-expanded, aria-controls implementation)
 - Dropdown Menus (role="menu", aria-haspopup, aria-expanded coordination)
 - Tab Panels (role="tablist", aria-selected, aria-controls relationships)
@@ -441,13 +439,13 @@ ${hasBeforeAfter ? `- State transition accuracy between before/after snapshots
    - **Live Regions**: Validate aria-live, aria-atomic for dynamic content
    - **Keyboard Support**: Ensure proper tabindex and focus management
 
-${hasBeforeAfter ? `3. **Screen Reader State Changes**: Since both before and after snapshots are provided, focus on how ARIA attributes change during interaction from a screen reader perspective:
+${hasBeforeAfter ? `**3. Screen Reader State Changes**: Since both before and after snapshots are provided, focus on how ARIA attributes change during interaction from a screen reader perspective:
    - Does aria-expanded correctly update when dropdowns open/close?
    - Do aria-selected attributes change when tabs are activated?
    - Are aria-live regions properly announcing dynamic content changes?
-   - Is focus management working correctly for screen readers?` : `3. **Screen Reader State Analysis**: Analyze the component's ARIA implementation for screen reader compatibility in the current state.`}
+   - Is focus management working correctly for screen readers?` : `**3. Screen Reader State Analysis**: Analyze the component's ARIA implementation for screen reader compatibility in the current state.`}
 
-4. **Screen Reader Accessibility Issues**: Identify problems that specifically impact screen reader users:
+**4. Screen Reader Accessibility Issues**: Identify problems that specifically impact screen reader users:
    - Missing or incorrect ARIA roles that prevent proper component identification
    - Missing ARIA states/properties that hide component functionality from screen readers
    - Incorrect ARIA relationships that break screen reader navigation
@@ -729,7 +727,7 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
       console.log(`   URL: ${context.url}`);
       console.log(`   Reasons: ${authResult.reasons.join(', ')}`);
     }
-    
+
     return authResult.isAuthStep;
   }
 
@@ -741,12 +739,12 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
     const groups: Record<string, any[]> = {
       main: snapshots
     };
-    
+
     // If manifest has flow information, use it; otherwise default to single flow
     if (manifest?.flows) {
       return manifest.flows;
     }
-    
+
     return groups;
   }
 
@@ -756,11 +754,11 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
    */
   private truncateHtml(html: string): string {
     console.log(`Original HTML size: ${html.length} chars`);
-    
+
     // First, filter out unnecessary content
     const filtered = this.filterHtmlForAnalysis(html);
     console.log(`Filtered HTML size: ${filtered.length} chars (removed ${html.length - filtered.length} chars)`);
-    
+
     // Configurable HTML size limit via environment variable (default 512KB)
     const maxLength = parseInt(process.env.MAX_SCREEN_READER_HTML_SIZE || '524288'); // 512KB default
 
@@ -788,7 +786,7 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
   private filterHtmlForAnalysis(html: string): string {
     // Check environment variable to enable/disable filtering
     const enableFiltering = process.env.FILTER_AUTH_CONTENT !== 'false';
-    
+
     if (!enableFiltering) {
       console.log('🔧 Auth content filtering disabled via FILTER_AUTH_CONTENT=false');
       return html;
@@ -819,7 +817,7 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
         // Keep essential head elements and body content
         const headMatch = filtered.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
         const essentialHead = headMatch ? this.extractEssentialHeadContent(headMatch[1]) : '';
-        
+
         const result = `<!DOCTYPE html>
 <html${this.extractHtmlAttributes(filtered)}>
 <head>
@@ -829,7 +827,7 @@ ${essentialHead}
 ${bodyMatch[1]}
 </body>
 </html>`;
-        
+
         console.log(`Extracted body content: ${result.length} chars`);
         return result;
       }
@@ -847,23 +845,23 @@ ${bodyMatch[1]}
    */
   private extractEssentialHeadContent(headContent: string): string {
     const essential = [];
-    
+
     // Keep charset
     const charsetMatch = headContent.match(/<meta[^>]*charset[^>]*>/i);
     if (charsetMatch) essential.push(charsetMatch[0]);
-    
+
     // Keep viewport
     const viewportMatch = headContent.match(/<meta[^>]*viewport[^>]*>/i);
     if (viewportMatch) essential.push(viewportMatch[0]);
-    
+
     // Keep title
     const titleMatch = headContent.match(/<title[^>]*>.*?<\/title>/i);
     if (titleMatch) essential.push(titleMatch[0]);
-    
+
     // Keep essential meta tags (og:, description, etc.)
     const metaMatches = headContent.match(/<meta[^>]*(?:og:|twitter:|description|keywords)[^>]*>/gi);
     if (metaMatches) essential.push(...metaMatches.slice(0, 5)); // Limit to 5 essential meta tags
-    
+
     return essential.join('\n');
   }
 
@@ -1216,7 +1214,7 @@ Remember:
   private filterAxeResultsForAnalysis(axeResults: any[]): any {
     // Check environment variable to enable/disable filtering
     const enableFiltering = process.env.FILTER_AUTH_CONTENT !== 'false';
-    
+
     if (!enableFiltering) {
       console.log('🔧 Auth content filtering disabled via FILTER_AUTH_CONTENT=false');
       return axeResults;
@@ -1269,7 +1267,7 @@ Remember:
 
     const filteredSize = JSON.stringify(filtered).length;
     console.log(`Filtered axe results: ${filteredSize} chars (reduced by ${JSON.stringify(axeResults).length - filteredSize} chars)`);
-    
+
     return filtered;
   }
 
