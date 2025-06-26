@@ -214,3 +214,42 @@ export interface ReplayOptions extends AnalysisOptions {
   startFromStep?: number;
   endAtStep?: number;
 }
+
+export interface AnalysisBatch {
+  batchId: string;
+  snapshots: SnapshotData[];
+  flowType: 'main_flow' | 'modal_flow' | 'form_flow' | 'navigation_flow' | 'sub_flow';
+  tokenCount: number;
+  batchIndex: number;
+  totalBatches: number;
+}
+
+export interface ProgressiveContext {
+  previousBatchSummaries: BatchSummary[];
+  currentBatchMetadata: {
+    batchId: string;
+    flowType: string;
+    stepRange: { start: number; end: number };
+    batchIndex: number;
+    totalBatches: number;
+  };
+  overallContext: {
+    sessionId: string;
+    url: string;
+    totalSteps: number;
+    flowTypes: string[];
+  };
+}
+
+export interface BatchSummary {
+  batchId: string;
+  flowType: string;
+  stepRange: { start: number; end: number };
+  keyFindings: string[];
+  criticalIssues: ComponentAccessibilityIssue[];
+  contextForNext: {
+    flowState: string;
+    uiState: string;
+    accessibilityPattern: string;
+  };
+}

@@ -110,6 +110,7 @@ export class GeminiService {
    * @param snapshots - Array of snapshots representing the interaction flow
    * @param manifest - Session manifest with parent-step relationships 
    * @param context - Overall session context
+   * @param progressiveContext - Optional progressive context from previous batches
    * @returns Structured accessibility analysis
    */
   async analyzeAccessibilityFlow(
@@ -119,6 +120,22 @@ export class GeminiService {
       url: string;
       sessionId: string;
       totalSteps: number;
+    },
+    progressiveContext?: {
+      previousBatchSummaries: any[];
+      currentBatchMetadata: {
+        batchId: string;
+        flowType: string;
+        stepRange: { start: number; end: number };
+        batchIndex: number;
+        totalBatches: number;
+      };
+      overallContext: {
+        sessionId: string;
+        url: string;
+        totalSteps: number;
+        flowTypes: string[];
+      };
     }
   ): Promise<GeminiAnalysis> {
     try {
@@ -130,7 +147,7 @@ export class GeminiService {
 
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
 
-      const prompt = this.buildFlowAnalysisPrompt(filteredSnapshots, manifest, context);
+      const prompt = this.buildFlowAnalysisPrompt(filteredSnapshots, manifest, context, progressiveContext);
 
       // Set up timeout for Gemini API call (3 minutes for complex flow analysis)
       const geminiPromise = model.generateContent(prompt);
@@ -533,16 +550,65 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
   private buildFlowAnalysisPrompt(
     snapshots: any[],
     manifest: any,
-    context: { url: string; sessionId: string; totalSteps: number }
+    context: { url: string; sessionId: string; totalSteps: number },
+    progressiveContext?: {
+      previousBatchSummaries: any[];
+      currentBatchMetadata: {
+        batchId: string;
+        flowType: string;
+        stepRange: { start: number; end: number };
+        batchIndex: number;
+        totalBatches: number;
+      };
+      overallContext: {
+        sessionId: string;
+        url: string;
+        totalSteps: number;
+        flowTypes: string[];
+      };
+    }
   ): string {
     // Group snapshots by flow context
     const flowGroups = this.groupSnapshotsByFlow(snapshots, manifest);
-    return `
-Your task is to analyze a complete user interaction flow consisting of ${context.totalSteps} steps captured during accessibility testing, with a PRIMARY FOCUS on screen reader (ARIA) accessibility and assistive technology compatibility. This analysis ensures that interaction sequences work correctly for screen reader users through proper ARIA implementation and state management.
+    
+    // Build progressive context section
+    const progressiveContextSection = progressiveContext ? `
+
+**PROGRESSIVE ANALYSIS CONTEXT:**
+This is batch ${progressiveContext.currentBatchMetadata.batchIndex + 1} of ${progressiveContext.currentBatchMetadata.totalBatches} in a hierarchical batching approach.
+
+**Current Batch:**
+- Batch ID: ${progressiveContext.currentBatchMetadata.batchId}
+- Flow Type: ${progressiveContext.currentBatchMetadata.flowType}
+- Step Range: ${progressiveContext.currentBatchMetadata.stepRange.start}-${progressiveContext.currentBatchMetadata.stepRange.end}
+- Analyzing ${snapshots.length} snapshots from this flow segment
+
+**Previous Batch Context:**
+${progressiveContext.previousBatchSummaries.length > 0 
+  ? progressiveContext.previousBatchSummaries.map(summary => `
+- Batch: ${summary.flowType} (steps ${summary.stepRange.start}-${summary.stepRange.end})
+  Key Findings: ${summary.keyFindings.join(', ')}
+  Critical Issues: ${summary.criticalIssues.length} issues
+  Context: ${summary.contextForNext.flowState} | ${summary.contextForNext.accessibilityPattern}`).join('\n')
+  : 'This is the first batch - no previous context available'}
+
+**Overall Session Context:**
+- Total Steps Across All Batches: ${progressiveContext.overallContext.totalSteps}
+- Flow Types in Session: ${progressiveContext.overallContext.flowTypes.join(', ')}
+- Current Analysis Focus: ${progressiveContext.currentBatchMetadata.flowType} flow patterns
+
+**Cross-Batch Considerations:**
+- Build upon findings from previous batches
+- Consider how this flow segment connects to previous interactions
+- Identify patterns that span multiple batches
+- Note accessibility state transitions that may affect subsequent flows
+` : '';
+
+    return `Your task is to analyze a user interaction flow${progressiveContext ? ` segment (batch ${progressiveContext.currentBatchMetadata.batchIndex + 1}/${progressiveContext.currentBatchMetadata.totalBatches})` : ''} consisting of ${context.totalSteps} steps captured during accessibility testing, with a PRIMARY FOCUS on screen reader (ARIA) accessibility and assistive technology compatibility. This analysis ensures that interaction sequences work correctly for screen reader users through proper ARIA implementation and state management.
 
 **PRIMARY OBJECTIVE: SCREEN READER ACCESSIBILITY FLOW ANALYSIS**
 The main requirement is to ensure the entire interaction flow maintains proper screen reader accessibility, with correct ARIA state transitions, focus management, and assistive technology announcements throughout the user journey.
-
+${progressiveContextSection}
 **Session Context:**
 - URL: ${context.url}
 - Session ID: ${context.sessionId}
@@ -606,10 +672,13 @@ Respond with a JSON object with this exact structure:
   "summary": "Overview of accessibility findings across the interaction flow",
   "components": [
     {
-      "componentName": "Specific component name (e.g., Search Button, Navigation Menu)",      "issue": "Clear description of the accessibility issue - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
-      "explanation": "Detailed explanation of why this is a problem - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)","relevantHtml": "EXACT HTML element(s) with the accessibility issue - show ONLY the specific problematic element, not <html>, <body>, or unrelated parent containers",
+      "componentName": "Specific component name (e.g., Search Button, Navigation Menu)",      
+      "issue": "Clear description of the accessibility issue - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
+      "explanation": "Detailed explanation of why this is a problem - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
+      "relevantHtml": "EXACT HTML element(s) with the accessibility issue - show ONLY the specific problematic element, not <html>, <body>, or unrelated parent containers",
       "correctedCode": "Fixed HTML showing the exact same element(s) with proper accessibility attributes",
-      "codeChangeSummary": "Brief summary of the fix (e.g., 'Added aria-label to button', 'Changed div to semantic heading')",      "impact": "critical|serious|moderate|minor",
+      "codeChangeSummary": "Brief summary of the fix (e.g., 'Added aria-label to button', 'Changed div to semantic heading')",      
+      "impact": "critical|serious|moderate|minor",
       "wcagRule": "WCAG 2.1 guideline reference (e.g., 1.3.1 Info and Relationships)",
       "wcagUrl": "Complete URL to the specific WCAG Understanding document (e.g., 'https://www.w3.org/WAI/WCAG21/Understanding/info-and-relationships.html')",
       "selector": "CSS selector to identify the problematic element (e.g., '.nav-menu button', '#search-input', 'main .content h1')"
@@ -648,40 +717,8 @@ Respond with a JSON object with this exact structure:
 - For missing elements (like missing h1 or main), provide a selector for where the element should be added
 - Examples: ".header button", "#search-form input", "nav .menu-item", ".content > div:first-child", "body > .page-wrapper"
 - Use classes, IDs, and structural selectors to create precise, targetable selectors
-- Provide concrete HTML fixes when possible
-- Focus on real accessibility barriers found in the captured snapshots
-- If no significant issues are found, return an empty components array
 
-Example of good relevantHtml vs correctedCode pairing:
-BAD: relevantHtml shows <html> but issue is missing heading
-GOOD: relevantHtml shows <div class="content"> and correctedCode shows <div class="content"><h1>Page Title</h1>
-
-BAD: relevantHtml shows <html> but issue is missing main landmark  
-GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode shows <body><main><div class="page-content">
-
-**CRITICAL: relevantHtml MUST BE ACTUAL HTML CODE:**
-- NEVER provide text content like "Skip to main content" or "New Aged Care Act"
-- ALWAYS provide HTML markup with < > angle brackets
-- Example GOOD: <button class="nav-btn">Skip to content</button>
-- Example BAD: Skip to main content
-- If you cannot identify specific HTML, leave relevantHtml empty
-- The relevantHtml field is for CODE ONLY, not page text content
-
-**Important**: Report ONLY components with identified screen reader accessibility issues. Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
-
-**OUTPUT FORMAT REQUIREMENTS:**
-- RETURN ONLY VALID JSON with no additional text before or after
-- Do NOT use emoji, Unicode symbols, or special characters in any output text
-- Use plain ASCII text only for maximum compatibility with PDF export systems
-- Each component must have a specific, non-generic name
-- Issues must be actionable and specific
-- Start your response with { and end with }
-- Do not include any markdown formatting, code blocks, or explanatory text
-
-**SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
-
-**CRITICAL: Return ONLY the JSON object - no other text.**
-`;
+**CRITICAL: Return ONLY the JSON object - no other text.**`;
   }
 
   /**

@@ -19,7 +19,10 @@ import type {
   DOMChangeType,
   DOMChangeDetails,
   ActionGroup,
-  FlowStatistics
+  FlowStatistics,
+  AnalysisBatch,
+  ProgressiveContext,
+  BatchSummary
 } from './types.js';
 
 /**
@@ -1155,7 +1158,7 @@ export class AccessibilityAnalyzer {
     // Process each batch with progressive context
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
-      console.log(`🔄 Processing batch ${i + 1}/${batches.length}: ${batch.flowType} (${batch.snapshots.length} snapshots, ~${batch.tokenEstimate} tokens)`);
+      console.log(`🔄 Processing batch ${i + 1}/${batches.length}: ${batch.flowType} (${batch.snapshots.length} snapshots, ~${batch.tokenCount} tokens)`);
       
       onProgress?.('processing-with-ai', `Analyzing batch ${i + 1}/${batches.length}: ${batch.flowType}`, i + 1, batches.length, undefined);
 
@@ -1167,14 +1170,47 @@ export class AccessibilityAnalyzer {
           totalBatches: batches.length,
           flowType: batch.flowType,
           progressiveSummary: progressiveSummary || 'This is the first batch - no previous context available.',
-          batchDescription: batch.description
+          batchDescription: `${batch.flowType} flow analysis`
+        };
+
+        // Prepare progressive context for this batch
+        const progressiveContext: ProgressiveContext = {
+          previousBatchSummaries: batchResults.map(result => ({
+            batchId: `batch_${batchResults.indexOf(result)}`,
+            flowType: result.summary || 'unknown',
+            stepRange: { start: 1, end: 10 }, // Approximate - could be more precise
+            keyFindings: result.recommendations || [],
+            criticalIssues: result.components?.filter(c => c.impact === 'critical') || [],
+            contextForNext: {
+              flowState: 'analyzed',
+              uiState: 'default',
+              accessibilityPattern: result.components?.length ? 'issues_found' : 'clean'
+            }
+          })),
+          currentBatchMetadata: {
+            batchId: batch.batchId,
+            flowType: batch.flowType,
+            stepRange: { 
+              start: batch.snapshots[0]?.step || 1, 
+              end: batch.snapshots[batch.snapshots.length - 1]?.step || 1 
+            },
+            batchIndex: batch.batchIndex,
+            totalBatches: batch.totalBatches
+          },
+          overallContext: {
+            sessionId: sessionContext.sessionId,
+            url: sessionContext.url,
+            totalSteps: sessionContext.totalSteps,
+            flowTypes: batches.map(b => b.flowType)
+          }
         };
 
         // Call Gemini with current batch + progressive context
         const batchResult = await this.geminiService.analyzeAccessibilityFlow(
           batch.snapshots,
           manifest,
-          batchContext
+          batchContext,
+          progressiveContext
         );
 
         console.log(`✅ Batch ${i + 1} analysis completed:`, {
@@ -1225,8 +1261,7 @@ export class AccessibilityAnalyzer {
         allComponents,
         progressiveSummary,
         manifest,
-        sessionContext,
-        snapshots
+        sessionContext
       );
     } catch (error) {
       console.warn(`⚠️ Final consolidation failed, using batch results:`, error);
@@ -1293,13 +1328,33 @@ export class AccessibilityAnalyzer {
   private createAnalysisBatches(
     flowGroups: Array<{ flowType: string; description: string; snapshots: SnapshotData[]; tokenEstimate: number }>,
     maxTokensPerBatch: number
-  ): Array<{ flowType: string; description: string; snapshots: SnapshotData[]; tokenEstimate: number }> {
-    const batches: Array<{ flowType: string; description: string; snapshots: SnapshotData[]; tokenEstimate: number }> = [];
+  ): AnalysisBatch[] {
+    const batches: AnalysisBatch[] = [];
+    let globalBatchIndex = 0;
+
+    // Calculate total number of batches first for totalBatches field
+    let totalBatchCount = 0;
+    flowGroups.forEach(group => {
+      if (group.tokenEstimate <= maxTokensPerBatch) {
+        totalBatchCount++;
+      } else {
+        // Estimate how many batches this group will be split into
+        totalBatchCount += Math.ceil(group.tokenEstimate / maxTokensPerBatch);
+      }
+    });
 
     flowGroups.forEach(group => {
       if (group.tokenEstimate <= maxTokensPerBatch) {
         // Group fits in one batch
-        batches.push(group);
+        batches.push({
+          batchId: `${group.flowType}_batch_${globalBatchIndex}`,
+          snapshots: group.snapshots,
+          flowType: group.flowType as any, // Cast to match the expected union type
+          tokenCount: group.tokenEstimate,
+          batchIndex: globalBatchIndex,
+          totalBatches: totalBatchCount
+        });
+        globalBatchIndex++;
       } else {
         // Split group into multiple batches
         console.log(`📦 Splitting large ${group.flowType} group (${group.tokenEstimate} tokens) into smaller batches`);
@@ -1314,16 +1369,19 @@ export class AccessibilityAnalyzer {
           if (currentTokens + snapshotTokens > maxTokensPerBatch && currentBatch.length > 0) {
             // Create batch from current accumulation
             batches.push({
-              flowType: `${group.flowType}_part${batchNumber}`,
-              description: `${group.description} (Part ${batchNumber})`,
+              batchId: `${group.flowType}_part${batchNumber}_batch_${globalBatchIndex}`,
               snapshots: [...currentBatch],
-              tokenEstimate: currentTokens
+              flowType: group.flowType as any, // Cast to match the expected union type
+              tokenCount: currentTokens,
+              batchIndex: globalBatchIndex,
+              totalBatches: totalBatchCount
             });
             
             // Start new batch
             currentBatch = [snapshot];
             currentTokens = snapshotTokens;
             batchNumber++;
+            globalBatchIndex++;
           } else {
             currentBatch.push(snapshot);
             currentTokens += snapshotTokens;
@@ -1333,11 +1391,14 @@ export class AccessibilityAnalyzer {
         // Add final batch if it has content
         if (currentBatch.length > 0) {
           batches.push({
-            flowType: `${group.flowType}_part${batchNumber}`,
-            description: `${group.description} (Part ${batchNumber})`,
+            batchId: `${group.flowType}_part${batchNumber}_batch_${globalBatchIndex}`,
             snapshots: currentBatch,
-            tokenEstimate: currentTokens
+            flowType: group.flowType as any, // Cast to match the expected union type
+            tokenCount: currentTokens,
+            batchIndex: globalBatchIndex,
+            totalBatches: totalBatchCount
           });
+          globalBatchIndex++;
         }
       }
     });
@@ -1353,56 +1414,75 @@ export class AccessibilityAnalyzer {
     allComponents: any[],
     progressiveSummary: string,
     manifest: SessionManifest,
-    sessionContext: { url: string; sessionId: string; totalSteps: number },
-    snapshots: SnapshotData[]
+    sessionContext: { url: string; sessionId: string; totalSteps: number }
   ): Promise<GeminiAnalysis> {
     if (!this.geminiService) {
       throw new Error('Gemini service not available');
     }
 
-    // Create consolidated analysis request
-    const consolidationContext = {
-      ...sessionContext,
-      batchCount: batchResults.length,
-      totalComponents: allComponents.length,
-      progressiveSummary,
-      consolidationRequest: true
-    };
-
     console.log(`🔄 Consolidating ${batchResults.length} batch results with ${allComponents.length} total components`);
 
-    // For now, use the existing flow analysis method with all snapshots
-    // TODO: Add dedicated consolidation method to GeminiService
-    const finalAnalysis = await this.geminiService.analyzeAccessibilityFlow(
-      snapshots,
-      manifest,
-      sessionContext
-    );
-
-    // Enhance with cross-batch insights
-    if (finalAnalysis.components && allComponents.length > 0) {
-      // Merge unique components from batches
-      const componentMap = new Map();
-      
-      // Add batch components
-      allComponents.forEach(comp => {
-        const key = `${comp.componentName || comp.selector}-${comp.issue}`;
-        if (!componentMap.has(key)) {
-          componentMap.set(key, comp);
+    // Instead of re-analyzing all snapshots, create a lightweight consolidation
+    // This avoids token limit issues and focuses on cross-batch analysis
+    
+    // Deduplicate and merge components from all batches
+    const componentMap = new Map();
+    
+    // Add components from all batches, deduplicating by selector + issue
+    allComponents.forEach(comp => {
+      const key = `${comp.componentName || comp.selector}-${comp.issue}`;
+      if (!componentMap.has(key)) {
+        componentMap.set(key, comp);
+      } else {
+        // If duplicate found, merge details (prefer more complete data)
+        const existing = componentMap.get(key);
+        if (comp.explanation && comp.explanation.length > existing.explanation?.length) {
+          existing.explanation = comp.explanation;
         }
-      });
-      
-      // Add final analysis components
-      finalAnalysis.components.forEach(comp => {
-        const key = `${comp.componentName || comp.selector}-${comp.issue}`;
-        if (!componentMap.has(key)) {
-          componentMap.set(key, comp);
+        if (comp.correctedCode && comp.correctedCode.length > existing.correctedCode?.length) {
+          existing.correctedCode = comp.correctedCode;
         }
-      });
-      
-      finalAnalysis.components = Array.from(componentMap.values());
-    }
+      }
+    });
+    
+    const deduplicatedComponents = Array.from(componentMap.values());
+    
+    // Create consolidated summary from batch summaries
+    const batchSummaries = batchResults.map(result => result.summary).filter(Boolean);
+    const consolidatedSummary = batchSummaries.length > 0 
+      ? `Cross-batch accessibility analysis completed across ${batchResults.length} flow segments. Key findings: ${batchSummaries.join('. ')}`
+      : 'Hierarchical analysis completed with no significant issues found.';
+    
+    // Aggregate recommendations from all batches
+    const allRecommendations = batchResults.flatMap(result => result.recommendations || []);
+    const uniqueRecommendations = [...new Set(allRecommendations)];
+    
+    // Calculate overall score based on batch scores
+    const batchScores = batchResults.map(result => result.score).filter(score => typeof score === 'number');
+    const overallScore = batchScores.length > 0 
+      ? Math.round(batchScores.reduce((sum, score) => sum + score, 0) / batchScores.length)
+      : 100;
 
+    // Create final consolidated analysis without re-querying LLM
+    const finalAnalysis: GeminiAnalysis = {
+      summary: consolidatedSummary,
+      components: deduplicatedComponents,
+      recommendations: uniqueRecommendations,
+      score: overallScore,
+      debug: {
+        type: 'flow',
+        prompt: `Hierarchical consolidation: ${batchResults.length} batches processed`,
+        response: `Consolidated ${deduplicatedComponents.length} unique components from ${allComponents.length} total findings`,
+        promptSize: 0,
+        responseSize: consolidatedSummary.length,
+        htmlSize: 0,
+        axeResultsCount: 0,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    console.log(`✅ Consolidation completed: ${deduplicatedComponents.length} unique components, score: ${overallScore}`);
+    
     return finalAnalysis;
   }
 
