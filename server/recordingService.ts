@@ -144,13 +144,13 @@ export class BrowserRecordingService {
         window.recordClick(selector, text);
       });
 
-      // Record form inputs
-      document.addEventListener('input', (e) => {
+      // Record form inputs only when field loses focus (blur)
+      document.addEventListener('blur', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
           const selector = getSelector(e.target);
           window.recordInput(selector, e.target.value);
         }
-      });
+      }, true); // Use capture phase to ensure we catch blur events
 
       // Record select changes
       document.addEventListener('change', (e) => {
