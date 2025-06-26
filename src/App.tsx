@@ -140,10 +140,41 @@ const InfoModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onC
   );
 };
 
+// Toast component for bottom-left error notifications
+const Toast: React.FC<{
+  message: string;
+  id: string;
+  onDismiss: (id: string) => void;
+  type?: 'error' | 'info';
+}> = ({ message, id, onDismiss, type = 'error' }) => (
+  <div
+    className={`mb-4 ml-4 px-4 py-3 rounded shadow-lg flex items-start max-w-xs w-full bg-${type === 'error' ? 'red' : 'blue'}-700 text-white animate-fade-in`}
+    role="alert"
+    tabIndex={0}
+    aria-live="assertive"
+  >
+    <span className="mr-2 mt-0.5">
+      {type === 'error' ? (
+        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#fff2" /><path d="M12 8v4m0 4h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+      ) : (
+        <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#fff2" /><path d="M12 16h.01M12 8v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+      )}
+    </span>
+    <span className="flex-1 text-sm whitespace-pre-line">{message}</span>
+    <button
+      onClick={() => onDismiss(id)}
+      className="ml-3 text-white hover:text-gray-200 focus:outline-none"
+      aria-label="Dismiss notification"
+    >
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+    </button>
+  </div>
+);
+
 function App() {
   // Session mode state
   const [sessionMode, setSessionMode] = useState<'new' | 'load'>('new');
-  
+
   // Main application state
   const [state, setState] = useState<AppState>({
     mode: 'setup',
@@ -163,6 +194,8 @@ function App() {
   const [isExporting, setIsExporting] = useState(false);
   // Info modal state
   const [infoOpen, setInfoOpen] = useState(false);
+  // Toast state for error notifications
+  const [toasts, setToasts] = useState<{ id: string; message: string; type?: 'error' | 'info' }[]>([]);
 
   // Accessibility analysis hook
   const { handleAnalysisResult } = useAccessibilityAnalysis();
@@ -427,7 +460,7 @@ function App() {
   const handleLoadSession = async (sessionId: string) => {
     try {
       updateState({ loading: true, error: undefined });
-      updateProgress('preparing-analysis', 'Loading saved session');      const sessionData = await recordingApi.loadSavedSession(sessionId);
+      updateProgress('preparing-analysis', 'Loading saved session'); const sessionData = await recordingApi.loadSavedSession(sessionId);
 
       updateProgress('recording-complete', `Session loaded: ${sessionData.actionCount} actions`, undefined, 'Ready for accessibility analysis');
 
@@ -453,12 +486,12 @@ function App() {
     }
   };
 
-  // Clear error after 5 seconds
+  // Clear error after 30 seconds
   useEffect(() => {
     if (state.error) {
       const timer = setTimeout(() => {
         updateState({ error: undefined });
-      }, 5000);
+      }, 30000);
       return () => clearTimeout(timer);
     }
   }, [state.error]);
@@ -475,73 +508,100 @@ function App() {
       ...prev,
       progress: { stage, message, progress, details, error, snapshotCount }
     }));
-  }; return (
+  };
+
+  // Helper to add a toast
+  const addToast = (message: string, type: 'error' | 'info' = 'error') => {
+    setToasts((prev) => [
+      ...prev,
+      { id: `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`, message, type },
+    ]);
+  };
+  // Helper to dismiss a toast
+  const dismissToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Show toast on error (including LLM failures)
+  useEffect(() => {
+    if (state.error) {
+      addToast(state.error, 'error');
+    }
+  }, [state.error]);
+
+  return (
     <QueryProvider>
-      <div className="min-h-screen">        <header className="bg-white">
-        <div className="flex items-center justify-between">
-          <div className="text-left">
-            <h1 className="text-3xl font-bold text-brand-dark">
-              Web Access Advisor <span className="text-xl font-normal text-orange-600 bg-orange-100 px-2 py-1 rounded-md">alpha</span>
-            </h1>
-            <p className="text-base text-slate mt-1">
-              AI-powered accessibility testing and analysis
-            </p>
-          </div>
-          <div className="text-base text-slate">
-            Service Mode: <span className="font-medium capitalize">{state.mode}</span>
-          </div>
+      <div className="min-h-screen">
+        {/* Toast container - bottom left */}
+        <div className="fixed bottom-0 left-0 z-50 flex flex-col items-start pointer-events-none">
+          {toasts.map((toast) => (
+            <Toast key={toast.id} {...toast} onDismiss={dismissToast} />
+          ))}
         </div>
-      </header>        <main className="mt-8">
+        <header className="bg-white">
+          <div className="flex items-center justify-between">
+            <div className="text-left">
+              <h1 className="text-3xl font-bold text-brand-dark">
+                Web Access Advisor <span className="text-xl font-normal text-orange-600 bg-orange-100 px-2 py-1 rounded-md">alpha</span>
+              </h1>
+              <p className="text-base text-slate mt-1">
+                AI-powered accessibility testing and analysis
+              </p>
+            </div>
+            <div className="text-base text-slate">
+              Service Mode: <span className="font-medium capitalize">{state.mode}</span>
+            </div>
+          </div>
+        </header>        <main className="mt-8">
           <div className="space-y-6">          {/* Session Mode - Always visible */}
-          {state.mode === 'setup' || (state.mode === 'results' && sessionMode === 'load' && !state.analysisResult) ? (
-            // Interactive session mode during setup or when in results mode with loaded session (before analysis)
-            <>
-              <SessionModeToggle
-                mode={sessionMode}
-                onModeChange={handleSessionModeChange}
-                disabled={state.loading}
-              />
-              
-              {sessionMode === 'new' ? (
-                <URLInput
-                  url={state.url}
-                  onUrlChange={handleUrlChange}
-                  onNavigate={handleNavigateAndRecord}
-                  isLoading={state.loading}
+            {state.mode === 'setup' || (state.mode === 'results' && sessionMode === 'load' && !state.analysisResult) ? (
+              // Interactive session mode during setup or when in results mode with loaded session (before analysis)
+              <>
+                <SessionModeToggle
+                  mode={sessionMode}
+                  onModeChange={handleSessionModeChange}
+                  disabled={state.loading}
                 />
-              ) : (
-                <SessionSelector
-                  onSessionSelect={handleLoadSession}
-                  isLoading={state.loading}
-                />
-              )}
-            </>
-          ) : state.mode === 'analyzing' || (state.mode === 'results' && state.analysisResult) ? (
-            // Read-only session mode indicator during analysis or when analysis is complete
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center space-x-3 flex-wrap">
-                  <span className="text-sm font-bold text-gray-700">Session:</span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    sessionMode === 'new' 
-                      ? 'bg-blue-100 text-blue-800' 
+
+                {sessionMode === 'new' ? (
+                  <URLInput
+                    url={state.url}
+                    onUrlChange={handleUrlChange}
+                    onNavigate={handleNavigateAndRecord}
+                    isLoading={state.loading}
+                  />
+                ) : (
+                  <SessionSelector
+                    onSessionSelect={handleLoadSession}
+                    isLoading={state.loading}
+                  />
+                )}
+              </>
+            ) : state.mode === 'analyzing' || (state.mode === 'results' && state.analysisResult) ? (
+              // Read-only session mode indicator during analysis or when analysis is complete
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center space-x-3 flex-wrap">
+                    <span className="text-sm font-bold text-gray-700">Session:</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${sessionMode === 'new'
+                      ? 'bg-blue-100 text-blue-800'
                       : 'bg-green-100 text-green-800'
-                  }`}>
-                    {sessionMode === 'new' ? 'New Recording' : 'Loaded Session'}
-                  </span>                  {state.sessionId && (
-                    <span className="text-sm text-gray-600 font-mono">
-                      <span className="font-bold">ID:</span> {state.sessionId}
-                    </span>
-                  )}
-                  {state.url && (
-                    <span className="text-sm text-gray-600">
-                      <span className="font-bold">Start URL:</span> {state.url}
-                    </span>
-                  )}
+                      }`}>
+                      {sessionMode === 'new' ? 'New Recording' : 'Loaded Session'}
+                    </span>                  {state.sessionId && (
+                      <span className="text-sm text-gray-600 font-mono">
+                        <span className="font-bold">ID:</span> {state.sessionId}
+                      </span>
+                    )}
+                    {state.url && (
+                      <span className="text-sm text-gray-600">
+                        <span className="font-bold">Start URL:</span> {state.url}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : null}{/* Three-Phase Status - Always visible */}
+            ) : null}{/* Three-Phase Status - Always visible */}
             <ThreePhaseStatus
               currentStage={state.progress.stage}
               error={state.progress.error}
@@ -641,9 +701,11 @@ function App() {
                             </span>
                           </button>
                         </div>
-                      </div>                    </div>                    {/* HR separator to emphasize master header - full width */}
+                      </div>
+                    </div>
+                    {/* HR separator to emphasize master header - full width */}
                     <hr className="border-gray-200" />
-                    
+
                     <div className="px-6 pb-6 pt-6">
                       <div ref={analysisResultsRef}>
                         <AnalysisResults
