@@ -132,6 +132,8 @@ interface AxeResultsProps {
   manifest?: SessionManifest;
 }
 
+
+
 const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [severityFilters, setSeverityFilters] = useState<Record<string, boolean>>({
@@ -210,7 +212,8 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
   };
 
   if (axeResults.length === 0) {
-    return (      <details className="mt-6 border-t border-gray-200 pt-6">
+    return (
+      <details className="mt-6 border-t border-gray-200 pt-6">
         <summary className="cursor-pointer flex items-center justify-center">
           <h4 className="text-lg font-medium text-gray-900 text-center">
             Axe Accessibility Issues
@@ -226,17 +229,21 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
         </div>
       </details>
     );
-  }  return (    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card -mx-6">
+  }
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card -mx-6">
       <div className="flex items-center justify-center py-5 px-4 relative">
         <h2 className="text-xl font-medium text-gray-900 text-center">
           Axe Accessibility Issues ({filteredViolations.length})
-        </h2><button
+        </h2>
+        <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="text-base text-slate hover:text-neutral-black underline absolute right-4"
         >
           {isExpanded ? 'Collapse' : 'Expand'}
         </button>
-      </div>{isExpanded && (
+      </div>
+      {isExpanded && (
         <div className="p-3 space-y-3">
           {/* Issue Count Summary - matching main analysis section styling */}
           {(() => {

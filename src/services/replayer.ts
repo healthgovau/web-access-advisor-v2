@@ -23,7 +23,7 @@ export const replayWithSnapshots = async (actions, options = {}) => {
     // Browser storage - simplified for frontend use
     
     const snapshots = [];
-    let browser, context, page;
+    let browser: any, context: any, page: any;
 
     try {
       // TODO: Initialize Playwright browser for replay
@@ -75,7 +75,7 @@ export const replayWithSnapshots = async (actions, options = {}) => {
 
     } finally {
       // Clean up browser resources
-      if (browser) {
+      if (browser && typeof browser.close === 'function') {
         await browser.close();
       }
     }

@@ -19,6 +19,127 @@ import * as recordingApi from './services/recordingApi';
 import type { AppState, ProgressStage } from './types';
 import './App.css';
 
+const InfoIcon: React.FC<{ onClick: () => void; label?: string }> = ({ onClick, label }) => (
+  <button
+    type="button"
+    aria-label={label || 'Show accessibility analysis information'}
+    onClick={onClick}
+    className="mr-3 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 rounded-full transition-colors"
+  >
+    <svg className="w-5 h-5 text-gray-500 hover:text-gray-700" fill="currentColor" viewBox="0 0 20 20">
+      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+    </svg>
+  </button>
+);
+
+const InfoModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="accessibility-info-title"
+    >
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 id="accessibility-info-title" className="text-xl font-semibold text-gray-900 text-left">
+            Accessibility Analysis Results: Information
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 rounded p-1"
+            aria-label="Close information dialog"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24">
+              <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-6 text-left">
+          <div className="space-y-8 text-gray-700 max-w-none">
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 text-left">What do the different analysis modes do?</h3>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>
+                  <span className="font-semibold text-gray-900">Axe (Automated Testing):</span>
+                  <span className="block text-gray-600 leading-relaxed">
+                    An automated accessibility engine that scans the DOM structure to detect common WCAG violations. It checks for issues like missing alt text, poor color contrast, improper heading structure, form labeling problems, and ARIA implementation errors. Fast and reliable for catching obvious accessibility barriers.
+                  </span>
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">LLM/AI Analysis:</span>
+                  <span className="block text-gray-600 leading-relaxed">
+                    Uses a large language model to analyze screenshots and DOM structure with human-like understanding. Provides contextual insights, identifies complex usability issues, suggests specific improvements, and can spot patterns that automated tools miss. Offers explanations and recommendations in natural language.
+                  </span>
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Replay/Interaction Testing:</span>
+                  <span className="block text-gray-600 leading-relaxed">
+                    Replays your recorded user interactions to test dynamic accessibility features. Checks for focus trap issues in modals, keyboard navigation problems, proper focus management, and interactive element accessibility. Captures the user experience across your entire workflow.
+                  </span>
+                </li>
+              </ul>
+            </section>
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 text-left">Important limitations and considerations</h3>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>
+                  <span className="font-semibold text-gray-900">AI/LLM Limitations:</span>
+                  <span className="block text-gray-600 leading-relaxed">
+                    Language models can make mistakes, hallucinate issues, or miss subtle problems. Their analysis is not exhaustive and should never be considered a substitute for expert human review or real user testing.
+                  </span>
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Educational Purpose:</span>
+                  <span className="block text-gray-600 leading-relaxed">
+                    This tool is designed to help you learn about accessibility and identify potential issues. It does not guarantee WCAG compliance or replace professional accessibility audits.
+                  </span>
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Automated Testing Limitations:</span>
+                  <span className="block text-gray-600 leading-relaxed">
+                    Automated tools can only detect a subset of accessibility issues. Many barriers require human judgment, context understanding, and real user experience to identify.
+                  </span>
+                </li>
+              </ul>
+            </section>
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 text-left">How to get the most value from these results</h3>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>
+                  <span className="font-semibold text-gray-900">Review All Reports Together:</span>
+                  <span className="block text-gray-600 leading-relaxed">
+                    Each analysis method (Axe, LLM, Replay) catches different types of issues. Use them in combination for a more complete picture. Cross-reference findings and prioritize issues that appear in multiple reports.
+                  </span>
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Run Multiple Times:</span>
+                  <span className="block text-gray-600 leading-relaxed">
+                    Run the analysis several times, especially for dynamic content. LLM analysis can vary between runs, and different user flows may reveal different issues. Test various scenarios and user paths.
+                  </span>
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Essential: Real User Testing:</span>
+                  <span className="block text-gray-600 leading-relaxed">
+                    <span className="font-bold">Always conduct testing with people with disabilities.</span> No automated tool or AI can replace the insights from users who actually rely on assistive technologies. Their lived experience will reveal issues and solutions that no algorithm can detect.
+                  </span>
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Use as Learning Tool:</span>
+                  <span className="block text-gray-600 leading-relaxed">
+                    Treat this analysis as a starting point for learning about accessibility. Research the issues found, understand the underlying principles, and gradually build your accessibility knowledge and awareness.
+                  </span>
+                </li>
+              </ul>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   // Session mode state
   const [sessionMode, setSessionMode] = useState<'new' | 'load'>('new');
@@ -40,6 +161,8 @@ function App() {
   const analysisResultsRef = useRef<HTMLDivElement | null>(null);
   // PDF export state
   const [isExporting, setIsExporting] = useState(false);
+  // Info modal state
+  const [infoOpen, setInfoOpen] = useState(false);
 
   // Accessibility analysis hook
   const { handleAnalysisResult } = useAccessibilityAnalysis();
@@ -499,18 +622,21 @@ function App() {
                 {state.analysisResult && (
                   <div className="card rounded-lg overflow-hidden">
                     <div className="p-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <div className="flex-1"></div>                      <h2 className="text-xl font-medium text-gray-900 text-center flex-1">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center w-20">
+                          <InfoIcon onClick={() => setInfoOpen(true)} />
+                        </div>
+                        <h2 className="text-xl font-medium text-gray-900 text-center flex-1">
                           Accessibility Analysis Results
                         </h2>
-                        <div className="flex-1 flex justify-end">
+                        <div className="flex items-center justify-end w-20">
                           <button
                             onClick={handleExportPDF}
                             disabled={isExporting}
                             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <span className="text-sm">📄</span>
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium whitespace-nowrap">
                               {isExporting ? 'Generating PDF...' : 'Export PDF'}
                             </span>
                           </button>
@@ -532,7 +658,12 @@ function App() {
               </>
             )}
           </div>
-        </main>        <footer className="mt-16">
+        </main>
+
+        {/* Info Modal */}
+        <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
+
+        <footer className="mt-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div className="text-center text-sm" style={{ color: 'var(--silver)' }}>
               <p>Web Access Advisor v2 (alpha)</p>
