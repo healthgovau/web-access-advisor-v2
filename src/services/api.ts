@@ -15,6 +15,11 @@ import type {
 // Base API configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
+// Extended RequestInit interface to include timeout
+interface RequestOptions extends RequestInit {
+  timeout?: number;
+}
+
 /**
  * HTTP client wrapper with error handling
  */
@@ -26,24 +31,31 @@ class ApiClient {
   }
 
   /**
-   * Generic fetch wrapper with error handling
+   * Generic fetch wrapper with error handling and timeout
    */
   private async request<T>(
     endpoint: string, 
-    options: RequestInit = {}
+    options: RequestOptions = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+    
+    // Set up abort controller for timeout (default: 35 minutes for long analysis)
+    const timeoutMs = options.timeout || (35 * 60 * 1000); // 35 minutes default
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
     const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
+      signal: controller.signal,
       ...options,
     };
 
     try {
       const response = await fetch(url, config);
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -54,7 +66,11 @@ class ApiClient {
 
       return await response.json();
     } catch (error) {
+      clearTimeout(timeoutId);
       if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error(`Request timeout after ${Math.round(timeoutMs / 60000)} minutes`);
+        }
         throw error;
       }
       throw new Error('An unexpected error occurred');

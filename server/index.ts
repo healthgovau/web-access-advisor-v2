@@ -43,10 +43,12 @@ console.log(`🌐 API Port: ${process.env.API_PORT || 3002}`);
 const ANALYSIS_TIMEOUT = parseInt(process.env.ANALYSIS_TIMEOUT || '1800000'); // 30 minutes default
 const LLM_COMPONENT_TIMEOUT = parseInt(process.env.LLM_COMPONENT_TIMEOUT || '300000'); // 5 minutes default
 const LLM_FLOW_TIMEOUT = parseInt(process.env.LLM_FLOW_TIMEOUT || '600000'); // 10 minutes default
+const RECORDING_TIMEOUT = parseInt(process.env.RECORDING_TIMEOUT || '30000'); // 30 seconds default
 
 console.log(`⏱️ Analysis timeout: ${ANALYSIS_TIMEOUT / 1000}s (${Math.round(ANALYSIS_TIMEOUT / 60000)} minutes)`);
 console.log(`⏱️ LLM component timeout: ${LLM_COMPONENT_TIMEOUT / 1000}s (${Math.round(LLM_COMPONENT_TIMEOUT / 60000)} minutes)`);
 console.log(`⏱️ LLM flow timeout: ${LLM_FLOW_TIMEOUT / 1000}s (${Math.round(LLM_FLOW_TIMEOUT / 60000)} minutes)`);
+console.log(`⏱️ Recording timeout: ${RECORDING_TIMEOUT / 1000}s`);
 
 import { AccessibilityAnalyzer, SessionManifest } from '@web-access-advisor/core';
 import { browserRecordingService } from './recordingService.js';
@@ -635,11 +637,15 @@ async function startServer() {
     // Initialize analyzer on startup
     await initializeAnalyzer();
     
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`🚀 Web Access Advisor API Server running on http://localhost:${PORT}`);
       console.log(`📋 Health check: http://localhost:${PORT}/api/health`);
       console.log(`📊 API documentation: http://localhost:${PORT}/api`);
     });
+    
+    // Set server timeout to match analysis timeout (prevent 1-minute default timeout)
+    server.setTimeout(ANALYSIS_TIMEOUT + 60000); // Add 1 minute buffer
+    console.log(`⏱️ HTTP server timeout: ${(ANALYSIS_TIMEOUT + 60000) / 1000}s (${Math.round((ANALYSIS_TIMEOUT + 60000) / 60000)} minutes)`);
     
   } catch (error) {
     console.error('Failed to start server:', error);
