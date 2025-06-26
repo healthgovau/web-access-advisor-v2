@@ -137,10 +137,10 @@ export class AccessibilityAnalyzer {
 
         // Detect DOM changes
         const domChangeDetails = await this.domChangeDetector.detectChanges(this.page, action);
-        console.log(`  DOM Change: ${domChangeDetails.type} - ${domChangeDetails.description}`);        // Only capture snapshot if changes are significant or it's a navigation
-        const shouldSnapshot = domChangeDetails.significant || 
-                              domChangeDetails.type === 'navigation' ||
-                              i === 0; // Always snapshot first step
+        console.log(`  DOM Change: ${domChangeDetails.type} - ${domChangeDetails.description}`);
+
+        // Enhanced snapshot decision logic with form input debouncing
+        const shouldSnapshot = this.shouldCaptureSnapshot(action, domChangeDetails, i, actions);
 
         if (shouldSnapshot) {
           console.log(`  Capturing snapshot for significant ${domChangeDetails.type} change`);
@@ -172,25 +172,26 @@ export class AccessibilityAnalyzer {
       
       // Perform Gemini analysis if enabled and service available
       if (analyzeWithGemini && this.geminiService && snapshots.length > 0) {
-        console.log(`🤖 Analyzing ${snapshots.length} snapshots with Gemini AI...`);
+        console.log(`🤖 Analyzing ${snapshots.length} snapshots with Gemini AI using hierarchical batching...`);
         onProgress?.('processing-with-ai', `Analyzing ${snapshots.length} snapshots with AI...`, undefined, undefined, snapshots.length);
         
         try {
           // Generate manifest first for flow analysis
           const tempManifest = await this.generateManifest(sessionId, actions, snapshots);
           
-          // Use enhanced flow analysis for multiple snapshots
-          geminiAnalysis = await this.geminiService.analyzeAccessibilityFlow(
+          // Use hierarchical batching with progressive context
+          geminiAnalysis = await this.performHierarchicalAnalysis(
             snapshots,
             tempManifest,
             {
               url: actions[0]?.url || 'unknown',
               sessionId,
               totalSteps: snapshots.length
-            }
+            },
+            onProgress
           );
           
-          console.log(`✅ Gemini analysis completed - found ${geminiAnalysis?.components?.length || 0} accessibility issues`);
+          console.log(`✅ Hierarchical Gemini analysis completed - found ${geminiAnalysis?.components?.length || 0} accessibility issues`);
         } catch (error) {
           console.warn('❌ Gemini analysis failed:', error);
           geminiAnalysis = undefined;
@@ -719,6 +720,65 @@ export class AccessibilityAnalyzer {
   }
 
   /**
+   * Determine if a snapshot should be captured with form input debouncing
+   * Avoids capturing snapshots for intermediate form input states
+   */
+  private shouldCaptureSnapshot(
+    action: UserAction,
+    domChangeDetails: DOMChangeDetails,
+    currentIndex: number,
+    allActions: UserAction[]
+  ): boolean {
+    // Always snapshot first step
+    if (currentIndex === 0) {
+      return true;
+    }
+
+    // Always snapshot navigation changes
+    if (domChangeDetails.type === 'navigation') {
+      return true;
+    }
+
+    // Always snapshot significant changes
+    if (domChangeDetails.significant) {
+      return true;
+    }
+
+    // Form input debouncing logic - only snapshot final form state
+    if (action.type === 'fill') {
+      // Look ahead to see if there are more fill actions on the same element
+      for (let i = currentIndex + 1; i < allActions.length; i++) {
+        const nextAction = allActions[i];
+        
+        // If next action is also a fill on the same selector, skip this snapshot
+        if (nextAction.type === 'fill' && nextAction.selector === action.selector) {
+          console.log(`  Skipping fill snapshot - more fills coming for ${action.selector}`);
+          return false;
+        }
+        
+        // If we hit a non-fill action, this is the final fill state
+        if (nextAction.type !== 'fill') {
+          console.log(`  Capturing final fill state for ${action.selector}`);
+          return true;
+        }
+        
+        // If next fill is on different element, this is final for current element
+        if (nextAction.type === 'fill' && nextAction.selector !== action.selector) {
+          console.log(`  Capturing final fill state for ${action.selector} (different element next)`);
+          return true;
+        }
+      }
+      
+      // If we're at the end of actions, capture this fill
+      console.log(`  Capturing final fill state for ${action.selector} (end of actions)`);
+      return true;
+    }
+
+    // For non-fill actions, use existing logic
+    return domChangeDetails.significant;
+  }
+
+  /**
    * Wait for action to settle before capturing snapshot to ensure reliability
    */
   private async waitForActionSettlement(page: Page, action: UserAction): Promise<void> {
@@ -1059,6 +1119,316 @@ export class AccessibilityAnalyzer {
         s.accessibilityContext.ariaLiveRegions.length > 0 || 
         s.accessibilityContext.screenReaderAnnouncements.length > 0
       ).length
+    };
+  }
+
+  /**
+   * Perform hierarchical analysis with progressive context extraction
+   * Groups snapshots by flow type, splits by token count, and maintains progressive summaries
+   */
+  private async performHierarchicalAnalysis(
+    snapshots: SnapshotData[],
+    manifest: SessionManifest,
+    sessionContext: { url: string; sessionId: string; totalSteps: number },
+    onProgress?: (phase: 'replaying-actions' | 'capturing-snapshots' | 'running-accessibility-checks' | 'processing-with-ai' | 'generating-report', message: string, step?: number, total?: number, snapshotCount?: number) => void
+  ): Promise<GeminiAnalysis> {
+    if (!this.geminiService) {
+      throw new Error('Gemini service not available');
+    }
+
+    console.log(`🧠 Starting hierarchical analysis with ${snapshots.length} snapshots`);
+    
+    // Group snapshots by flow type for hierarchical processing
+    const flowGroups = this.groupSnapshotsByFlowType(snapshots, manifest);
+    console.log(`📊 Created ${flowGroups.length} flow groups:`, flowGroups.map(g => `${g.flowType}(${g.snapshots.length})`));
+
+    // Split groups by token limits and create batches
+    const batches = this.createAnalysisBatches(flowGroups, 8000); // Reserve space for progressive summary
+    console.log(`📦 Created ${batches.length} analysis batches`);
+
+    // Progressive context accumulation
+    let progressiveSummary = '';
+    const batchResults: GeminiAnalysis[] = [];
+    const allComponents: any[] = [];
+    const debugLogs: string[] = [];
+
+    // Process each batch with progressive context
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      console.log(`🔄 Processing batch ${i + 1}/${batches.length}: ${batch.flowType} (${batch.snapshots.length} snapshots, ~${batch.tokenEstimate} tokens)`);
+      
+      onProgress?.('processing-with-ai', `Analyzing batch ${i + 1}/${batches.length}: ${batch.flowType}`, i + 1, batches.length, undefined);
+
+      try {
+        // Prepare batch context with progressive summary
+        const batchContext = {
+          ...sessionContext,
+          batchNumber: i + 1,
+          totalBatches: batches.length,
+          flowType: batch.flowType,
+          progressiveSummary: progressiveSummary || 'This is the first batch - no previous context available.',
+          batchDescription: batch.description
+        };
+
+        // Call Gemini with current batch + progressive context
+        const batchResult = await this.geminiService.analyzeAccessibilityFlow(
+          batch.snapshots,
+          manifest,
+          batchContext
+        );
+
+        console.log(`✅ Batch ${i + 1} analysis completed:`, {
+          components: batchResult.components?.length || 0,
+          hasSummary: !!batchResult.summary
+        });
+
+        // Accumulate results
+        batchResults.push(batchResult);
+        if (batchResult.components) {
+          allComponents.push(...batchResult.components);
+        }
+        
+        // Update progressive summary for next batch (use the main summary)
+        if (batchResult.summary) {
+          if (progressiveSummary) {
+            progressiveSummary += `\n\n--- Previous Analysis Summary ---\n${progressiveSummary}\n\n--- Latest Batch Summary ---\n${batchResult.summary}`;
+          } else {
+            progressiveSummary = batchResult.summary;
+          }
+          
+          // Trim progressive summary if it gets too long (keep last 2000 chars)
+          if (progressiveSummary.length > 2000) {
+            progressiveSummary = '...(previous context truncated)...\n' + progressiveSummary.slice(-2000);
+          }
+        }
+
+        // Collect debug info
+        if (batchResult.debug) {
+          debugLogs.push(`Batch ${i + 1}: ${batchResult.debug}`);
+        }
+
+      } catch (error) {
+        console.warn(`❌ Batch ${i + 1} analysis failed:`, error);
+        debugLogs.push(`Batch ${i + 1} failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Continue with other batches
+      }
+    }
+
+    console.log(`🔄 Running final cross-batch analysis...`);
+    onProgress?.('processing-with-ai', 'Running final cross-batch analysis...', undefined, undefined, undefined);
+
+    // Final consolidation pass to identify cross-batch issues
+    let finalAnalysis: GeminiAnalysis;
+    try {
+      finalAnalysis = await this.consolidateBatchResults(
+        batchResults,
+        allComponents,
+        progressiveSummary,
+        manifest,
+        sessionContext,
+        snapshots
+      );
+    } catch (error) {
+      console.warn(`⚠️ Final consolidation failed, using batch results:`, error);
+      // Fallback to combined batch results
+      finalAnalysis = this.createFallbackAnalysis(batchResults, allComponents, debugLogs);
+    }
+
+    console.log(`✅ Hierarchical analysis completed:`, {
+      totalBatches: batches.length,
+      totalComponents: finalAnalysis.components?.length || 0,
+      hasDebugInfo: !!finalAnalysis.debug
+    });
+
+    return finalAnalysis;
+  }
+
+  /**
+   * Group snapshots by flow type for hierarchical processing
+   */
+  private groupSnapshotsByFlowType(snapshots: SnapshotData[], manifest: SessionManifest): Array<{
+    flowType: string;
+    description: string;
+    snapshots: SnapshotData[];
+    tokenEstimate: number;
+  }> {
+    const groups = new Map<string, {
+      flowType: string;
+      description: string;
+      snapshots: SnapshotData[];
+      tokenEstimate: number;
+    }>();
+
+    snapshots.forEach(snapshot => {
+      // Find corresponding step detail to get flow type
+      const stepDetail = manifest.stepDetails.find(s => s.step === snapshot.step);
+      const flowType = stepDetail?.flowType || 'unknown';
+      const description = stepDetail ? this.getFlowDescription(stepDetail.flowType as any) : 'Unknown flow';
+
+      if (!groups.has(flowType)) {
+        groups.set(flowType, {
+          flowType,
+          description,
+          snapshots: [],
+          tokenEstimate: 0
+        });
+      }
+
+      const group = groups.get(flowType)!;
+      group.snapshots.push(snapshot);
+      group.tokenEstimate += this.estimateTokens(snapshot);
+    });
+
+    // Return groups sorted by relevance (main_app first)
+    return Array.from(groups.values()).sort((a, b) => {
+      if (a.flowType === 'main_app') return -1;
+      if (b.flowType === 'main_app') return 1;
+      return a.flowType.localeCompare(b.flowType);
+    });
+  }
+
+  /**
+   * Create analysis batches from flow groups, splitting large groups by token count
+   */
+  private createAnalysisBatches(
+    flowGroups: Array<{ flowType: string; description: string; snapshots: SnapshotData[]; tokenEstimate: number }>,
+    maxTokensPerBatch: number
+  ): Array<{ flowType: string; description: string; snapshots: SnapshotData[]; tokenEstimate: number }> {
+    const batches: Array<{ flowType: string; description: string; snapshots: SnapshotData[]; tokenEstimate: number }> = [];
+
+    flowGroups.forEach(group => {
+      if (group.tokenEstimate <= maxTokensPerBatch) {
+        // Group fits in one batch
+        batches.push(group);
+      } else {
+        // Split group into multiple batches
+        console.log(`📦 Splitting large ${group.flowType} group (${group.tokenEstimate} tokens) into smaller batches`);
+        
+        let currentBatch: SnapshotData[] = [];
+        let currentTokens = 0;
+        let batchNumber = 1;
+
+        group.snapshots.forEach(snapshot => {
+          const snapshotTokens = this.estimateTokens(snapshot);
+          
+          if (currentTokens + snapshotTokens > maxTokensPerBatch && currentBatch.length > 0) {
+            // Create batch from current accumulation
+            batches.push({
+              flowType: `${group.flowType}_part${batchNumber}`,
+              description: `${group.description} (Part ${batchNumber})`,
+              snapshots: [...currentBatch],
+              tokenEstimate: currentTokens
+            });
+            
+            // Start new batch
+            currentBatch = [snapshot];
+            currentTokens = snapshotTokens;
+            batchNumber++;
+          } else {
+            currentBatch.push(snapshot);
+            currentTokens += snapshotTokens;
+          }
+        });
+
+        // Add final batch if it has content
+        if (currentBatch.length > 0) {
+          batches.push({
+            flowType: `${group.flowType}_part${batchNumber}`,
+            description: `${group.description} (Part ${batchNumber})`,
+            snapshots: currentBatch,
+            tokenEstimate: currentTokens
+          });
+        }
+      }
+    });
+
+    return batches;
+  }
+
+  /**
+   * Consolidate batch results into final analysis with cross-batch insights
+   */
+  private async consolidateBatchResults(
+    batchResults: GeminiAnalysis[],
+    allComponents: any[],
+    progressiveSummary: string,
+    manifest: SessionManifest,
+    sessionContext: { url: string; sessionId: string; totalSteps: number },
+    snapshots: SnapshotData[]
+  ): Promise<GeminiAnalysis> {
+    if (!this.geminiService) {
+      throw new Error('Gemini service not available');
+    }
+
+    // Create consolidated analysis request
+    const consolidationContext = {
+      ...sessionContext,
+      batchCount: batchResults.length,
+      totalComponents: allComponents.length,
+      progressiveSummary,
+      consolidationRequest: true
+    };
+
+    console.log(`🔄 Consolidating ${batchResults.length} batch results with ${allComponents.length} total components`);
+
+    // For now, use the existing flow analysis method with all snapshots
+    // TODO: Add dedicated consolidation method to GeminiService
+    const finalAnalysis = await this.geminiService.analyzeAccessibilityFlow(
+      snapshots,
+      manifest,
+      sessionContext
+    );
+
+    // Enhance with cross-batch insights
+    if (finalAnalysis.components && allComponents.length > 0) {
+      // Merge unique components from batches
+      const componentMap = new Map();
+      
+      // Add batch components
+      allComponents.forEach(comp => {
+        const key = `${comp.componentName || comp.selector}-${comp.issue}`;
+        if (!componentMap.has(key)) {
+          componentMap.set(key, comp);
+        }
+      });
+      
+      // Add final analysis components
+      finalAnalysis.components.forEach(comp => {
+        const key = `${comp.componentName || comp.selector}-${comp.issue}`;
+        if (!componentMap.has(key)) {
+          componentMap.set(key, comp);
+        }
+      });
+      
+      finalAnalysis.components = Array.from(componentMap.values());
+    }
+
+    return finalAnalysis;
+  }
+
+  /**
+   * Create fallback analysis if consolidation fails
+   */
+  private createFallbackAnalysis(
+    batchResults: GeminiAnalysis[],
+    allComponents: any[],
+    debugLogs: string[]
+  ): GeminiAnalysis {
+    return {
+      summary: `Hierarchical analysis completed across ${batchResults.length} batches. Some batch results may be incomplete due to processing errors.`,
+      components: allComponents,
+      recommendations: batchResults.flatMap(r => r.recommendations || []),
+      score: Math.min(...batchResults.map(r => r.score).filter(s => typeof s === 'number')) || 50,
+      debug: {
+        type: 'flow',
+        prompt: `Hierarchical batching: ${batchResults.length} batches processed`,
+        response: debugLogs.join('\n'),
+        promptSize: 0,
+        responseSize: debugLogs.join('\n').length,
+        htmlSize: 0,
+        axeResultsCount: 0,
+        timestamp: new Date().toISOString()
+      }
     };
   }
 
