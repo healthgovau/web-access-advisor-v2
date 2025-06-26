@@ -339,9 +339,14 @@ function App() {
         });
       } else {
         // Poll for analysis completion - backend is now processing
+        let pollRetryCount = 0;
+        const maxRetries = 3;
         const pollAnalysis = async () => {
           try {
             const statusResponse = await recordingApi.getAnalysisStatus(response.analysisId);
+
+            // Reset retry count on successful response
+            pollRetryCount = 0;
 
             if (statusResponse.phase && statusResponse.message) {
               // Map backend phases to frontend progress stages
@@ -357,11 +362,11 @@ function App() {
               const frontendStage = stageMapping[statusResponse.phase] || statusResponse.phase as ProgressStage;
 
               // Update progress with real-time snapshot count
-
               updateProgress(frontendStage, statusResponse.message, undefined, undefined, undefined, statusResponse.snapshotCount);
-            } if (statusResponse.status === 'completed' && statusResponse.result) {
-              // Analysis complete - handle result
+            }
 
+            if (statusResponse.status === 'completed' && statusResponse.result) {
+              // Analysis complete - handle result
               const resultHandler = handleAnalysisResult(statusResponse.result);
               updateProgress(resultHandler.stage, resultHandler.message, undefined, resultHandler.details, undefined, statusResponse.result.snapshotCount);
 
@@ -374,7 +379,7 @@ function App() {
             }
 
             if (statusResponse.status === 'failed') {
-              // Analysis failed
+              // Analysis actually failed on backend
               updateProgress('error', statusResponse.message || 'Analysis failed');
               updateState({
                 error: statusResponse.message || 'Analysis failed',
@@ -387,10 +392,40 @@ function App() {
             // Analysis still in progress - continue polling
             setTimeout(pollAnalysis, 2000);
           } catch (error) {
-            console.error('Analysis polling error:', error);
-            updateProgress('error', 'Analysis failed', undefined, undefined, error instanceof Error ? error.message : 'Unknown error');
+            console.error(`Analysis polling error (attempt ${pollRetryCount + 1}/${maxRetries + 1}):`, error);
+            
+            pollRetryCount++;
+            
+            if (pollRetryCount <= maxRetries) {
+              // Retry with exponential backoff
+              const retryDelay = Math.min(2000 * Math.pow(2, pollRetryCount - 1), 10000);
+              console.log(`Retrying analysis polling in ${retryDelay}ms...`);
+              setTimeout(pollAnalysis, retryDelay);
+              return;
+            }
+
+            // Max retries exceeded - show appropriate error
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            let userFriendlyMessage = 'Connection lost during analysis';
+            let details = 'The backend may still be processing. Try refreshing the page in a few minutes.';
+            
+            if (errorMessage.includes('fetch') || errorMessage.includes('NetworkError')) {
+              userFriendlyMessage = 'Network connection lost';
+              details = 'Check your internet connection. The analysis may still be running on the server.';
+            } else if (errorMessage.includes('timeout') || errorMessage.includes('abort')) {
+              userFriendlyMessage = 'Server response timeout';
+              details = 'The server is taking longer than expected. The analysis may still be processing.';
+            } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+              userFriendlyMessage = 'Analysis session not found';
+              details = 'The analysis session may have expired or been cleaned up.';
+            } else if (errorMessage.includes('500') || errorMessage.includes('Internal Server Error')) {
+              userFriendlyMessage = 'Server error occurred';
+              details = 'There was an internal server error. Please try starting a new analysis.';
+            }
+
+            updateProgress('error', userFriendlyMessage, undefined, details, `Network/Communication Error: ${errorMessage}`);
             updateState({
-              error: error instanceof Error ? error.message : 'Analysis failed',
+              error: `${userFriendlyMessage}: ${details}`,
               loading: false,
               mode: 'results'
             });
@@ -520,6 +555,7 @@ function App() {
   // Helper to dismiss a toast
   const dismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+    console.log(`Toast dismissed: ${id}`);
   };
 
   // Show toast on error (including LLM failures)
@@ -533,7 +569,7 @@ function App() {
     <QueryProvider>
       <div className="min-h-screen">
         {/* Toast container - bottom left */}
-        <div className="fixed bottom-0 left-0 z-50 flex flex-col items-start pointer-events-none">
+        <div className="fixed bottom-0 left-0 z-50 flex flex-col items-start pointer-events-auto">
           {toasts.map((toast) => (
             <Toast key={toast.id} {...toast} onDismiss={dismissToast} />
           ))}
