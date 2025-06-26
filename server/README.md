@@ -55,7 +55,17 @@ export NODE_ENV=production
 | `PLAYWRIGHT_HEADLESS` | No | false | Run browser in headless mode |
 | `PLAYWRIGHT_SLOW_MO` | No | 50 | Slow down Playwright actions (ms) |
 | `RECORDING_TIMEOUT` | No | 30000 | Recording session timeout (ms) |
-| `ANALYSIS_TIMEOUT` | No | 60000 | Analysis timeout (ms) |
+| `ANALYSIS_TIMEOUT` | No | 1800000 | Overall analysis timeout (ms) - 30 minutes default |
+| `LLM_COMPONENT_TIMEOUT` | No | 300000 | Individual LLM component analysis timeout (ms) - 5 minutes default |
+| `LLM_FLOW_TIMEOUT` | No | 600000 | Individual LLM flow analysis timeout (ms) - 10 minutes default |
+
+### Timeout Configuration Notes
+
+- **ANALYSIS_TIMEOUT**: Total time for entire session analysis (replay + snapshots + all LLM batches)
+- **LLM_COMPONENT_TIMEOUT**: Timeout for single snapshot accessibility analysis
+- **LLM_FLOW_TIMEOUT**: Timeout for batch analysis with multiple snapshots
+- For sessions with many actions/snapshots, increase ANALYSIS_TIMEOUT proportionally
+- Individual LLM timeouts are per-request, not cumulative
 
 ## File Structure
 

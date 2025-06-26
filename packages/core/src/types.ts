@@ -143,6 +143,9 @@ export interface AnalysisOptions {
   analyzeWithGemini?: boolean;
   outputDir?: string;
   onProgress?: (phase: 'replaying-actions' | 'capturing-snapshots' | 'running-accessibility-checks' | 'processing-with-ai' | 'generating-report', message: string, step?: number, total?: number, snapshotCount?: number) => void;
+  // Timeout configurations (in milliseconds)
+  llmComponentTimeout?: number; // Timeout for individual LLM component analysis requests
+  llmFlowTimeout?: number; // Timeout for individual LLM flow analysis requests
 }
 
 export interface AnalysisResult {

@@ -31,7 +31,8 @@ export class GeminiService {
       step: number;
       domChangeType?: string;
     },
-    previousHtml?: string
+    previousHtml?: string,
+    timeoutMs?: number
   ): Promise<GeminiAnalysis> {
     try {
       // Check if this is an authentication step that should be skipped
@@ -59,10 +60,11 @@ export class GeminiService {
 
       const prompt = this.buildComponentAnalysisPrompt(htmlContent, axeResults, context, previousHtml);
 
-      // Set up timeout for Gemini API call (2 minutes)
+      // Set up timeout for Gemini API call (configurable, default 5 minutes)
+      const timeout = timeoutMs || (5 * 60 * 1000); // Default 5 minutes
       const geminiPromise = model.generateContent(prompt);
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Gemini API timeout after 2 minutes')), 2 * 60 * 1000);
+        setTimeout(() => reject(new Error(`Gemini API timeout after ${Math.round(timeout / 60000)} minutes`)), timeout);
       });
 
       const result = await Promise.race([geminiPromise, timeoutPromise]);
@@ -136,7 +138,8 @@ export class GeminiService {
         totalSteps: number;
         flowTypes: string[];
       };
-    }
+    },
+    timeoutMs?: number
   ): Promise<GeminiAnalysis> {
     try {
       // Filter out authentication steps from snapshots
@@ -149,10 +152,11 @@ export class GeminiService {
 
       const prompt = this.buildFlowAnalysisPrompt(filteredSnapshots, manifest, context, progressiveContext);
 
-      // Set up timeout for Gemini API call (3 minutes for complex flow analysis)
+      // Set up timeout for Gemini API call (configurable, default 10 minutes for complex flow analysis)
+      const timeout = timeoutMs || (10 * 60 * 1000); // Default 10 minutes
       const geminiPromise = model.generateContent(prompt);
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Gemini API timeout after 3 minutes')), 3 * 60 * 1000);
+        setTimeout(() => reject(new Error(`Gemini API timeout after ${Math.round(timeout / 60000)} minutes`)), timeout);
       });
 
       const result = await Promise.race([geminiPromise, timeoutPromise]);

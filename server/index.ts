@@ -38,6 +38,16 @@ console.log(`📄 .env.local result:`, envLocalResult.error ? `Error: ${envLocal
 
 console.log(`🔑 Gemini API Key configured: ${process.env.GEMINI_API_KEY ? 'Yes (' + process.env.GEMINI_API_KEY.substring(0, 10) + '...)' : 'No'}`);
 console.log(`🌐 API Port: ${process.env.API_PORT || 3002}`);
+
+// Timeout configurations
+const ANALYSIS_TIMEOUT = parseInt(process.env.ANALYSIS_TIMEOUT || '1800000'); // 30 minutes default
+const LLM_COMPONENT_TIMEOUT = parseInt(process.env.LLM_COMPONENT_TIMEOUT || '300000'); // 5 minutes default
+const LLM_FLOW_TIMEOUT = parseInt(process.env.LLM_FLOW_TIMEOUT || '600000'); // 10 minutes default
+
+console.log(`⏱️ Analysis timeout: ${ANALYSIS_TIMEOUT / 1000}s (${Math.round(ANALYSIS_TIMEOUT / 60000)} minutes)`);
+console.log(`⏱️ LLM component timeout: ${LLM_COMPONENT_TIMEOUT / 1000}s (${Math.round(LLM_COMPONENT_TIMEOUT / 60000)} minutes)`);
+console.log(`⏱️ LLM flow timeout: ${LLM_FLOW_TIMEOUT / 1000}s (${Math.round(LLM_FLOW_TIMEOUT / 60000)} minutes)`);
+
 import { AccessibilityAnalyzer, SessionManifest } from '@web-access-advisor/core';
 import { browserRecordingService } from './recordingService.js';
 import type { 
@@ -479,18 +489,22 @@ async function processAnalysisAsync(sessionId: string, actions: UserAction[]) {
       console.log(`📊 Phase: ${phase} - ${message}${step && total ? ` (${step}/${total})` : ''}${snapshotCount !== undefined ? ` [${snapshotCount} snapshots]` : ''}`);
     };
     
-    // Run the actual analysis with real progress tracking
+    // Run the actual analysis with real progress tracking and configurable timeouts
     const analysisPromise = currentAnalyzer.analyzeActions(actions, {
       sessionId: sessionId, // Use the recording session ID
       captureScreenshots: true,
       analyzeWithGemini: true,
       waitForStability: true,
-      onProgress
+      onProgress,
+      // Pass timeout configurations to core analyzer
+      llmComponentTimeout: LLM_COMPONENT_TIMEOUT,
+      llmFlowTimeout: LLM_FLOW_TIMEOUT
     });
 
-    // Set up timeout for analysis (5 minutes)
+    // Set up timeout for analysis (configurable via environment)
+    const timeoutMessage = `Analysis timeout after ${Math.round(ANALYSIS_TIMEOUT / 60000)} minutes`;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Analysis timeout after 5 minutes')), 5 * 60 * 1000);
+      setTimeout(() => reject(new Error(timeoutMessage)), ANALYSIS_TIMEOUT);
     });
 
     const result: AnalysisResult = await Promise.race([analysisPromise, timeoutPromise]);

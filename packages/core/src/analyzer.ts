@@ -191,7 +191,11 @@ export class AccessibilityAnalyzer {
               sessionId,
               totalSteps: snapshots.length
             },
-            onProgress
+            onProgress,
+            { 
+              llmComponentTimeout: options.llmComponentTimeout,
+              llmFlowTimeout: options.llmFlowTimeout
+            }
           );
           
           console.log(`✅ Hierarchical Gemini analysis completed - found ${geminiAnalysis?.components?.length || 0} accessibility issues`);
@@ -1133,7 +1137,8 @@ export class AccessibilityAnalyzer {
     snapshots: SnapshotData[],
     manifest: SessionManifest,
     sessionContext: { url: string; sessionId: string; totalSteps: number },
-    onProgress?: (phase: 'replaying-actions' | 'capturing-snapshots' | 'running-accessibility-checks' | 'processing-with-ai' | 'generating-report', message: string, step?: number, total?: number, snapshotCount?: number) => void
+    onProgress?: (phase: 'replaying-actions' | 'capturing-snapshots' | 'running-accessibility-checks' | 'processing-with-ai' | 'generating-report', message: string, step?: number, total?: number, snapshotCount?: number) => void,
+    timeoutOptions?: { llmComponentTimeout?: number; llmFlowTimeout?: number }
   ): Promise<GeminiAnalysis> {
     if (!this.geminiService) {
       throw new Error('Gemini service not available');
@@ -1210,7 +1215,8 @@ export class AccessibilityAnalyzer {
           batch.snapshots,
           manifest,
           batchContext,
-          progressiveContext
+          progressiveContext,
+          timeoutOptions?.llmFlowTimeout
         );
 
         console.log(`✅ Batch ${i + 1} analysis completed:`, {
