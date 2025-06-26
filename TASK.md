@@ -2,6 +2,13 @@
 
 ## ✅ Recently Completed (2025-06-26)
 
+### LLM and Analysis Timeout Configuration  
+- ✅ **Made all timeouts configurable via environment variables** - Added `ANALYSIS_TIMEOUT` (30min default), `LLM_COMPONENT_TIMEOUT` (5min default), and `LLM_FLOW_TIMEOUT` (10min default) to support large batch processing
+- ✅ **Fixed cumulative timeout issue** - The previous 5-minute timeout was cumulative for entire analysis, now properly separated into overall analysis and per-LLM-call timeouts
+- ✅ **Updated timeout propagation** - Server reads environment variables and passes timeout values through the entire analysis pipeline to core Gemini service
+- ✅ **Enhanced timeout logging** - Server startup logs show configured timeout values for debugging and verification
+- ✅ **Updated environment documentation** - Added timeout configuration details to server README.md with clear explanations
+
 ### LLM Prompt Filtering and Analysis Pipeline Reliability
 - ✅ **Implemented axe results filtering** - Filter to violations only with essential properties (id, impact, tags, description, help, helpUrl, nodes with target/html/failureSummary) to reduce LLM prompt size
 - ✅ **Added HTML snapshot filtering** - Remove scripts, links, styles, and other non-essential elements from HTML before LLM analysis to prevent prompt truncation

@@ -60,8 +60,8 @@ export class GeminiService {
 
       const prompt = this.buildComponentAnalysisPrompt(htmlContent, axeResults, context, previousHtml);
 
-      // Set up timeout for Gemini API call (configurable, default 5 minutes)
-      const timeout = timeoutMs || (5 * 60 * 1000); // Default 5 minutes
+      // Set up timeout for Gemini API call (passed from environment config)
+      const timeout = timeoutMs || (5 * 60 * 1000); // Fallback if no timeout provided
       const geminiPromise = model.generateContent(prompt);
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error(`Gemini API timeout after ${Math.round(timeout / 60000)} minutes`)), timeout);
@@ -152,8 +152,8 @@ export class GeminiService {
 
       const prompt = this.buildFlowAnalysisPrompt(filteredSnapshots, manifest, context, progressiveContext);
 
-      // Set up timeout for Gemini API call (configurable, default 10 minutes for complex flow analysis)
-      const timeout = timeoutMs || (10 * 60 * 1000); // Default 10 minutes
+      // Set up timeout for Gemini API call (passed from environment config)
+      const timeout = timeoutMs || (10 * 60 * 1000); // Fallback if no timeout provided
       const geminiPromise = model.generateContent(prompt);
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error(`Gemini API timeout after ${Math.round(timeout / 60000)} minutes`)), timeout);
@@ -1003,7 +1003,7 @@ ${bodyMatch[1]}
   }  /**
    * Generate explanations and actionable recommendations for specific axe violations
    */
-  async generateAxeRecommendations(violations: any[]): Promise<Map<string, { explanation: string; recommendation: string }>> {
+  async generateAxeRecommendations(violations: any[], timeoutMs?: number): Promise<Map<string, { explanation: string; recommendation: string }>> {
     console.log(`🤖 generateAxeRecommendations called with ${violations?.length || 0} violations`);
 
     if (!violations || violations.length === 0) {
@@ -1032,7 +1032,15 @@ ${bodyMatch[1]}
       const prompt = this.buildAxeRecommendationPrompt(violations);
 
       console.log(`📤 Sending comprehensive prompt to LLM for ${violations.length} violations...`);
-      const result = await model.generateContent(prompt);
+      
+      // Set up timeout for Gemini API call (passed from environment config)
+      const timeout = timeoutMs || (5 * 60 * 1000); // Fallback if no timeout provided
+      const geminiPromise = model.generateContent(prompt);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`Gemini API timeout after ${Math.round(timeout / 60000)} minutes`)), timeout);
+      });
+
+      const result = await Promise.race([geminiPromise, timeoutPromise]);
       const response = await result.response;
       const text = response.text();
 

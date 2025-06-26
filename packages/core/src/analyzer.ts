@@ -67,7 +67,9 @@ export class AccessibilityAnalyzer {
       waitForStability = true,
       analyzeWithGemini = true,
       outputDir = './snapshots',
-      onProgress
+      onProgress,
+      llmComponentTimeout,
+      llmFlowTimeout
     } = options;
 
     // Use provided sessionId or generate a new one
@@ -254,7 +256,7 @@ export class AccessibilityAnalyzer {
       onProgress?.('generating-report', 'Generating final accessibility report...', undefined, undefined, snapshots.length);
       
       // Aggregate axe results from all snapshots
-      const consolidatedAxeResults = await this.consolidateAxeResults(snapshots);
+      const consolidatedAxeResults = await this.consolidateAxeResults(snapshots, { llmComponentTimeout });
       
       // Generate metadata manifest
       const manifest = await this.generateManifest(sessionId, actions, snapshots);
@@ -671,7 +673,7 @@ export class AccessibilityAnalyzer {
   /**
    * Consolidate axe results from all snapshots, removing duplicates and adding LLM recommendations
    */
-  private async consolidateAxeResults(snapshots: SnapshotData[]): Promise<any[]> {
+  private async consolidateAxeResults(snapshots: SnapshotData[], timeoutOptions?: { llmComponentTimeout?: number }): Promise<any[]> {
     // Instead of deduplicating by id, flatten all violations with their originating step and url
     const violations: any[] = [];
     snapshots.forEach(snapshot => {
@@ -691,7 +693,7 @@ export class AccessibilityAnalyzer {
       try {
         console.log(`🤖 Generating LLM recommendations for ${violations.length} axe violations...`);
         console.log(`🔍 Sample violation:`, violations[0]?.id, violations[0]?.help);
-        const recommendations = await this.geminiService.generateAxeRecommendations(violations);
+        const recommendations = await this.geminiService.generateAxeRecommendations(violations, timeoutOptions?.llmComponentTimeout);
         console.log(`📊 Received ${recommendations.size} recommendations from LLM`);
         
         // Add recommendations to violations
