@@ -66,6 +66,31 @@ export interface SessionManifest {
   timestamp: string;
   totalSteps: number;
   stepDetails: StepDetail[];
+  actionGroups?: ActionGroup[];
+  flowStatistics?: FlowStatistics;
+  llmOptimizations?: {
+    authStepsFiltered: number;
+    relevantStepsForAnalysis: number;
+    totalTokenEstimate: number;
+  };
+}
+
+export interface ActionGroup {
+  groupId: string;
+  steps: number[];
+  description: string;
+  flowType: 'main_app' | 'auth_flow' | 'error_flow' | 'external_redirect';
+  relevantForAnalysis: boolean;
+  tokenEstimate: number;
+}
+
+export interface FlowStatistics {
+  totalSteps: number;
+  authSteps: number;
+  mainAppSteps: number;
+  errorSteps: number;
+  significantDOMChanges: number;
+  accessibilityEvents: number;
 }
 
 export interface StepDetail {
@@ -85,6 +110,30 @@ export interface StepDetail {
   domChangeType: DOMChangeType;
   domChanges: string;
   tokenEstimate: number;
+  
+  // Enhanced fields for LLM optimization
+  previousStep?: number;
+  nextStep?: number;
+  isAuthRelated: boolean;
+  excludeFromAnalysis: boolean;
+  skipReason?: string;
+  flowType: 'main_app' | 'auth_flow' | 'error_flow' | 'external_redirect';
+  domChangeSummary: {
+    elementsAdded: number;
+    elementsRemoved: number;
+    ariaChanges: string[];
+    focusChanges?: string;
+    liveRegionUpdates: string[];
+    significantChange: boolean;
+  };
+  accessibilityContext: {
+    focusedElement?: string;
+    screenReaderAnnouncements: string[];
+    keyboardNavigationState: string;
+    modalState: 'none' | 'open' | 'closing';
+    dynamicContentUpdates: boolean;
+    ariaLiveRegions: string[];
+  };
 }
 
 export interface AnalysisOptions {

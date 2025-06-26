@@ -240,8 +240,9 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
         <div className="p-3 space-y-3">
           {/* Issue Count Summary - matching main analysis section styling */}
           {(() => {
-            // Calculate counts from ALL violations, not just filtered ones
-            const counts = axeResults.reduce((acc, violation) => {
+            // Calculate counts from filtered violations only (excluding auth steps)
+            const nonAuthViolations = axeResults.filter(violation => !isAuthViolation(violation));
+            const counts = nonAuthViolations.reduce((acc, violation) => {
               acc[violation.impact] = (acc[violation.impact] || 0) + 1;
               return acc;
             }, {} as Record<string, number>);

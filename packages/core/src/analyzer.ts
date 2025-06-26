@@ -11,12 +11,15 @@ import type {
   UserAction, 
   SnapshotData, 
   AnalysisResult, 
-  AnalysisOptions,  SessionManifest,
+  AnalysisOptions,  
+  SessionManifest,
   StepDetail,
   AxeContext,
   GeminiAnalysis,
   DOMChangeType,
-  DOMChangeDetails
+  DOMChangeDetails,
+  ActionGroup,
+  FlowStatistics
 } from './types.js';
 
 /**
@@ -543,36 +546,35 @@ export class AccessibilityAnalyzer {
   }
 
   /**
-   * Generate session manifest
+   * Generate enhanced session manifest with LLM optimizations
    */
   private async generateManifest(
     sessionId: string,
     actions: UserAction[],
     snapshots: SnapshotData[]
   ): Promise<SessionManifest> {
+    // Create enhanced step details with all optimizations
+    const enhancedStepDetails = await this.createEnhancedStepDetails(actions, snapshots);
+    
+    // Generate action groups for better LLM understanding
+    const actionGroups = this.generateActionGroups(enhancedStepDetails);
+    
+    // Calculate flow statistics
+    const flowStats = this.calculateFlowStatistics(enhancedStepDetails);
+
     const manifest: SessionManifest = {
       sessionId,
       url: actions.find(a => a.type === 'navigate')?.url || 'unknown',
       timestamp: new Date().toISOString(),
       totalSteps: snapshots.length,
-      stepDetails: snapshots.map((snapshot, index) => ({
-        step: snapshot.step,
-        parentStep: this.determineParentStep(actions[index], actions, index),
-        action: snapshot.action,
-        actionType: this.determineActionType(actions[index]),
-        interactionTarget: actions[index].selector,
-        flowContext: this.determineFlowContext(actions[index], actions, index),
-        uiState: this.determineUIState(actions[index], actions, index),
-        timestamp: snapshot.timestamp,
-        htmlFile: path.basename(snapshot.files.html),
-        axeFile: path.basename(snapshot.files.axeContext),
-        axeResultsFile: path.basename(snapshot.files.axeResults),
-        screenshotFile: snapshot.files.screenshot ? path.basename(snapshot.files.screenshot) : undefined,
-        url: snapshot.axeContext?.url || 'unknown',
-        domChangeType: snapshot.domChangeType,
-        domChanges: snapshot.domChangeDetails.description,
-        tokenEstimate: this.estimateTokens(snapshot)
-      }))
+      stepDetails: enhancedStepDetails,
+      actionGroups,
+      flowStatistics: flowStats,
+      llmOptimizations: {
+        authStepsFiltered: enhancedStepDetails.filter(s => s.isAuthRelated).length,
+        relevantStepsForAnalysis: enhancedStepDetails.filter(s => !s.excludeFromAnalysis).length,
+        totalTokenEstimate: enhancedStepDetails.reduce((sum, s) => sum + s.tokenEstimate, 0)
+      }
     };
 
     return manifest;
@@ -759,6 +761,308 @@ export class AccessibilityAnalyzer {
       // Don't fail - just continue with snapshot capture
     }
   }
+
+  /**
+   * Create enhanced step details with all LLM optimizations
+   */
+  private async createEnhancedStepDetails(actions: UserAction[], snapshots: SnapshotData[]): Promise<StepDetail[]> {
+    const enhancedSteps: StepDetail[] = [];
+    
+    for (let i = 0; i < snapshots.length; i++) {
+      const snapshot = snapshots[i];
+      const action = actions[i];
+      const previousSnapshot = i > 0 ? snapshots[i - 1] : null;
+      const nextSnapshot = i < snapshots.length - 1 ? snapshots[i + 1] : null;
+      
+      // Determine flow type based on URL
+      const flowType = this.determineFlowType(snapshot.axeContext?.url || '');
+      
+      // Check if this is auth-related
+      const isAuthRelated = this.isAuthenticationStep(snapshot.axeContext?.url || '');
+      
+      // Generate DOM change summary
+      const domChangeSummary = await this.generateDOMChangeSummary(snapshot, previousSnapshot);
+      
+      // Generate accessibility context
+      const accessibilityContext = await this.generateAccessibilityContext(snapshot);
+      
+      const enhancedStep: StepDetail = {
+        step: snapshot.step,
+        parentStep: this.determineParentStep(action, actions, i),
+        action: snapshot.action,
+        actionType: this.determineActionType(action),
+        interactionTarget: action?.selector,
+        flowContext: this.determineFlowContext(action, actions, i),
+        uiState: this.determineUIState(action, actions, i),
+        timestamp: snapshot.timestamp,
+        htmlFile: path.basename(snapshot.files.html),
+        axeFile: path.basename(snapshot.files.axeContext),
+        axeResultsFile: path.basename(snapshot.files.axeResults),
+        screenshotFile: snapshot.files.screenshot ? path.basename(snapshot.files.screenshot) : undefined,
+        url: snapshot.axeContext?.url || 'unknown',
+        domChangeType: snapshot.domChangeType,
+        domChanges: snapshot.domChangeDetails.description,
+        tokenEstimate: this.estimateTokens(snapshot),
+        
+        // Enhanced fields
+        previousStep: previousSnapshot?.step,
+        nextStep: nextSnapshot?.step,
+        isAuthRelated,
+        excludeFromAnalysis: isAuthRelated || flowType === 'error_flow',
+        skipReason: isAuthRelated ? 'Authentication flow - not relevant for UI accessibility' : 
+                   flowType === 'error_flow' ? 'Error page - not part of main user flow' : undefined,
+        flowType,
+        domChangeSummary,
+        accessibilityContext
+      };
+      
+      enhancedSteps.push(enhancedStep);
+    }
+    
+    return enhancedSteps;
+  }
+
+  /**
+   * Determine flow type based on URL patterns
+   */
+  private determineFlowType(url: string): 'main_app' | 'auth_flow' | 'error_flow' | 'external_redirect' {
+    if (!url || url === 'unknown') return 'external_redirect';
+    
+    // Auth flow patterns
+    const authPatterns = [
+      'b2clogin.com',
+      'auth.identity.gov.au',
+      'myid.gov.au',
+      'sts.development.health.gov.au',
+      '/oauth/',
+      '/authorize',
+      '/signin',
+      '/login',
+      'AuthSpa.UI'
+    ];
+    
+    // Error flow patterns
+    const errorPatterns = [
+      '/error',
+      '/exception',
+      'hangup.php',
+      'GlobalException'
+    ];
+    
+    // Check for auth patterns
+    if (authPatterns.some(pattern => url.includes(pattern))) {
+      return 'auth_flow';
+    }
+    
+    // Check for error patterns
+    if (errorPatterns.some(pattern => url.includes(pattern))) {
+      return 'error_flow';
+    }
+    
+    // Check if it's the main app domain
+    if (url.includes('hbsp-test.powerappsportals.com')) {
+      return 'main_app';
+    }
+    
+    return 'external_redirect';
+  }
+
+  /**
+   * Check if step is authentication-related
+   */
+  private isAuthenticationStep(url: string): boolean {
+    return this.determineFlowType(url) === 'auth_flow';
+  }
+
+  /**
+   * Generate DOM change summary for LLM analysis
+   */
+  private async generateDOMChangeSummary(
+    current: SnapshotData, 
+    previous: SnapshotData | null
+  ): Promise<StepDetail['domChangeSummary']> {
+    const summary = {
+      elementsAdded: current.domChangeDetails.elementsAdded,
+      elementsRemoved: current.domChangeDetails.elementsRemoved,
+      ariaChanges: [] as string[],
+      focusChanges: undefined as string | undefined,
+      liveRegionUpdates: [] as string[],
+      significantChange: current.domChangeDetails.significant
+    };
+    
+    // Analyze ARIA changes (simplified - in production, you'd parse HTML)
+    if (previous && current.html && previous.html) {
+      // Check for common ARIA attribute changes
+      const ariaPatterns = [
+        { pattern: /aria-expanded="true"/, change: 'Element expanded' },
+        { pattern: /aria-expanded="false"/, change: 'Element collapsed' },
+        { pattern: /aria-hidden="true"/, change: 'Element hidden from screen readers' },
+        { pattern: /aria-hidden="false"/, change: 'Element shown to screen readers' },
+        { pattern: /role="alert"/, change: 'Alert role added' },
+        { pattern: /aria-live="polite"/, change: 'Polite live region added' },
+        { pattern: /aria-live="assertive"/, change: 'Assertive live region added' }
+      ];
+      
+      for (const { pattern, change } of ariaPatterns) {
+        if (pattern.test(current.html) && !pattern.test(previous.html)) {
+          summary.ariaChanges.push(change);
+        }
+      }
+      
+      // Check for focus changes (simplified)
+      const focusMatch = current.html.match(/autofocus|tabindex="0"|:focus/);
+      if (focusMatch) {
+        summary.focusChanges = 'Focus state detected in DOM';
+      }
+      
+      // Check for live region updates
+      if (current.html.includes('aria-live') && current.html !== previous.html) {
+        summary.liveRegionUpdates.push('Live region content potentially updated');
+      }
+    }
+    
+    return summary;
+  }
+
+  /**
+   * Generate accessibility context for screen reader analysis
+   */
+  private async generateAccessibilityContext(
+    snapshot: SnapshotData
+  ): Promise<StepDetail['accessibilityContext']> {
+    const context = {
+      focusedElement: undefined as string | undefined,
+      screenReaderAnnouncements: [] as string[],
+      keyboardNavigationState: 'default',
+      modalState: 'none' as 'none' | 'open' | 'closing',
+      dynamicContentUpdates: false,
+      ariaLiveRegions: [] as string[]
+    };
+    
+    if (snapshot.html) {
+      // Detect focused elements
+      const focusMatch = snapshot.html.match(/<[^>]+(?:autofocus|tabindex="0")[^>]*>/);
+      if (focusMatch) {
+        context.focusedElement = focusMatch[0];
+      }
+      
+      // Detect modal state
+      if (snapshot.html.includes('role="dialog"') || snapshot.html.includes('modal')) {
+        context.modalState = 'open';
+      }
+      
+      // Detect live regions
+      const liveRegionMatches = snapshot.html.match(/<[^>]+aria-live="[^"]+"/g);
+      if (liveRegionMatches) {
+        context.ariaLiveRegions = liveRegionMatches;
+      }
+      
+      // Detect dynamic updates
+      context.dynamicContentUpdates = snapshot.domChangeDetails.significant;
+      
+      // Infer keyboard navigation state
+      if (snapshot.action === 'fill' || snapshot.action === 'select') {
+        context.keyboardNavigationState = 'form_interaction';
+      } else if (snapshot.action === 'click') {
+        context.keyboardNavigationState = 'button_interaction';
+      }
+      
+      // Generate screen reader announcements (inferred)
+      if (snapshot.domChangeDetails.type === 'navigation') {
+        context.screenReaderAnnouncements.push('Page navigation completed');
+      }
+      if (context.ariaLiveRegions.length > 0) {
+        context.screenReaderAnnouncements.push('Dynamic content update detected');
+      }
+    }
+    
+    return context;
+  }
+
+  /**
+   * Generate action groups for better LLM understanding
+   */
+  private generateActionGroups(stepDetails: StepDetail[]): ActionGroup[] {
+    const groups: ActionGroup[] = [];
+    let currentGroup: number[] = [];
+    let currentFlowType: string = '';
+    let groupCounter = 1;
+    
+    for (const step of stepDetails) {
+      if (step.flowType !== currentFlowType) {
+        // Finish current group
+        if (currentGroup.length > 0) {
+          groups.push({
+            groupId: `${currentFlowType}_${groupCounter}`,
+            steps: currentGroup,
+            description: this.getFlowDescription(currentFlowType as any),
+            flowType: currentFlowType as any,
+            relevantForAnalysis: currentFlowType === 'main_app',
+            tokenEstimate: currentGroup.reduce((sum, stepNum) => {
+              const stepDetail = stepDetails.find(s => s.step === stepNum);
+              return sum + (stepDetail?.tokenEstimate || 0);
+            }, 0)
+          });
+        }
+        
+        // Start new group
+        currentGroup = [step.step];
+        currentFlowType = step.flowType;
+        groupCounter++;
+      } else {
+        currentGroup.push(step.step);
+      }
+    }
+    
+    // Add final group
+    if (currentGroup.length > 0) {
+      groups.push({
+        groupId: `${currentFlowType}_${groupCounter}`,
+        steps: currentGroup,
+        description: this.getFlowDescription(currentFlowType as any),
+        flowType: currentFlowType as any,
+        relevantForAnalysis: currentFlowType === 'main_app',
+        tokenEstimate: currentGroup.reduce((sum, stepNum) => {
+          const stepDetail = stepDetails.find(s => s.step === stepNum);
+          return sum + (stepDetail?.tokenEstimate || 0);
+        }, 0)
+      });
+    }
+    
+    return groups;
+  }
+
+  /**
+   * Get human-readable description for flow types
+   */
+  private getFlowDescription(flowType: 'main_app' | 'auth_flow' | 'error_flow' | 'external_redirect'): string {
+    switch (flowType) {
+      case 'main_app': return 'Primary application functionality';
+      case 'auth_flow': return 'Authentication and authorization flow';
+      case 'error_flow': return 'Error handling and error pages';
+      case 'external_redirect': return 'External site redirects and third-party services';
+      default: return 'Unknown flow type';
+    }
+  }
+
+  /**
+   * Calculate flow statistics for LLM context
+   */
+  private calculateFlowStatistics(stepDetails: StepDetail[]): FlowStatistics {
+    return {
+      totalSteps: stepDetails.length,
+      authSteps: stepDetails.filter(s => s.flowType === 'auth_flow').length,
+      mainAppSteps: stepDetails.filter(s => s.flowType === 'main_app').length,
+      errorSteps: stepDetails.filter(s => s.flowType === 'error_flow').length,
+      significantDOMChanges: stepDetails.filter(s => s.domChangeSummary.significantChange).length,
+      accessibilityEvents: stepDetails.filter(s => 
+        s.accessibilityContext.ariaLiveRegions.length > 0 || 
+        s.accessibilityContext.screenReaderAnnouncements.length > 0
+      ).length
+    };
+  }
+
+  // ...existing code...
 }
 
 /**
