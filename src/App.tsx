@@ -44,7 +44,7 @@ const InfoModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onC
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 id="accessibility-info-title" className="text-xl font-semibold text-gray-900 text-left">
-            Accessibility Analysis Results: Information
+            Important things to know and do
           </h2>
           <button
             onClick={onClose}
