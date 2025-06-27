@@ -1,0 +1,4 @@
+✅ fix failure to load recording after server restart
+page numbering for each issue, perhaps next to 'screen reader issue' and 'axe issue'
+perhaps a search / filter issue by number would be helpful
+progress bar by batches to replace processing n snapshots in the ai analysis phase panel. show processing batch 9/34

@@ -369,11 +369,11 @@ app.post('/api/record/stop', async (req: any, res: any) => {
 /**
  * Get actions for active recording session - Phase 1
  */
-app.get('/api/record/:sessionId/actions', (req: any, res: any) => {
+app.get('/api/record/:sessionId/actions', async (req: any, res: any) => {
   try {
     const { sessionId } = req.params;
     
-    const actions = browserRecordingService.getSessionActions(sessionId);
+    const actions = await browserRecordingService.getSessionActions(sessionId);
     
     res.json({
       sessionId,

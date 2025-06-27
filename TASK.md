@@ -2,10 +2,18 @@
 
 ## ✅ Recently Completed (2025-06-27)
 
+### Session Persistence and Server Restart Fix
+- ✅ **Fixed session loading after server restart** - Sessions now load reliably from disk when not found in memory, enabling analysis of previously saved recordings after `npm run dev:full` restart
+- ✅ **Implemented memory-first, disk-fallback session loading** - `getSession()` now checks memory first for active sessions, then falls back to loading saved recordings from disk with automatic format conversion
+- ✅ **Added automatic data format conversion** - Seamlessly converts between in-memory `RecordingSession` format and disk `SavedRecording` format, handling field name differences (name/sessionName, Date/string timestamps)
+- ✅ **Enhanced session loading robustness** - Updated `getSession()` and `getSessionActions()` to be async with proper error handling for disk I/O operations
+- ✅ **Maintained API compatibility** - All existing endpoints continue to work without changes, with improved reliability for saved session analysis
+
 ### Dynamic Timeout and Duplicate Message Fixes
 - ✅ **Implemented dynamic analysis timeout calculation** - Timeout now scales with action count: base 10 minutes + 20 seconds per action (max 60 minutes)
 - ✅ **Fixed timeout configuration** - Updated `.env.local` from 1-minute to 10-minute minimum timeout, preventing premature analysis termination
 - ✅ **Added progress message deduplication** - Frontend now prevents duplicate progress messages like "Replaying step 23: navigate" appearing twice
+- ✅ **Fixed Axe results duplication** - Backend now deduplicates identical accessibility violations across multiple snapshots, preventing the same issue from appearing N times
 - ✅ **Enhanced timeout logging** - Server now logs calculated timeout duration based on action count for better debugging
 - ✅ **Improved timeout messaging** - Backend timeout messages now include action count for context (e.g., "timeout after 15 minutes (49 actions)")
 - ✅ **Added estimated duration reporting** - Analysis start response now includes estimated duration based on action count

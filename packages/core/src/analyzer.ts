@@ -674,19 +674,38 @@ export class AccessibilityAnalyzer {
    * Consolidate axe results from all snapshots, removing duplicates and adding LLM recommendations
    */
   private async consolidateAxeResults(snapshots: SnapshotData[], timeoutOptions?: { llmComponentTimeout?: number }): Promise<any[]> {
-    // Instead of deduplicating by id, flatten all violations with their originating step and url
-    const violations: any[] = [];
+    // Collect violations with deduplication by rule ID + target selector combination
+    const violationMap = new Map<string, any>();
+    
     snapshots.forEach(snapshot => {
       if (snapshot.axeResults && Array.isArray(snapshot.axeResults)) {
         snapshot.axeResults.forEach(violation => {
-          violations.push({
-            ...violation,
-            step: snapshot.step,
-            url: (snapshot.axeContext && snapshot.axeContext.url) || undefined
-          });
+          // Create unique key for each violation based on rule ID and target elements
+          const targets = violation.nodes?.map((node: any) => node.target?.join(' ') || '').join('|') || '';
+          const uniqueKey = `${violation.id}:${targets}`;
+          
+          if (!violationMap.has(uniqueKey)) {
+            // First occurrence of this violation - add it with step info
+            violationMap.set(uniqueKey, {
+              ...violation,
+              step: snapshot.step,
+              url: (snapshot.axeContext && snapshot.axeContext.url) || undefined,
+              firstSeenStep: snapshot.step,
+              stepOccurrences: [snapshot.step]
+            });
+          } else {
+            // Duplicate violation - just track which steps it occurred in
+            const existing = violationMap.get(uniqueKey);
+            if (!existing.stepOccurrences.includes(snapshot.step)) {
+              existing.stepOccurrences.push(snapshot.step);
+            }
+          }
         });
       }
     });
+
+    const violations = Array.from(violationMap.values());
+    console.log(`🔍 Consolidated ${violations.length} unique violations from ${snapshots.reduce((sum, s) => sum + (s.axeResults?.length || 0), 0)} total violations across ${snapshots.length} snapshots`);
 
     // Generate LLM recommendations if Gemini is available
     if (this.geminiService && violations.length > 0) {

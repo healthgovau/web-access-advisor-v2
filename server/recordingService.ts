@@ -249,10 +249,39 @@ export class BrowserRecordingService {
   }
 
   /**
-   * Get session by ID
+   * Get session by ID - loads from disk if not in memory
    */
-  getSession(sessionId: string): RecordingSession | null {
-    return this.sessions.get(sessionId) || null;
+  async getSession(sessionId: string): Promise<RecordingSession | null> {
+    // First check if session is in memory
+    const memorySession = this.sessions.get(sessionId);
+    if (memorySession) {
+      return memorySession;
+    }
+
+    // If not in memory, try to load from disk
+    try {
+      const savedRecording = await this.getSavedRecording(sessionId);
+      if (!savedRecording) {
+        return null;
+      }
+
+      // Convert SavedRecording to RecordingSession format
+      const reconstructedSession: RecordingSession = {
+        sessionId: savedRecording.sessionId,
+        url: savedRecording.url,
+        name: savedRecording.sessionName,
+        startTime: new Date(savedRecording.startTime),
+        status: 'stopped', // Saved recordings are always stopped
+        actions: savedRecording.actions,
+        // Browser, context, page are undefined since this is a saved session
+      };
+
+      console.log(`📁 Loaded session ${sessionId} from disk with ${savedRecording.actions.length} actions`);
+      return reconstructedSession;
+    } catch (error) {
+      console.error(`Failed to load session ${sessionId} from disk:`, error);
+      return null;
+    }
   }
 
   /**
@@ -263,10 +292,10 @@ export class BrowserRecordingService {
   }
 
   /**
-   * Get session actions
+   * Get session actions - loads from disk if not in memory
    */
-  getSessionActions(sessionId: string): UserAction[] {
-    const session = this.sessions.get(sessionId);
+  async getSessionActions(sessionId: string): Promise<UserAction[]> {
+    const session = await this.getSession(sessionId);
     return session?.actions || [];
   }
 
