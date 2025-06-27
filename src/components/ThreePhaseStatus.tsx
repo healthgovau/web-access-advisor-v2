@@ -18,6 +18,8 @@ interface ThreePhaseStatusProps {
   error?: string;
   actionCount?: number;
   snapshotCount?: number;
+  batchCurrent?: number;
+  batchTotal?: number;
   warnings?: string[];
 }
 
@@ -26,6 +28,8 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
   error,
   actionCount = 0,
   snapshotCount = 0,
+  batchCurrent,
+  batchTotal,
   warnings = []
 }) => {
     // Determine phase statuses based on current stage
@@ -104,9 +108,11 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
         phases[1].details = `${snapshotCount} snapshots captured`;
           phases[2].status = 'active';
         phases[2].message = currentStage === 'processing-with-ai' ? 'Analyzing with AI...' : 'Generating report...';
-        phases[2].details = snapshotCount > 0 ? 
-          `Processing ${snapshotCount} snapshots` : 
-          'Analyzing accessibility data';
+        phases[2].details = currentStage === 'processing-with-ai' && batchCurrent && batchTotal ? 
+          `Processing batch ${batchCurrent}/${batchTotal}` : 
+          snapshotCount > 0 ? 
+            `Processing ${snapshotCount} snapshots` : 
+            'Analyzing accessibility data';
         break;
           case 'completed':
         phases[0].status = 'completed';

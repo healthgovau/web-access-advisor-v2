@@ -36,6 +36,8 @@ export interface AnalyzeSessionResponse {
   currentStep?: number;
   totalSteps?: number;
   snapshotCount?: number;
+  batchCurrent?: number;
+  batchTotal?: number;
 }
 
 /**

@@ -87,6 +87,8 @@ interface AnalysisState {
   currentStep?: number;
   totalSteps?: number;
   snapshotCount?: number; // Track snapshots captured so far
+  batchCurrent?: number;  // Current batch being processed
+  batchTotal?: number;    // Total number of batches
 }
 
 // Middleware
@@ -507,6 +509,13 @@ async function processAnalysisAsync(sessionId: string, actions: UserAction[], dy
       if (snapshotCount !== undefined) {
         analysisState.snapshotCount = snapshotCount;
       }
+      
+      // For AI processing phase, use step/total as batch information
+      if (phase === 'processing-with-ai' && step !== undefined && total !== undefined) {
+        analysisState.batchCurrent = step;
+        analysisState.batchTotal = total;
+      }
+      
       console.log(`📊 Phase: ${phase} - ${message}${step && total ? ` (${step}/${total})` : ''}${snapshotCount !== undefined ? ` [${snapshotCount} snapshots]` : ''}`);
     };
     
@@ -568,6 +577,8 @@ app.get('/api/analysis/:analysisId/status', async (req: any, res: any) => {
         currentStep: analysisState.currentStep,
         totalSteps: analysisState.totalSteps,
         snapshotCount: analysisState.snapshotCount || 0,
+        batchCurrent: analysisState.batchCurrent,
+        batchTotal: analysisState.batchTotal,
         result: analysisState.result
       });
     }

@@ -161,6 +161,8 @@ export interface ProgressState {
   details?: string;
   error?: string;
   snapshotCount?: number;
+  batchCurrent?: number;    // Current batch number (e.g., 9)
+  batchTotal?: number;      // Total number of batches (e.g., 34)
 }
 
 export interface AppState {

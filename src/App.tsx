@@ -394,8 +394,17 @@ function App() {
 
               const frontendStage = stageMapping[statusResponse.phase] || statusResponse.phase as ProgressStage;
 
-              // Update progress with real-time snapshot count
-              updateProgress(frontendStage, statusResponse.message, undefined, undefined, undefined, statusResponse.snapshotCount);
+              // Update progress with real-time snapshot count and batch info
+              updateProgress(
+                frontendStage, 
+                statusResponse.message, 
+                undefined, 
+                undefined, 
+                undefined, 
+                statusResponse.snapshotCount,
+                statusResponse.batchCurrent,
+                statusResponse.batchTotal
+              );
             }
 
             if (statusResponse.status === 'completed' && statusResponse.result) {
@@ -602,14 +611,14 @@ function App() {
       stopActionPolling();
     };
   }, []);  // Update progress helper with mounted check and duplicate message prevention
-  const updateProgress = (stage: ProgressStage, message: string, progress?: number, details?: string, error?: string, snapshotCount?: number) => {
+  const updateProgress = (stage: ProgressStage, message: string, progress?: number, details?: string, error?: string, snapshotCount?: number, batchCurrent?: number, batchTotal?: number) => {
     if (!isMountedRef.current) {
       console.warn('Attempted to update progress on unmounted component:', { stage, message });
       return;
     }
     
     // Create a unique message identifier to prevent duplicates
-    const messageId = `${stage}:${message}:${progress || 0}:${snapshotCount || 0}`;
+    const messageId = `${stage}:${message}:${progress || 0}:${snapshotCount || 0}:${batchCurrent || 0}:${batchTotal || 0}`;
     
     // Check if this is the same message as the last one (prevents duplicate console logs too)
     if (lastProgressMessageRef.current === messageId) {
@@ -622,10 +631,10 @@ function App() {
     
     setState(prev => ({
       ...prev,
-      progress: { stage, message, progress, details, error, snapshotCount }
+      progress: { stage, message, progress, details, error, snapshotCount, batchCurrent, batchTotal }
     }));
     
-    console.log(`📊 Progress: ${stage} - ${message}${progress ? ` (${progress}%)` : ''}${snapshotCount !== undefined ? ` [${snapshotCount} snapshots]` : ''}`);
+    console.log(`📊 Progress: ${stage} - ${message}${progress ? ` (${progress}%)` : ''}${snapshotCount !== undefined ? ` [${snapshotCount} snapshots]` : ''}${batchCurrent && batchTotal ? ` [batch ${batchCurrent}/${batchTotal}]` : ''}`);
   };
 
   // Helper to add a toast with mounted check
@@ -722,6 +731,11 @@ function App() {
                       </span>
                     )}
                   </div>
+                  
+                  {/* Info button flush to the right */}
+                  <div className="flex items-center">
+                    <InfoIcon onClick={() => setInfoOpen(true)} />
+                  </div>
                 </div>
               </div>
             ) : null}{/* Three-Phase Status - Always visible */}
@@ -733,6 +747,8 @@ function App() {
                 const snapshotCount = state.progress.snapshotCount || state.analysisResult?.snapshotCount || 0;
                 return snapshotCount;
               })()}
+              batchCurrent={state.progress.batchCurrent}
+              batchTotal={state.progress.batchTotal}
               warnings={state.analysisResult?.warnings || []}
             />            {/* Error Display */}
             {state.error && <ErrorDisplay error={state.error} />}
@@ -809,13 +825,10 @@ function App() {
                   <div className="card rounded-lg overflow-hidden">
                     <div className="p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center w-20">
-                          <InfoIcon onClick={() => setInfoOpen(true)} />
-                        </div>
                         <h2 className="text-xl font-medium text-gray-900 text-center flex-1">
                           Accessibility Analysis Results
                         </h2>
-                        <div className="flex items-center justify-end w-20">
+                        <div className="flex items-center justify-end">
                           <button
                             onClick={handleExportPDF}
                             disabled={isExporting}
