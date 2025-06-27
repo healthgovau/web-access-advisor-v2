@@ -411,6 +411,25 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
         </div>
       )}
 
+      {/* Screen Reader Analysis - No Issues Found State */}
+      {analysisData.analysis && analysisData.analysis.components && analysisData.analysis.components.length === 0 && (
+        <details className="mt-6 border-t border-gray-200 pt-6">
+          <summary className="cursor-pointer flex items-center justify-center">
+            <h4 className="text-lg font-medium text-gray-900 text-center">
+              Screen Reader Accessibility Issues
+            </h4>
+            <span className="text-sm text-green-600 font-medium ml-4">
+              ✅ No issues found
+            </span>
+          </summary>
+          <div className="mt-4 p-4 bg-green-50 rounded-lg">
+            <p className="text-sm text-green-700">
+              The AI analysis found no screen reader accessibility issues in the captured snapshots.
+            </p>
+          </div>
+        </details>
+      )}
+
       {/* No Analysis Data State - only show if there's no AI analysis AND no axe results exist */}
       {(!analysisData.analysis || !analysisData.analysis.components || analysisData.analysis.components.length === 0) && 
        !analysisData.axeResults && (
