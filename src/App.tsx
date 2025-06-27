@@ -321,7 +321,7 @@ function App() {
       updateProgress('recording-complete', `Recording complete: ${state.actions.length} actions captured`, undefined, 'Ready for accessibility analysis');
 
       updateState({
-        mode: 'results',
+        mode: 'ready',
         loading: false
       });
 
@@ -573,7 +573,7 @@ function App() {
       updateProgress('recording-complete', `Session loaded: ${sessionData.actionCount} actions`, undefined, 'Ready for accessibility analysis');
 
       updateState({
-        mode: 'results',
+        mode: 'ready',
         sessionId: sessionData.sessionId,
         url: sessionData.url,
         actions: sessionData.actions,
@@ -690,8 +690,8 @@ function App() {
           </div>
         </header>        <main className="mt-8">
           <div className="space-y-6">          {/* Session Mode - Always visible */}
-            {state.mode === 'setup' || (state.mode === 'results' && sessionMode === 'load' && !state.analysisResult) ? (
-              // Interactive session mode during setup or when in results mode with loaded session (before analysis)
+            {state.mode === 'setup' || state.mode === 'ready' || (state.mode === 'results' && sessionMode === 'load' && !state.analysisResult) ? (
+              // Interactive session mode during setup, ready state, or when in results mode with loaded session (before analysis)
               <>
                 <SessionModeToggle
                   mode={sessionMode}
@@ -804,7 +804,7 @@ function App() {
               </>
             )}
 
-            {/* Results Mode */}            {state.mode === 'results' && (
+            {/* Ready/Results Mode */}            {(state.mode === 'ready' || state.mode === 'results') && (
               <>
                 <AnalysisControls
                   hasActions={state.actions.length > 0}

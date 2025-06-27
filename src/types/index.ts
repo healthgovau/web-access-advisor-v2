@@ -137,7 +137,7 @@ export interface AnalysisOptions {
 }
 
 // Frontend-specific types
-export type AppMode = 'setup' | 'recording' | 'analyzing' | 'results';
+export type AppMode = 'setup' | 'recording' | 'ready' | 'analyzing' | 'results';
 
 export type ProgressStage = 
   | 'idle'
