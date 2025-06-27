@@ -2,12 +2,25 @@
 
 ## ✅ Recently Completed (2025-06-27)
 
-### Frontend Polling Resilience and Error Handling
+### Dynamic Timeout and Duplicate Message Fixes
+- ✅ **Implemented dynamic analysis timeout calculation** - Timeout now scales with action count: base 10 minutes + 20 seconds per action (max 60 minutes)
+- ✅ **Fixed timeout configuration** - Updated `.env.local` from 1-minute to 10-minute minimum timeout, preventing premature analysis termination
+- ✅ **Added progress message deduplication** - Frontend now prevents duplicate progress messages like "Replaying step 23: navigate" appearing twice
+- ✅ **Enhanced timeout logging** - Server now logs calculated timeout duration based on action count for better debugging
+- ✅ **Improved timeout messaging** - Backend timeout messages now include action count for context (e.g., "timeout after 15 minutes (49 actions)")
+- ✅ **Added estimated duration reporting** - Analysis start response now includes estimated duration based on action count
+
+### Frontend Polling Resilience and Error Handling  
 - ✅ **Fixed misleading error messages during analysis polling** - Frontend now distinguishes between backend analysis failures and temporary communication issues
 - ✅ **Added retry logic for analysis polling** - Implements exponential backoff with up to 3 retries for transient network/timeout errors during status polling
 - ✅ **Improved error message accuracy** - Polling failures now show specific error types (network connection lost, server timeout, etc.) instead of backend progress messages
 - ✅ **Enhanced user guidance for polling failures** - Provides clear guidance when connection is lost, suggesting the backend may still be processing and to try refreshing later
 - ✅ **Prevented premature analysis termination** - Frontend no longer terminates analysis session on first polling failure, allowing backend to continue processing
+- ✅ **Fixed unhandled promise rejections in polling** - Wrapped all setTimeout polling callbacks with proper error handling to prevent frontend crashes from async polling errors
+- ✅ **Added React component lifecycle protection** - Implemented mounted component checks to prevent state updates on unmounted components during long-running analysis
+- ✅ **Improved async error handling** - All polling setTimeout calls now properly catch and log errors instead of causing unhandled promise rejections
+- ✅ **Resolved duplicate error notifications** - Error display component now hidden when toast notifications are active to prevent redundant error messages
+- ✅ **Enhanced timeout detection** - Frontend now properly detects and handles backend analysis timeouts with user-friendly messaging and appropriate cleanup
 
 ## ✅ Recently Completed (2025-06-26)
 

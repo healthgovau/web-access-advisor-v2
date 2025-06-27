@@ -40,12 +40,26 @@ console.log(`🔑 Gemini API Key configured: ${process.env.GEMINI_API_KEY ? 'Yes
 console.log(`🌐 API Port: ${process.env.API_PORT || 3002}`);
 
 // Timeout configurations
-const ANALYSIS_TIMEOUT = parseInt(process.env.ANALYSIS_TIMEOUT || '1800000'); // 30 minutes default
+const BASE_ANALYSIS_TIMEOUT = parseInt(process.env.ANALYSIS_TIMEOUT || '1800000'); // 30 minutes default
 const LLM_COMPONENT_TIMEOUT = parseInt(process.env.LLM_COMPONENT_TIMEOUT || '300000'); // 5 minutes default
 const LLM_FLOW_TIMEOUT = parseInt(process.env.LLM_FLOW_TIMEOUT || '600000'); // 10 minutes default
 const RECORDING_TIMEOUT = parseInt(process.env.RECORDING_TIMEOUT || '30000'); // 30 seconds default
 
-console.log(`⏱️ Analysis timeout: ${ANALYSIS_TIMEOUT / 1000}s (${Math.round(ANALYSIS_TIMEOUT / 60000)} minutes)`);
+/**
+ * Calculate dynamic analysis timeout based on action count
+ * Formula: Base timeout (10 minutes) + (action count * 20 seconds)
+ * Minimum: 10 minutes, Maximum: 60 minutes
+ */
+function calculateAnalysisTimeout(actionCount: number): number {
+  const baseTimeout = Math.max(600000, BASE_ANALYSIS_TIMEOUT); // Minimum 10 minutes
+  const perActionTimeout = 20000; // 20 seconds per action
+  const calculatedTimeout = baseTimeout + (actionCount * perActionTimeout);
+  const maxTimeout = 3600000; // Maximum 60 minutes
+  
+  return Math.min(calculatedTimeout, maxTimeout);
+}
+
+console.log(`⏱️ Base analysis timeout: ${BASE_ANALYSIS_TIMEOUT / 1000}s (${Math.round(BASE_ANALYSIS_TIMEOUT / 60000)} minutes)`);
 console.log(`⏱️ LLM component timeout: ${LLM_COMPONENT_TIMEOUT / 1000}s (${Math.round(LLM_COMPONENT_TIMEOUT / 60000)} minutes)`);
 console.log(`⏱️ LLM flow timeout: ${LLM_FLOW_TIMEOUT / 1000}s (${Math.round(LLM_FLOW_TIMEOUT / 60000)} minutes)`);
 console.log(`⏱️ Recording timeout: ${RECORDING_TIMEOUT / 1000}s`);
@@ -428,6 +442,10 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
 
     console.log(`Starting analysis of session ${sessionId} with ${recordingSession.actions.length} actions`);
 
+    // Calculate dynamic timeout based on action count
+    const dynamicTimeout = calculateAnalysisTimeout(recordingSession.actions.length);
+    console.log(`⏱️ Dynamic analysis timeout for ${recordingSession.actions.length} actions: ${dynamicTimeout / 1000}s (${Math.round(dynamicTimeout / 60000)} minutes)`);
+
     // Initialize analysis state tracking
     const analysisState: AnalysisState = {
       sessionId,
@@ -445,11 +463,12 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
       analysisId: sessionId,
       status: 'analyzing',
       phase: analysisState.phase,
-      message: analysisState.message
+      message: analysisState.message,
+      estimatedDuration: Math.round(dynamicTimeout / 60000) // Include estimated duration in minutes
     });
 
     // Process analysis asynchronously
-    processAnalysisAsync(sessionId, recordingSession.actions);
+    processAnalysisAsync(sessionId, recordingSession.actions, dynamicTimeout);
 
   } catch (error) {
     console.error('Analysis start error:', error);
@@ -463,7 +482,7 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
 /**
  * Process analysis asynchronously with phase tracking
  */
-async function processAnalysisAsync(sessionId: string, actions: UserAction[]) {
+async function processAnalysisAsync(sessionId: string, actions: UserAction[], dynamicTimeout: number) {
   const analysisState = analysisStates.get(sessionId);
   if (!analysisState) {
     console.error(`Analysis state not found for session ${sessionId}`);
@@ -503,10 +522,10 @@ async function processAnalysisAsync(sessionId: string, actions: UserAction[]) {
       llmFlowTimeout: LLM_FLOW_TIMEOUT
     });
 
-    // Set up timeout for analysis (configurable via environment)
-    const timeoutMessage = `Analysis timeout after ${Math.round(ANALYSIS_TIMEOUT / 60000)} minutes`;
+    // Set up timeout for analysis with dynamic timeout
+    const timeoutMessage = `Analysis timeout after ${Math.round(dynamicTimeout / 60000)} minutes (${actions.length} actions)`;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error(timeoutMessage)), ANALYSIS_TIMEOUT);
+      setTimeout(() => reject(new Error(timeoutMessage)), dynamicTimeout);
     });
 
     const result: AnalysisResult = await Promise.race([analysisPromise, timeoutPromise]);
@@ -643,9 +662,10 @@ async function startServer() {
       console.log(`📊 API documentation: http://localhost:${PORT}/api`);
     });
     
-    // Set server timeout to match analysis timeout (prevent 1-minute default timeout)
-    server.setTimeout(ANALYSIS_TIMEOUT + 60000); // Add 1 minute buffer
-    console.log(`⏱️ HTTP server timeout: ${(ANALYSIS_TIMEOUT + 60000) / 1000}s (${Math.round((ANALYSIS_TIMEOUT + 60000) / 60000)} minutes)`);
+    // Set server timeout to match base analysis timeout (prevent 1-minute default timeout)
+    const httpTimeout = BASE_ANALYSIS_TIMEOUT + 60000; // Add 1 minute buffer
+    server.setTimeout(httpTimeout);
+    console.log(`⏱️ HTTP server timeout: ${httpTimeout / 1000}s (${Math.round(httpTimeout / 60000)} minutes)`);
     
   } catch (error) {
     console.error('Failed to start server:', error);

@@ -196,6 +196,17 @@ function App() {
   const [infoOpen, setInfoOpen] = useState(false);
   // Toast state for error notifications
   const [toasts, setToasts] = useState<{ id: string; message: string; type?: 'error' | 'info' }[]>([]);
+  
+  // Track if component is mounted to prevent state updates on unmounted component
+  const isMountedRef = useRef(true);
+  
+  // Track last progress message to prevent duplicates
+  const lastProgressMessageRef = useRef<string>('');
+
+  // Reset mount ref to true when component renders (handles React strict mode)
+  useEffect(() => {
+    isMountedRef.current = true;
+  });
 
   // Accessibility analysis hook
   const { handleAnalysisResult } = useAccessibilityAnalysis();
@@ -213,9 +224,13 @@ function App() {
     }
   };
 
-  // Update state helper
+  // Update state helper with mounted check
   const updateState = (updates: Partial<AppState>) => {
-    setState(prev => ({ ...prev, ...updates }));
+    if (isMountedRef.current) {
+      setState(prev => ({ ...prev, ...updates }));
+    } else {
+      console.warn('Attempted to update state on unmounted component:', updates);
+    }
   };
   // Handle URL changes
   const handleUrlChange = (url: string) => {
@@ -247,18 +262,25 @@ function App() {
   };  // Handle navigate & start recording
   const handleNavigateAndRecord = async () => {
     try {
-      updateState({ loading: true, error: undefined }); updateProgress('starting-browser', 'Initializing browser environment', 10);
+      updateState({ loading: true, error: undefined });
+      if (!isMountedRef.current) return; // Check after state update
+      
+      updateProgress('starting-browser', 'Initializing browser environment', 10);
+      if (!isMountedRef.current) return; // Check after progress update
 
       if (!state.url.trim()) {
         throw new Error('Please enter a URL to test');
       }
 
       updateProgress('starting-browser', 'Launching browser session');
+      if (!isMountedRef.current) return; // Check before API call
 
       // Start recording session
       const response = await recordingApi.startRecordingSession({
         url: state.url
       });
+      
+      if (!isMountedRef.current) return; // Check after async operation
 
       updateProgress('recording', 'Browser ready - interact with the website to record actions');
 
@@ -270,8 +292,12 @@ function App() {
       });
 
       // Start polling for actions
-      startActionPolling(response.sessionId);
+      if (isMountedRef.current) {
+        startActionPolling(response.sessionId);
+      }
     } catch (error) {
+      if (!isMountedRef.current) return; // Don't update if unmounted
+      
       updateProgress('error', 'Failed to start recording', undefined, undefined, error instanceof Error ? error.message : 'Unknown error');
       updateState({
         error: error instanceof Error ? error.message : 'Failed to start recording',
@@ -310,12 +336,19 @@ function App() {
 
   // Handle analysis start
   const handleStartAnalysis = async () => {
-    if (!state.sessionId) return; try {
+    if (!state.sessionId) return;
+
+    try {
+      // Reset progress message tracking for new analysis
+      lastProgressMessageRef.current = '';
+      
       updateState({
         mode: 'analyzing',
         loading: true,
         error: undefined
-      }); updateProgress('preparing-analysis', 'Initializing accessibility analysis');
+      });
+
+      updateProgress('preparing-analysis', 'Initializing accessibility analysis');
 
       if (state.actions.length === 0) {
         throw new Error('No actions to analyze');
@@ -324,11 +357,11 @@ function App() {
       updateProgress('replaying-actions', 'Replaying actions in headless browser');
 
       // Brief delay to show the replaying phase
-      await new Promise(resolve => setTimeout(resolve, 800)); updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
-      // Start the analysis
-      const response = await recordingApi.analyzeSession(state.sessionId);
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-      if (response.status === 'completed' && response.result) {
+      updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
+      // Start the analysis
+      const response = await recordingApi.analyzeSession(state.sessionId);        if (response.status === 'completed' && response.result) {
         // Analysis completed immediately (unlikely but possible)
         const resultHandler = handleAnalysisResult(response.result);
         updateProgress(resultHandler.stage, resultHandler.message, undefined, resultHandler.details);
@@ -390,7 +423,12 @@ function App() {
             }
 
             // Analysis still in progress - continue polling
-            setTimeout(pollAnalysis, 2000);
+            setTimeout(() => {
+              pollAnalysis().catch(err => {
+                console.error('Unhandled polling error in setTimeout:', err);
+                // Don't crash the app, just log the error
+              });
+            }, 2000);
           } catch (error) {
             console.error(`Analysis polling error (attempt ${pollRetryCount + 1}/${maxRetries + 1}):`, error);
             
@@ -400,14 +438,27 @@ function App() {
               // Retry with exponential backoff
               const retryDelay = Math.min(2000 * Math.pow(2, pollRetryCount - 1), 10000);
               console.log(`Retrying analysis polling in ${retryDelay}ms...`);
-              setTimeout(pollAnalysis, retryDelay);
+              
+              // Show temporary warning message for polling issues (not a fatal error)
+              updateProgress('processing-with-ai', 
+                `Connection issue detected (retry ${pollRetryCount}/${maxRetries}). Retrying in ${Math.ceil(retryDelay/1000)}s...`, 
+                undefined, 
+                'The analysis is likely still running on the server.');
+              
+              setTimeout(() => {
+                pollAnalysis().catch(err => {
+                  console.error('Unhandled polling retry error in setTimeout:', err);
+                  // Don't crash the app, just log the error
+                });
+              }, retryDelay);
               return;
             }
 
-            // Max retries exceeded - show appropriate error
+            // Max retries exceeded - but DON'T treat this as a fatal error
+            // Instead, provide a way to manually retry or check status
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            let userFriendlyMessage = 'Connection lost during analysis';
-            let details = 'The backend may still be processing. Try refreshing the page in a few minutes.';
+            let userFriendlyMessage = 'Polling connection lost';
+            let details = 'The backend analysis may still be running. You can try refreshing the page or waiting a few minutes.';
             
             if (errorMessage.includes('fetch') || errorMessage.includes('NetworkError')) {
               userFriendlyMessage = 'Network connection lost';
@@ -423,17 +474,29 @@ function App() {
               details = 'There was an internal server error. Please try starting a new analysis.';
             }
 
-            updateProgress('error', userFriendlyMessage, undefined, details, `Network/Communication Error: ${errorMessage}`);
+            // Show warning in progress but DON'T set state.error (which triggers toast)
+            updateProgress('processing-with-ai', 
+              `${userFriendlyMessage}`, 
+              undefined, 
+              `${details} | Technical details: ${errorMessage}`);
+            
+            // Show a less intrusive toast warning instead of fatal error
+            addToast(`${userFriendlyMessage}: ${details}`, 'info');
+            
+            // Show warning in progress and continue analysis without setting fatal error
             updateState({
-              error: `${userFriendlyMessage}: ${details}`,
-              loading: false,
-              mode: 'results'
+              loading: false  // Stop the loading spinner, but keep analysis mode
             });
           }
         };
 
         // Start polling immediately
-        setTimeout(pollAnalysis, 1000);
+        setTimeout(() => {
+          pollAnalysis().catch(err => {
+            console.error('Unhandled initial polling error in setTimeout:', err);
+            // Don't crash the app, just log the error
+          });
+        }, 1000);
       }
 
     } catch (error) {
@@ -457,6 +520,7 @@ function App() {
   };  // Reset to start over
   const handleReset = () => {
     stopActionPolling();
+    lastProgressMessageRef.current = ''; // Reset progress message tracking
     setSessionMode('new'); // Reset to new recording mode
     updateState({
       mode: 'setup',
@@ -534,23 +598,46 @@ function App() {
   // Cleanup polling on unmount
   useEffect(() => {
     return () => {
+      isMountedRef.current = false;
       stopActionPolling();
     };
-  }, []);  // Update progress helper
+  }, []);  // Update progress helper with mounted check and duplicate message prevention
   const updateProgress = (stage: ProgressStage, message: string, progress?: number, details?: string, error?: string, snapshotCount?: number) => {
-
+    if (!isMountedRef.current) {
+      console.warn('Attempted to update progress on unmounted component:', { stage, message });
+      return;
+    }
+    
+    // Create a unique message identifier to prevent duplicates
+    const messageId = `${stage}:${message}:${progress || 0}:${snapshotCount || 0}`;
+    
+    // Check if this is the same message as the last one (prevents duplicate console logs too)
+    if (lastProgressMessageRef.current === messageId) {
+      console.log(`📊 Duplicate progress message prevented: ${message}`);
+      return;
+    }
+    
+    // Update the last message reference
+    lastProgressMessageRef.current = messageId;
+    
     setState(prev => ({
       ...prev,
       progress: { stage, message, progress, details, error, snapshotCount }
     }));
+    
+    console.log(`📊 Progress: ${stage} - ${message}${progress ? ` (${progress}%)` : ''}${snapshotCount !== undefined ? ` [${snapshotCount} snapshots]` : ''}`);
   };
 
-  // Helper to add a toast
+  // Helper to add a toast with mounted check
   const addToast = (message: string, type: 'error' | 'info' = 'error') => {
-    setToasts((prev) => [
-      ...prev,
-      { id: `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`, message, type },
-    ]);
+    if (isMountedRef.current) {
+      setToasts((prev) => [
+        ...prev,
+        { id: `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`, message, type },
+      ]);
+    } else {
+      console.warn('Attempted to add toast on unmounted component:', message);
+    }
   };
   // Helper to dismiss a toast
   const dismissToast = (id: string) => {
@@ -689,7 +776,9 @@ function App() {
                       </div>
                     </div>
                   </div>
-                </div>{/* Actions List - Keep visible during analysis for consistency */}
+                </div>
+
+                {/* Actions List - Keep visible during analysis for consistency */}
                 {state.actions.length > 0 && (
                   <ActionList
                     actions={state.actions}
@@ -707,7 +796,8 @@ function App() {
                   hasAnalysisResult={!!state.analysisResult}
                   isLoading={state.loading}
                   onStartAnalysis={handleStartAnalysis}
-                  onReset={handleReset} />                {/* Actions List */}
+                  onReset={handleReset}
+                />                {/* Actions List */}
                 {state.actions.length > 0 && (
                   <ActionList
                     actions={state.actions}
