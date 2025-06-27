@@ -680,8 +680,12 @@ function App() {
                 AI-powered accessibility testing and analysis
               </p>
             </div>
-            <div className="text-base text-slate">
-              Service Mode: <span className="font-medium capitalize">{state.mode}</span>
+            <div className="flex items-center space-x-4">
+              <div className="text-base text-slate">
+                Service Mode: <span className="font-medium capitalize">{state.mode}</span>
+              </div>
+              {/* Info button - Always visible */}
+              <InfoIcon onClick={() => setInfoOpen(true)} />
             </div>
           </div>
         </header>        <main className="mt-8">
@@ -730,11 +734,6 @@ function App() {
                         <span className="font-bold">Start URL:</span> {state.url}
                       </span>
                     )}
-                  </div>
-                  
-                  {/* Info button flush to the right */}
-                  <div className="flex items-center">
-                    <InfoIcon onClick={() => setInfoOpen(true)} />
                   </div>
                 </div>
               </div>
