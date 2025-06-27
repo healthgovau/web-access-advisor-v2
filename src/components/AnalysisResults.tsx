@@ -411,8 +411,9 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
         </div>
       )}
 
-      {/* No Analysis Data State */}
-      {(!analysisData.analysis || !analysisData.analysis.components || analysisData.analysis.components.length === 0) && (
+      {/* No Analysis Data State - only show if there's no AI analysis AND no axe results exist */}
+      {(!analysisData.analysis || !analysisData.analysis.components || analysisData.analysis.components.length === 0) && 
+       !analysisData.axeResults && (
         <div className="bg-white border border-gray-200 rounded-lg">
           <div className="text-center py-8">
             <span className="text-gray-400 text-4xl">
