@@ -174,6 +174,9 @@ const Toast: React.FC<{
 function App() {
   // Session mode state
   const [sessionMode, setSessionMode] = useState<'new' | 'load'>('new');
+  
+  // Static section filtering state
+  const [filterStaticSections, setFilterStaticSections] = useState(true);
 
   // Main application state
   const [state, setState] = useState<AppState>({
@@ -810,6 +813,8 @@ function App() {
                   hasActions={state.actions.length > 0}
                   hasAnalysisResult={!!state.analysisResult}
                   isLoading={state.loading}
+                  filterStaticSections={filterStaticSections}
+                  onFilterStaticSectionsChange={setFilterStaticSections}
                   onStartAnalysis={handleStartAnalysis}
                   onReset={handleReset}
                 />                {/* Actions List */}

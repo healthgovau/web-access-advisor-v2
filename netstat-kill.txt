@@ -1,0 +1,2 @@
+netstat -ano | findstr :3002
+taskkill //PID 28592 //F

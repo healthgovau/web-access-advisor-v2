@@ -32,7 +32,8 @@ export class GeminiService {
       domChangeType?: string;
     },
     previousHtml?: string,
-    timeoutMs?: number
+    timeoutMs?: number,
+    filterStaticSections?: boolean
   ): Promise<GeminiAnalysis> {
     try {
       // Check if this is an authentication step that should be skipped
@@ -58,7 +59,7 @@ export class GeminiService {
 
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
 
-      const prompt = this.buildComponentAnalysisPrompt(htmlContent, axeResults, context, previousHtml);
+      const prompt = this.buildComponentAnalysisPrompt(htmlContent, axeResults, context, previousHtml, filterStaticSections);
 
       // Set up timeout for Gemini API call (passed from environment config)
       const timeout = timeoutMs || (5 * 60 * 1000); // Fallback if no timeout provided
@@ -139,7 +140,8 @@ export class GeminiService {
         flowTypes: string[];
       };
     },
-    timeoutMs?: number
+    timeoutMs?: number,
+    filterStaticSections?: boolean
   ): Promise<GeminiAnalysis> {
     try {
       // Filter out authentication steps from snapshots
@@ -150,7 +152,7 @@ export class GeminiService {
 
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
 
-      const prompt = this.buildFlowAnalysisPrompt(filteredSnapshots, manifest, context, progressiveContext);
+      const prompt = this.buildFlowAnalysisPrompt(filteredSnapshots, manifest, context, progressiveContext, filterStaticSections);
 
       // Set up timeout for Gemini API call (passed from environment config)
       const timeout = timeoutMs || (10 * 60 * 1000); // Fallback if no timeout provided
@@ -218,7 +220,8 @@ export class GeminiService {
     htmlContent: string,
     axeResults: any[],
     context: { url: string; action: string; step: number; domChangeType?: string },
-    previousHtml?: string
+    previousHtml?: string,
+    filterStaticSections?: boolean
   ): string {
     const hasBeforeAfter = previousHtml && previousHtml !== htmlContent;
     return `
@@ -246,10 +249,10 @@ Identify and address all barriers in the code that prevent the entire page — i
 - DOM Change Type: ${context.domChangeType || 'unknown'}
 
 **Current State DOM Snapshot:**
-${this.truncateHtml(htmlContent)}
+${this.truncateHtml(htmlContent, filterStaticSections)}
 
 ${hasBeforeAfter ? `**Previous State DOM Snapshot:**
-${this.truncateHtml(previousHtml)}` : ''}
+${this.truncateHtml(previousHtml, filterStaticSections)}` : ''}
 
 **Axe-core Accessibility Report (Violations Only):**
 ${JSON.stringify(this.filterAxeResultsForAnalysis(axeResults), null, 2)}
@@ -570,7 +573,8 @@ GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode show
         totalSteps: number;
         flowTypes: string[];
       };
-    }
+    },
+    filterStaticSections?: boolean
   ): string {
     // Group snapshots by flow context
     const flowGroups = this.groupSnapshotsByFlow(snapshots, manifest);
@@ -635,7 +639,7 @@ Step ${step.step} (Parent: ${stepDetail?.parentStep || 'none'}):
 - Axe Violations: ${step.axeResults?.length || 0}
 
 DOM Snapshot (truncated):
-${this.truncateHtml(step.html)}
+${this.truncateHtml(step.html, filterStaticSections)}
 
 Axe Violations (Filtered):
 ${JSON.stringify(this.filterAxeResultsForAnalysis(step.axeResults || []), null, 2)}
@@ -768,11 +772,11 @@ Respond with a JSON object with this exact structure:
    * Filters and truncates HTML content for analysis while preserving important accessibility attributes
    * Removes script/link/style tags and focuses on semantic content
    */
-  private truncateHtml(html: string): string {
+  private truncateHtml(html: string, filterStaticSections: boolean = false): string {
     console.log(`Original HTML size: ${html.length} chars`);
 
     // First, filter out unnecessary content
-    const filtered = this.filterHtmlForAnalysis(html);
+    const filtered = this.filterHtmlForAnalysis(html, filterStaticSections);
     console.log(`Filtered HTML size: ${filtered.length} chars (removed ${html.length - filtered.length} chars)`);
 
     // Configurable HTML size limit via environment variable (default 512KB)
@@ -798,8 +802,9 @@ Respond with a JSON object with this exact structure:
    * Filters HTML content to remove unnecessary elements while preserving semantic structure
    * Removes scripts, links, styles and focuses on body content with accessibility attributes
    * Can be controlled via FILTER_AUTH_CONTENT environment variable (default: true)
+   * Optionally removes static sections (header, footer, nav) when filterStaticSections is true
    */
-  private filterHtmlForAnalysis(html: string): string {
+  private filterHtmlForAnalysis(html: string, filterStaticSections: boolean = false): string {
     // Check environment variable to enable/disable filtering
     const enableFiltering = process.env.FILTER_AUTH_CONTENT !== 'false';
 
@@ -826,6 +831,11 @@ Respond with a JSON object with this exact structure:
         // Clean up excessive whitespace
         .replace(/\s{3,}/g, ' ')
         .replace(/\n\s*\n\s*\n/g, '\n\n');
+
+      // Remove static sections if requested (header, footer, navigation)
+      if (filterStaticSections) {
+        filtered = this.removeStaticSections(filtered);
+      }
 
       // Try to extract body content if possible, otherwise return filtered HTML
       const bodyMatch = filtered.match(/<body[^>]*>([\s\S]*)<\/body>/i);
@@ -895,7 +905,104 @@ ${bodyMatch[1]}
   private extractBodyAttributes(html: string): string {
     const bodyMatch = html.match(/<body([^>]*)>/i);
     return bodyMatch ? bodyMatch[1] : '';
-  }  /**
+  }
+
+  /**
+   * Removes static sections (header, footer, navigation) using DOM parsing approach
+   * Focuses on removing outermost static elements while preserving inner navigation
+   */
+  private removeStaticSections(html: string): string {
+    try {
+      console.log('🧹 Filtering static sections (header, footer, navigation)...');
+      
+      let filtered = html;
+      let sectionsRemoved = 0;
+
+      // Remove semantic header, footer, and outermost nav elements
+      // Use negative lookahead to avoid removing nested elements
+      
+      // Remove header elements (outermost only)
+      const headerMatches = filtered.match(/<header\b[^>]*>[\s\S]*?<\/header>/gi);
+      if (headerMatches) {
+        headerMatches.forEach(match => {
+          // Only remove if it's not nested inside another header
+          const beforeMatch = filtered.substring(0, filtered.indexOf(match));
+          const openHeaderCount = (beforeMatch.match(/<header\b[^>]*>/gi) || []).length;
+          const closeHeaderCount = (beforeMatch.match(/<\/header>/gi) || []).length;
+          
+          if (openHeaderCount === closeHeaderCount) {
+            filtered = filtered.replace(match, '<!-- Header removed for analysis -->');
+            sectionsRemoved++;
+          }
+        });
+      }
+
+      // Remove footer elements (outermost only)
+      const footerMatches = filtered.match(/<footer\b[^>]*>[\s\S]*?<\/footer>/gi);
+      if (footerMatches) {
+        footerMatches.forEach(match => {
+          const beforeMatch = filtered.substring(0, filtered.indexOf(match));
+          const openFooterCount = (beforeMatch.match(/<footer\b[^>]*>/gi) || []).length;
+          const closeFooterCount = (beforeMatch.match(/<\/footer>/gi) || []).length;
+          
+          if (openFooterCount === closeFooterCount) {
+            filtered = filtered.replace(match, '<!-- Footer removed for analysis -->');
+            sectionsRemoved++;
+          }
+        });
+      }
+
+      // Remove navigation elements (outermost only) - preserves breadcrumbs and local nav
+      const navMatches = filtered.match(/<nav\b[^>]*>[\s\S]*?<\/nav>/gi);
+      if (navMatches) {
+        navMatches.forEach(match => {
+          const beforeMatch = filtered.substring(0, filtered.indexOf(match));
+          const openNavCount = (beforeMatch.match(/<nav\b[^>]*>/gi) || []).length;
+          const closeNavCount = (beforeMatch.match(/<\/nav>/gi) || []).length;
+          
+          if (openNavCount === closeNavCount) {
+            filtered = filtered.replace(match, '<!-- Navigation removed for analysis -->');
+            sectionsRemoved++;
+          }
+        });
+      }
+
+      // Remove elements with common static section classes/IDs
+      const staticPatterns = [
+        // Main navigation patterns
+        /<[^>]*class="[^"]*(?:main-nav|primary-nav|site-nav|global-nav)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
+        /<[^>]*id="[^"]*(?:main-nav|primary-nav|site-nav|global-nav)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
+        
+        // Header patterns
+        /<[^>]*class="[^"]*(?:site-header|main-header|page-header)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
+        /<[^>]*id="[^"]*(?:site-header|main-header|page-header)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
+        
+        // Footer patterns
+        /<[^>]*class="[^"]*(?:site-footer|main-footer|page-footer)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
+        /<[^>]*id="[^"]*(?:site-footer|main-footer|page-footer)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi
+      ];
+
+      staticPatterns.forEach(pattern => {
+        const matches = filtered.match(pattern);
+        if (matches) {
+          matches.forEach(match => {
+            filtered = filtered.replace(match, '<!-- Static section removed for analysis -->');
+            sectionsRemoved++;
+          });
+        }
+      });
+
+      console.log(`✅ Static section filtering complete: ${sectionsRemoved} sections removed`);
+      console.log(`📉 Size reduction: ${html.length - filtered.length} chars`);
+
+      return filtered;
+    } catch (error) {
+      console.warn('⚠️ Static section filtering failed, using original HTML:', error);
+      return html;
+    }
+  }
+  
+  /**
    * Parses Gemini response into structured component-based format
    */  private parseGeminiResponse(text: string, context: { step: number }): GeminiAnalysis {
     console.log(`🔍 DEBUG: Parsing screen reader analysis response, length: ${text.length}`);
