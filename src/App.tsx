@@ -176,7 +176,7 @@ function App() {
   const [sessionMode, setSessionMode] = useState<'new' | 'load'>('new');
   
   // Static section filtering state
-  const [staticSectionMode, setStaticSectionMode] = useState<'include' | 'ignore' | 'separate'>('ignore');
+  const [staticSectionMode, setStaticSectionMode] = useState<'include' | 'ignore' | 'separate'>('separate');
 
   // Main application state
   const [state, setState] = useState<AppState>({

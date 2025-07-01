@@ -31,6 +31,8 @@ const SessionModeToggle: React.FC<SessionModeToggleProps> = ({ mode, onModeChang
             New Recording
           </button>
           
+          <div className="w-px h-5 bg-gray-300 mx-1 self-center"></div>
+          
           <button
             type="button"
             onClick={() => onModeChange('load')}
