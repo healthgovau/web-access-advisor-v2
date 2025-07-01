@@ -104,7 +104,7 @@ export async function stopRecordingSession(sessionId: string): Promise<StopSessi
 /**
  * Start accessibility analysis on recorded session
  */
-export async function analyzeSession(sessionId: string, options?: { filterStaticSections?: boolean }): Promise<AnalyzeSessionResponse> {
+export async function analyzeSession(sessionId: string, options?: { staticSectionMode?: 'include' | 'ignore' | 'separate' }): Promise<AnalyzeSessionResponse> {
   const response = await fetch(`${API_BASE}/sessions/${sessionId}/analyze`, {
     method: 'POST',
     headers: {

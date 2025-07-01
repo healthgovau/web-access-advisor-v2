@@ -136,6 +136,8 @@ export interface StepDetail {
   };
 }
 
+export type StaticSectionMode = 'include' | 'ignore' | 'separate';
+
 export interface AnalysisOptions {
   sessionId?: string;
   captureScreenshots?: boolean;
@@ -146,6 +148,8 @@ export interface AnalysisOptions {
   // Timeout configurations (in milliseconds)
   llmComponentTimeout?: number; // Timeout for individual LLM component analysis requests
   llmFlowTimeout?: number; // Timeout for individual LLM flow analysis requests
+  // Static section handling
+  staticSectionMode?: StaticSectionMode; // 'include' | 'ignore' | 'separate'
 }
 
 export interface AnalysisResult {

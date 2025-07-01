@@ -8,13 +8,13 @@ import type { AnalysisResult } from '../types';
 
 export const useAccessibilityAnalysis = () => {
   // Start analysis
-  const startAnalysis = useCallback(async (sessionId: string, actionCount: number) => {
+  const startAnalysis = useCallback(async (sessionId: string, actionCount: number, staticSectionMode?: 'include' | 'ignore' | 'separate') => {
     if (actionCount === 0) {
       throw new Error('No actions to analyze');
     }
 
-    console.log(`Starting analysis of ${actionCount} actions`);
-    const response = await recordingApi.analyzeSession(sessionId);
+    console.log(`Starting analysis of ${actionCount} actions with static section mode: ${staticSectionMode || 'ignore'}`);
+    const response = await recordingApi.analyzeSession(sessionId, { staticSectionMode });
     return response;
   }, []);
 

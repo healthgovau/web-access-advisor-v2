@@ -176,7 +176,7 @@ function App() {
   const [sessionMode, setSessionMode] = useState<'new' | 'load'>('new');
   
   // Static section filtering state
-  const [filterStaticSections, setFilterStaticSections] = useState(true);
+  const [staticSectionMode, setStaticSectionMode] = useState<'include' | 'ignore' | 'separate'>('ignore');
 
   // Main application state
   const [state, setState] = useState<AppState>({
@@ -364,7 +364,7 @@ function App() {
 
       updateProgress('capturing-snapshots', 'Capturing accessibility snapshots');
       // Start the analysis
-      const response = await recordingApi.analyzeSession(state.sessionId);        if (response.status === 'completed' && response.result) {
+      const response = await recordingApi.analyzeSession(state.sessionId, { staticSectionMode });        if (response.status === 'completed' && response.result) {
         // Analysis completed immediately (unlikely but possible)
         const resultHandler = handleAnalysisResult(response.result);
         updateProgress(resultHandler.stage, resultHandler.message, undefined, resultHandler.details);
@@ -813,8 +813,8 @@ function App() {
                   hasActions={state.actions.length > 0}
                   hasAnalysisResult={!!state.analysisResult}
                   isLoading={state.loading}
-                  filterStaticSections={filterStaticSections}
-                  onFilterStaticSectionsChange={setFilterStaticSections}
+                  staticSectionMode={staticSectionMode}
+                  onStaticSectionModeChange={setStaticSectionMode}
                   onStartAnalysis={handleStartAnalysis}
                   onReset={handleReset}
                 />                {/* Actions List */}

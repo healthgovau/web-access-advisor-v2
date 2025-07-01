@@ -15,5 +15,6 @@ export type {
   ReplaySession,
   SessionManifest,
   GeminiAnalysis,
-  ComponentAccessibilityIssue
+  ComponentAccessibilityIssue,
+  StaticSectionMode
 } from './types.js';

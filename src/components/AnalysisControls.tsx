@@ -8,8 +8,8 @@ interface AnalysisControlsProps {
   hasActions: boolean;
   hasAnalysisResult: boolean;
   isLoading: boolean;
-  filterStaticSections: boolean;
-  onFilterStaticSectionsChange: (enabled: boolean) => void;
+  staticSectionMode: 'include' | 'ignore' | 'separate';
+  onStaticSectionModeChange: (mode: 'include' | 'ignore' | 'separate') => void;
   onStartAnalysis: () => void;
   onReset: () => void;
 }
@@ -18,8 +18,8 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
   hasActions,
   hasAnalysisResult,
   isLoading,
-  filterStaticSections,
-  onFilterStaticSectionsChange,
+  staticSectionMode,
+  onStaticSectionModeChange,
   onStartAnalysis,
   onReset
 }) => {  return (
@@ -46,20 +46,72 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
           </button>        </div>
       </div>
       
-      {hasActions && (
+      {!hasAnalysisResult && hasActions && (
         <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex items-center">
-            <input
-              id="filter-static-sections"
-              type="checkbox"
-              checked={filterStaticSections}
-              onChange={(e) => onFilterStaticSectionsChange(e.target.checked)}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-            />
-            <label htmlFor="filter-static-sections" className="ml-2 block text-sm text-gray-700">
-              Ignore static sections (header, footer, navigation) to focus on page content
-            </label>
-          </div>
+          <fieldset>
+            <legend className="text-sm font-medium text-gray-700 mb-3 text-left">
+              Static sections (header, footer, navigation)
+            </legend>
+            <div className="space-y-3">
+              <div className="flex items-start">
+                <input
+                  id="static-ignore"
+                  name="staticSectionMode"
+                  type="radio"
+                  value="ignore"
+                  checked={staticSectionMode === 'ignore'}
+                  onChange={(e) => onStaticSectionModeChange(e.target.value as 'include' | 'ignore' | 'separate')}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 mt-0.5 flex-shrink-0"
+                />
+                <div className="ml-3 text-left">
+                  <label htmlFor="static-ignore" className="block text-sm text-gray-700 font-medium text-left">
+                    Ignore - focus only on main content
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1 text-left">
+                    Skip headers, footers, and navigation. Analyze only unique page content.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <input
+                  id="static-separate"
+                  name="staticSectionMode"
+                  type="radio"
+                  value="separate"
+                  checked={staticSectionMode === 'separate'}
+                  onChange={(e) => onStaticSectionModeChange(e.target.value as 'include' | 'ignore' | 'separate')}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 mt-0.5 flex-shrink-0"
+                />
+                <div className="ml-3 text-left">
+                  <label htmlFor="static-separate" className="block text-sm text-gray-700 font-medium text-left">
+                    Analyze static content once only
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1 text-left">
+                    Analyze main content normally, but handle static sections separately to avoid re-analyzing identical headers/footers.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <input
+                  id="static-include"
+                  name="staticSectionMode"
+                  type="radio"
+                  value="include"
+                  checked={staticSectionMode === 'include'}
+                  onChange={(e) => onStaticSectionModeChange(e.target.value as 'include' | 'ignore' | 'separate')}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 mt-0.5 flex-shrink-0"
+                />
+                <div className="ml-3 text-left">
+                  <label htmlFor="static-include" className="block text-sm text-gray-700 font-medium text-left">
+                    Don't ignore - analyze all content
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1 text-left">
+                    Analyze headers, footers, navigation, and main content together in one analysis.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </fieldset>
         </div>
       )}
     </div>

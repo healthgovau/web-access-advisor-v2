@@ -69,7 +69,8 @@ export class AccessibilityAnalyzer {
       outputDir = './snapshots',
       onProgress,
       llmComponentTimeout,
-      llmFlowTimeout
+      llmFlowTimeout,
+      staticSectionMode = 'ignore'
     } = options;
 
     // Use provided sessionId or generate a new one
@@ -197,7 +198,8 @@ export class AccessibilityAnalyzer {
             { 
               llmComponentTimeout: options.llmComponentTimeout,
               llmFlowTimeout: options.llmFlowTimeout
-            }
+            },
+            staticSectionMode
           );
           
           console.log(`✅ Hierarchical Gemini analysis completed - found ${geminiAnalysis?.components?.length || 0} accessibility issues`);
@@ -1159,7 +1161,8 @@ export class AccessibilityAnalyzer {
     manifest: SessionManifest,
     sessionContext: { url: string; sessionId: string; totalSteps: number },
     onProgress?: (phase: 'replaying-actions' | 'capturing-snapshots' | 'running-accessibility-checks' | 'processing-with-ai' | 'generating-report', message: string, step?: number, total?: number, snapshotCount?: number) => void,
-    timeoutOptions?: { llmComponentTimeout?: number; llmFlowTimeout?: number }
+    timeoutOptions?: { llmComponentTimeout?: number; llmFlowTimeout?: number },
+    staticSectionMode: 'include' | 'ignore' | 'separate' = 'ignore'
   ): Promise<GeminiAnalysis> {
     if (!this.geminiService) {
       throw new Error('Gemini service not available');
@@ -1237,7 +1240,8 @@ export class AccessibilityAnalyzer {
           manifest,
           batchContext,
           progressiveContext,
-          timeoutOptions?.llmFlowTimeout
+          timeoutOptions?.llmFlowTimeout,
+          staticSectionMode === 'ignore' || staticSectionMode === 'separate' // Filter static sections for 'ignore' and 'separate' modes
         );
 
         console.log(`✅ Batch ${i + 1} analysis completed:`, {
@@ -1274,6 +1278,88 @@ export class AccessibilityAnalyzer {
         console.warn(`❌ Batch ${i + 1} analysis failed:`, error);
         debugLogs.push(`Batch ${i + 1} failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         // Continue with other batches
+      }
+    }
+
+    // Handle "separate" mode - analyze static sections separately
+    if (staticSectionMode === 'separate') {
+      console.log(`🔄 Running separate static section analysis...`);
+      onProgress?.('processing-with-ai', 'Analyzing static sections separately...', undefined, undefined, undefined);
+      
+      try {
+        // Run analysis on static sections only (no filtering)
+        const staticSectionBatches = this.createAnalysisBatches(flowGroups, 8000);
+        
+        for (let i = 0; i < staticSectionBatches.length; i++) {
+          const batch = staticSectionBatches[i];
+          
+          console.log(`🔄 Processing static sections batch ${i + 1}/${staticSectionBatches.length}: ${batch.flowType}`);
+          
+          try {
+            const batchContext = {
+              ...sessionContext,
+              batchNumber: i + 1,
+              totalBatches: staticSectionBatches.length,
+              flowType: `${batch.flowType}_static_sections`,
+              progressiveSummary: 'Analyzing static sections (header, footer, navigation) separately from main content.',
+              batchDescription: `Static sections analysis for ${batch.flowType} flow`
+            };
+
+            const progressiveContext = {
+              previousBatchSummaries: [],
+              currentBatchMetadata: {
+                batchId: `static_${batch.batchId}`,
+                flowType: `${batch.flowType}_static_sections`,
+                stepRange: { 
+                  start: batch.snapshots[0]?.step || 1, 
+                  end: batch.snapshots[batch.snapshots.length - 1]?.step || 1 
+                },
+                batchIndex: i,
+                totalBatches: staticSectionBatches.length
+              },
+              overallContext: {
+                sessionId: sessionContext.sessionId,
+                url: sessionContext.url,
+                totalSteps: sessionContext.totalSteps,
+                flowTypes: staticSectionBatches.map(b => `${b.flowType}_static_sections`)
+              }
+            };
+
+            // Analyze static sections only (filterStaticSections = false)
+            const staticSectionResult = await this.geminiService.analyzeAccessibilityFlow(
+              batch.snapshots,
+              manifest,
+              batchContext,
+              progressiveContext,
+              timeoutOptions?.llmFlowTimeout,
+              false // Don't filter static sections for this analysis
+            );
+
+            console.log(`✅ Static sections batch ${i + 1} analysis completed:`, {
+              components: staticSectionResult.components?.length || 0
+            });
+
+            // Add static section components to the final results
+            if (staticSectionResult.components) {
+              // Mark these components as coming from static sections
+              staticSectionResult.components.forEach(component => {
+                component.componentName = `[Static] ${component.componentName}`;
+                component.explanation = `Static section accessibility issue: ${component.explanation}`;
+              });
+              allComponents.push(...staticSectionResult.components);
+            }
+            
+          } catch (error) {
+            console.warn(`❌ Static sections batch ${i + 1} analysis failed:`, error);
+            // Continue with other static section batches
+          }
+        }
+        
+        console.log(`✅ Static section analysis completed`);
+        
+      } catch (error) {
+        console.warn(`⚠️ Static section analysis failed:`, error);
+        // Continue without static section analysis
       }
     }
 

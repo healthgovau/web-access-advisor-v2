@@ -64,7 +64,7 @@ console.log(`⏱️ LLM component timeout: ${LLM_COMPONENT_TIMEOUT / 1000}s (${M
 console.log(`⏱️ LLM flow timeout: ${LLM_FLOW_TIMEOUT / 1000}s (${Math.round(LLM_FLOW_TIMEOUT / 60000)} minutes)`);
 console.log(`⏱️ Recording timeout: ${RECORDING_TIMEOUT / 1000}s`);
 
-import { AccessibilityAnalyzer, SessionManifest } from '@web-access-advisor/core';
+import { AccessibilityAnalyzer, SessionManifest, StaticSectionMode } from '@web-access-advisor/core';
 import { browserRecordingService } from './recordingService.js';
 import type { 
   UserAction, 
@@ -425,6 +425,7 @@ app.delete('/api/sessions/:id', (req: any, res: any) => {
 app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
   try {
     const { sessionId } = req.params;
+    const { staticSectionMode = 'ignore' } = req.body; // Default to 'ignore' for main content only
     
     // Get the recording session
     const recordingSession = await browserRecordingService.getSession(sessionId);
@@ -442,7 +443,7 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
       });
     }
 
-    console.log(`Starting analysis of session ${sessionId} with ${recordingSession.actions.length} actions`);
+    console.log(`Starting analysis of session ${sessionId} with ${recordingSession.actions.length} actions (static sections: ${staticSectionMode})`);
 
     // Calculate dynamic timeout based on action count
     const dynamicTimeout = calculateAnalysisTimeout(recordingSession.actions.length);
@@ -470,7 +471,7 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
     });
 
     // Process analysis asynchronously
-    processAnalysisAsync(sessionId, recordingSession.actions, dynamicTimeout);
+    processAnalysisAsync(sessionId, recordingSession.actions, dynamicTimeout, { staticSectionMode });
 
   } catch (error) {
     console.error('Analysis start error:', error);
@@ -484,7 +485,7 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
 /**
  * Process analysis asynchronously with phase tracking
  */
-async function processAnalysisAsync(sessionId: string, actions: UserAction[], dynamicTimeout: number) {
+async function processAnalysisAsync(sessionId: string, actions: UserAction[], dynamicTimeout: number, analysisOptions: { staticSectionMode?: string } = {}) {
   const analysisState = analysisStates.get(sessionId);
   if (!analysisState) {
     console.error(`Analysis state not found for session ${sessionId}`);
@@ -528,7 +529,9 @@ async function processAnalysisAsync(sessionId: string, actions: UserAction[], dy
       onProgress,
       // Pass timeout configurations to core analyzer
       llmComponentTimeout: LLM_COMPONENT_TIMEOUT,
-      llmFlowTimeout: LLM_FLOW_TIMEOUT
+      llmFlowTimeout: LLM_FLOW_TIMEOUT,
+      // Pass static section mode to analyzer
+      staticSectionMode: analysisOptions.staticSectionMode as 'include' | 'ignore' | 'separate'
     });
 
     // Set up timeout for analysis with dynamic timeout
