@@ -1439,4 +1439,160 @@ Remember:
     return filteredSnapshots;
   }
 
+  // Static Section Caching for "separate" mode
+  private staticSectionCache = new Map<string, ComponentAccessibilityIssue[]>();
+
+  /**
+   * Extract static sections (header, footer, nav) from HTML content
+   * Returns both the static sections and the remaining main content
+   */
+  extractStaticSections(html: string): { staticSections: string; mainContent: string } {
+    try {
+      console.log('🔍 Extracting static sections from HTML...');
+      
+      let staticSections = '';
+      let mainContent = html;
+
+      // Extract header elements
+      const headerMatches = html.match(/<header\b[^>]*>[\s\S]*?<\/header>/gi);
+      if (headerMatches) {
+        headerMatches.forEach(match => {
+          staticSections += match + '\n';
+          mainContent = mainContent.replace(match, '<!-- Header removed for main content analysis -->');
+        });
+      }
+
+      // Extract footer elements
+      const footerMatches = html.match(/<footer\b[^>]*>[\s\S]*?<\/footer>/gi);
+      if (footerMatches) {
+        footerMatches.forEach(match => {
+          staticSections += match + '\n';
+          mainContent = mainContent.replace(match, '<!-- Footer removed for main content analysis -->');
+        });
+      }
+
+      // Extract navigation elements (main/primary nav only)
+      const navMatches = html.match(/<nav\b[^>]*(?:class="[^"]*(?:main-nav|primary-nav|site-nav|global-nav)[^"]*"|id="[^"]*(?:main-nav|primary-nav|site-nav|global-nav)[^"]*")[^>]*>[\s\S]*?<\/nav>/gi);
+      if (navMatches) {
+        navMatches.forEach(match => {
+          staticSections += match + '\n';
+          mainContent = mainContent.replace(match, '<!-- Navigation removed for main content analysis -->');
+        });
+      }
+
+      // Extract elements with static section classes/IDs
+      const staticPatterns = [
+        /<[^>]*class="[^"]*(?:site-header|main-header|page-header|site-footer|main-footer|page-footer)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
+        /<[^>]*id="[^"]*(?:site-header|main-header|page-header|site-footer|main-footer|page-footer)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi
+      ];
+
+      staticPatterns.forEach(pattern => {
+        const matches = mainContent.match(pattern);
+        if (matches) {
+          matches.forEach(match => {
+            staticSections += match + '\n';
+            mainContent = mainContent.replace(match, '<!-- Static section removed for main content analysis -->');
+          });
+        }
+      });
+
+      console.log(`✅ Static sections extracted: ${staticSections.length} chars, main content: ${mainContent.length} chars`);
+      
+      return {
+        staticSections: staticSections.trim(),
+        mainContent: mainContent
+      };
+    } catch (error) {
+      console.warn('⚠️ Static section extraction failed, using original HTML:', error);
+      return {
+        staticSections: '',
+        mainContent: html
+      };
+    }
+  }
+
+  /**
+   * Generate content hash for static sections to use as cache key
+   */
+  generateContentHash(content: string): string {
+    const crypto = require('crypto');
+    return crypto.createHash('sha256').update(content).digest('hex').substring(0, 16);
+  }
+
+  /**
+   * Analyze static sections separately and cache results by content hash
+   */
+  async analyzeStaticSections(
+    staticSections: string,
+    axeResults: any[],
+    context: { url: string; action: string; step: number; domChangeType?: string },
+    timeoutMs?: number
+  ): Promise<ComponentAccessibilityIssue[]> {
+    if (!staticSections || staticSections.trim().length === 0) {
+      console.log('🔍 No static sections to analyze');
+      return [];
+    }
+
+    // Generate content hash for caching
+    const contentHash = this.generateContentHash(staticSections);
+    console.log(`🔑 Static section content hash: ${contentHash}`);
+
+    // Check cache first
+    if (this.staticSectionCache.has(contentHash)) {
+      console.log(`✅ Using cached static section analysis for hash: ${contentHash}`);
+      return this.staticSectionCache.get(contentHash)!;
+    }
+
+    console.log(`🔄 Analyzing static sections (not in cache): ${staticSections.length} chars`);
+
+    try {
+      // Use existing analyzeComponent method for static sections
+      const model = this.genAI.getGenerativeModel({ model: this.modelName });
+      
+      // Build analysis prompt specifically for static sections
+      const prompt = this.buildComponentAnalysisPrompt(
+        staticSections,
+        axeResults,
+        { 
+          ...context, 
+          action: `Static Section Analysis: ${context.action}`,
+          domChangeType: 'static-section-analysis'
+        },
+        undefined, // no previous HTML for static sections
+        false // don't filter static sections when analyzing them
+      );
+
+      const timeout = timeoutMs || (5 * 60 * 1000);
+      const geminiPromise = model.generateContent(prompt);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`Static section analysis timeout after ${Math.round(timeout / 60000)} minutes`)), timeout);
+      });
+
+      const result = await Promise.race([geminiPromise, timeoutPromise]);
+      const response = await result.response;
+      const text = response.text();
+
+      const analysis = this.parseGeminiResponse(text, context);
+      
+      // Cache the results
+      this.staticSectionCache.set(contentHash, analysis.components);
+      console.log(`💾 Cached static section analysis: ${analysis.components.length} components`);
+
+      return analysis.components;
+    } catch (error) {
+      console.warn('❌ Static section analysis failed:', error);
+      // Cache empty results to avoid re-analyzing failed content
+      this.staticSectionCache.set(contentHash, []);
+      return [];
+    }
+  }
+
+  /**
+   * Clear static section cache (useful for testing or memory management)
+   */
+  clearStaticSectionCache(): void {
+    console.log(`🗑️ Clearing static section cache: ${this.staticSectionCache.size} entries`);
+    this.staticSectionCache.clear();
+  }
+
 }
