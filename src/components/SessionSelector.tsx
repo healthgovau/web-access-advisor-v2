@@ -52,8 +52,9 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
   const handleSessionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const sessionId = e.target.value;
     setSelectedSessionId(sessionId);
-  };  const handleLoadSession = () => {
-    if (selectedSessionId) {
+    
+    // Auto-load session when one is selected
+    if (sessionId && !isLoading) {
       // Wait for UI to fully render before scrolling
       setTimeout(() => {
         const rect = containerRef.current?.getBoundingClientRect();
@@ -66,7 +67,7 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
         }
       }, 200); // 200ms delay to allow UI to update
       
-      onSessionSelect(selectedSessionId);
+      onSessionSelect(sessionId);
     }
   };
 
@@ -74,7 +75,6 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
     return new Date(dateString).toLocaleString();
   };
 
-  const canLoadSession = selectedSessionId && !isLoading && !loadingSessions;
   if (loadingSessions) {
     return (
       <div ref={containerRef} className="card rounded-lg p-4">
@@ -142,20 +142,10 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
         {selectedSessionId && (
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
             <div className="text-sm text-blue-700">
-              {sessions.find(s => s.sessionId === selectedSessionId)?.sessionName} will be loaded for analysis
+              Loading {sessions.find(s => s.sessionId === selectedSessionId)?.sessionName} for analysis...
             </div>
           </div>
         )}
-
-        <div className="flex justify-center">
-          <button
-            onClick={handleLoadSession}
-            disabled={!canLoadSession}
-            className="btn-primary"
-          >
-           Load Session
-          </button>
-        </div>
       </div>
     </div>
   );

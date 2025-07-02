@@ -28,7 +28,7 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
     switch (mode) {
       case 'separate': return 'Smart';
       case 'include': return 'All';
-      case 'ignore': return 'Ignore';
+      case 'ignore': return 'None';
       default: return 'Smart';
     }
   };
@@ -37,12 +37,12 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
     switch (label) {
       case 'Smart': return 'separate';
       case 'All': return 'include';
-      case 'Ignore': return 'ignore';
+      case 'None': return 'ignore';
       default: return 'separate';
     }
   };
 
-  const modes = ['Smart', 'All', 'Ignore'];
+  const modes = ['Smart', 'All', 'None'];
   const currentLabel = getModeLabel(staticSectionMode);
 
   return (
@@ -102,7 +102,7 @@ const AnalysisControls: React.FC<AnalysisControlsProps> = ({
                     <div className="text-gray-700">Static nav, footer & header elements are included in every analysis</div>
                   </div>
                   <div className="text-left">
-                    <div className="font-semibold text-gray-900 mb-1">Ignore</div>
+                    <div className="font-semibold text-gray-900 mb-1">None</div>
                     <div className="text-gray-700">Static nav, footer & header elements are completely ignored</div>
                   </div>
                 </div>
