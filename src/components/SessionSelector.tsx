@@ -71,10 +71,6 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
-
   if (loadingSessions) {
     return (
       <div ref={containerRef} className="card rounded-lg p-4">
@@ -133,7 +129,7 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
             <option value="">Choose a session...</option>
             {sessions.map((session) => (
               <option key={session.sessionId} value={session.sessionId}>
-                {session.sessionName} - {session.url} ({session.actionCount} actions) - {formatDate(session.created)}
+                {session.sessionName} ({session.actionCount} actions) - {session.url} - {session.sessionId}
               </option>
             ))}
           </select>
