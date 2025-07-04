@@ -304,7 +304,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                             <span>URL: </span>
                             {(() => {
                               const url = getStepUrl(component.step);
-                              const displayUrl = url.length > 60 ? url.substring(0, 57) + '...' : url;
+                              const displayUrl = url.length > 100 ? url.substring(0, 97) + '...' : url;
                               return (
                                 <a
                                   href={url}

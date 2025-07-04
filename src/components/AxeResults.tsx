@@ -315,7 +315,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
                         <span>URL: </span>
                         {(() => {
                           const url = getViolationUrl(violation);
-                          const displayUrl = url.length > 60 ? url.substring(0, 57) + '...' : url;
+                          const displayUrl = url.length > 100 ? url.substring(0, 97) + '...' : url;
                           return (
                             <a
                               href={url}
