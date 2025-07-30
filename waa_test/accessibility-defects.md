@@ -14,6 +14,7 @@ This document lists all accessibility defects implemented in the test pages for 
 - **page3.html**: ❌ Missing lang | ✅ HAS skip links, main landmark  
 - **page4.html**: ❌ Missing lang | ✅ HAS skip links, main landmark
 - **page5.html**: ❌ Missing lang | ✅ HAS skip links, main landmark
+- **page6.html**: ❌ Missing lang | ✅ HAS skip links, main landmark
 
 **Usage:** Check off the boxes below as you verify each issue is detected by your testing tools.
 
@@ -116,6 +117,80 @@ This document lists all accessibility defects implemented in the test pages for 
     - [ ] Lighthouse/axe-core detected
     - [ ] WAA Tool detected
 
+12. **select-name**: Select element without associated label
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+### Advanced Defects (Often Missed by Basic Tools):
+
+13. **verbose-alt-text**: Overly descriptive alt text that's unnecessarily verbose
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+14. **decorative-alt-misuse**: Decorative images with unnecessary alt text instead of alt=""
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+15. **placeholder-alt-text**: Alt text containing placeholder/outdated information (e.g., "555-1234")
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+16. **css-background-images**: Important content delivered via CSS background-image without text alternative
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+17. **non-descriptive-links**: Link text like "Read more..." or "Click here" without context
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+18. **link-image-empty-alt**: Links containing only images with empty alt attributes
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+19. **visual-heading-non-semantic**: Text styled to look like headings but not using heading elements
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+20. **reading-sequence-css**: Content order problems caused by CSS positioning/flexbox
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+21. **link-visual-distinction**: Links that look like headings and aren't visually distinct
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+22. **focusable-non-interactive**: Focusable elements without interactive purpose or accessible name
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+23. **context-only-instructions**: Help text that only appears on hover/focus without proper association
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+24. **broken-live-regions**: aria-live regions that don't properly announce content changes
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+25. **false-positive-accessibility**: Elements that look accessible but have no real functionality
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+26. **dynamic-content-focus-loss**: Content that appears/disappears without proper focus management
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+27. **javascript-navigation-links**: Navigation links using JavaScript instead of proper href attributes
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+28. **layout-tables-for-design**: Tables used for visual layout instead of data presentation
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+29. **nested-interactive-elements**: Interactive elements nested inside other interactive elements
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
 ### NVDA Screen Reader Issues:
 
 **NOTE: Pages 1-5 all have proper skip links and main landmarks - focus on content-specific issues**
@@ -151,6 +226,58 @@ This document lists all accessibility defects implemented in the test pages for 
 8. **Fake buttons**: Divs with click handlers that appear as buttons but lack semantics
    - [ ] NVDA manual test detected
    - [ ] WAA Tool detected
+
+9. **Verbose alt text confusion**: Overly long descriptions that provide too much detail
+   - [ ] NVDA manual test detected
+   - [ ] WAA Tool detected
+
+10. **Content reading order**: CSS-positioned content that reads in wrong sequence
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
+
+11. **Link context confusion**: Non-descriptive links that lack sufficient context
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
+
+12. **CSS content missing**: Important visual information only available through background images
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
+
+13. **Focusable non-interactive elements**: Elements that receive focus but serve no interactive purpose
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
+
+14. **Context-dependent instructions**: Help text that appears only on hover/focus without proper association
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
+
+15. **Silent live region updates**: Content that changes but isn't announced to screen readers
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
+
+16. **False accessibility feedback**: Elements that announce as interactive but have no real functionality
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
+
+17. **Dynamic content without focus management**: Content that appears/disappears without proper focus handling
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
+
+18. **Navigation confusion**: Interactive elements that don't behave as expected with screen reader navigation
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
+
+19. **JavaScript navigation problems**: Links that use JavaScript instead of proper href causing screen reader issues
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
+
+20. **Layout table confusion**: Tables used for layout being announced as data tables
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
+
+21. **Nested interactive element confusion**: Interactive elements inside other interactive elements causing navigation problems
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
 
 ## Page 2 - Complex Forms & Navigation
 
@@ -723,6 +850,126 @@ This document lists all accessibility defects implemented in the test pages for 
    - [ ] WAA Tool detected
 
 5. **Loading states**: Verify async operations communicate status changes
+   - [ ] NVDA manual test detected
+   - [ ] WAA Tool detected
+
+## Page 6 - Advanced ARIA & Screen Reader Edge Cases
+
+**CORRECTED: This page has skip links and main landmark but is MISSING lang attribute**
+
+### Advanced ARIA Defects (Often Missed by Lighthouse/axe):
+
+1. **aria-pressed state management**: Button states that don't update when clicked
+   - [ ] Lighthouse/axe-core detected
+   - [ ] WAA Tool detected
+
+2. **aria-expanded without content**: Expandable controls that don't actually expand content
+   - [ ] Lighthouse/axe-core detected
+   - [ ] WAA Tool detected
+
+3. **Non-functional live regions**: aria-live regions that don't announce changes
+   - [ ] Lighthouse/axe-core detected
+   - [ ] WAA Tool detected
+
+4. **Invalid aria-current values**: Using "yes", "active", "true" instead of proper values
+   - [ ] Lighthouse/axe-core detected
+   - [ ] WAA Tool detected
+
+5. **Contradictory ARIA labels**: aria-label that contradicts visible button text
+   - [ ] Lighthouse/axe-core detected
+   - [ ] WAA Tool detected
+
+6. **Invalid aria-level values**: Heading levels >6, ≤0, or non-numeric
+   - [ ] Lighthouse/axe-core detected
+   - [ ] WAA Tool detected
+
+7. **Mixed state conflicts**: aria-pressed and aria-checked on same element
+   - [ ] Lighthouse/axe-core detected
+   - [ ] WAA Tool detected
+
+8. **Multiple selected options**: Listbox with multiple aria-selected="true" in single-select
+   - [ ] Lighthouse/axe-core detected
+   - [ ] WAA Tool detected
+
+9. **Broken tree structure**: Tree items not properly nested in groups
+   - [ ] Lighthouse/axe-core detected
+   - [ ] WAA Tool detected
+
+10. **Grid header misassociation**: Using aria-describedby instead of proper header association
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+11. **Hidden content references**: aria-describedby pointing to display:none elements
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+12. **Presentation table with headers**: role="presentation" table containing th elements
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+13. **Conflicting list semantics**: List items with menuitem/option roles
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+14. **aria-hidden/visibility mismatch**: aria-hidden="false" on display:none elements
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+15. **Broken tab panel associations**: Tabs referencing non-existent panels
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+16. **Multiple active tabs**: Multiple tabs with tabindex="0" in same tablist
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+17. **Option focus management**: Listbox options with tabindex="0" (should be -1)
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+18. **Silent progress updates**: Progress bars that update without announcements
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+19. **Context-only instructions**: Help text that only appears on hover/focus
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+20. **Misleading field context**: Form fields with contradictory labels and ARIA
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+### Screen Reader Edge Cases:
+
+1. **State change communication**: Interactive elements that change appearance but don't update ARIA states
+   - [ ] NVDA manual test detected
+   - [ ] WAA Tool detected
+
+2. **Dynamic content without announcements**: Content that appears/disappears silently
+   - [ ] NVDA manual test detected
+   - [ ] WAA Tool detected
+
+3. **Focus management failures**: Modals and custom widgets that don't trap or return focus
+   - [ ] NVDA manual test detected
+   - [ ] WAA Tool detected
+
+4. **Loading state silence**: Async operations without status communication
+   - [ ] NVDA manual test detected
+   - [ ] WAA Tool detected
+
+5. **Time-sensitive content**: Countdown timers without adequate warnings
+   - [ ] NVDA manual test detected
+   - [ ] WAA Tool detected
+
+6. **Context loss**: Form validation errors that appear without focus management
+   - [ ] NVDA manual test detected
+   - [ ] WAA Tool detected
+
+7. **Widget keyboard traps**: Custom components with broken arrow key navigation
+   - [ ] NVDA manual test detected
+   - [ ] WAA Tool detected
+
+8. **Inconsistent widget behavior**: Components that don't follow standard ARIA patterns
    - [ ] NVDA manual test detected
    - [ ] WAA Tool detected
 

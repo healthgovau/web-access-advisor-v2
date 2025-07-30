@@ -419,7 +419,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
               Screen Reader Accessibility Issues
             </h4>
             <span className="text-sm text-green-600 font-medium ml-4">
-              ✅ No issues found
+              🔍 No issues found
             </span>
           </summary>
           <div className="mt-4 p-4 bg-green-50 rounded-lg">
