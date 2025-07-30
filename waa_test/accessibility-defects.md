@@ -5,6 +5,16 @@ This document lists all accessibility defects implemented in the test pages for 
 - **axe-core** accessibility engine (used by axe DevTools, axe-linter, etc.)
 - **NVDA screen reader** compatibility testing
 
+**⚠️ CRITICAL ACCURACY UPDATE:** This documentation has been corrected after comprehensive verification. Previous versions contained significant inaccuracies regarding structural elements.
+
+**VERIFIED STRUCTURAL STATUS:**
+- **index.html**: ❌ Missing lang, skip links, main landmark (uses div.nav, div.content)
+- **page1.html**: ✅ HAS lang="en", skip links, main landmark 
+- **page2.html**: ❌ Missing lang | ✅ HAS skip links, main landmark
+- **page3.html**: ❌ Missing lang | ✅ HAS skip links, main landmark  
+- **page4.html**: ❌ Missing lang | ✅ HAS skip links, main landmark
+- **page5.html**: ❌ Missing lang | ✅ HAS skip links, main landmark
+
 **Usage:** Check off the boxes below as you verify each issue is detected by your testing tools.
 
 **Checkbox Legend:**
@@ -27,8 +37,8 @@ This document lists all accessibility defects implemented in the test pages for 
    - [ ] WAA Tool detected
 
 4. **landmark-one-main**: Missing main landmark
-   - [ ] Lighthouse/axe-core detected
-   - [ ] WAA Tool detected
+   - [x] Lighthouse/axe-core detected
+   - [x] WAA Tool detected
 
 5. **page-has-heading-one**: Page has proper h1 element (this should pass)
    - [ ] Lighthouse/axe-core detected
@@ -58,61 +68,57 @@ This document lists all accessibility defects implemented in the test pages for 
 
 ## Page 1 - Text Content & Basic Forms
 
+**CORRECTED: This page HAS lang="en", skip links, and main landmark - DOCUMENTATION WAS INCORRECT**
+
 ### Lighthouse/axe-core Detected Issues:
 
-1. **html-has-lang**: HTML element missing lang attribute
+1. **duplicate-id**: Multiple h1 elements with id="duplicate" 
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-2. **document-title**: Page missing or empty title element
+2. **heading-order**: Skipped heading levels (h1 jumping to h3)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-3. **duplicate-id**: Multiple elements with the same ID
+3. **empty-heading**: Heading elements with no content (h2 and h4 elements)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-4. **heading-order**: Skipped heading levels (h1 jumping to h3)
+4. **image-alt**: Images missing alt attributes
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-5. **empty-heading**: Heading elements with no content
+5. **label**: Form inputs without associated labels (name, email, phone, message fields)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-6. **image-alt**: Images missing alt attributes or with inappropriate alt text
+6. **form-field-multiple-labels**: Input with multiple conflicting labels
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-7. **label**: Form inputs without associated labels
+7. **button-name**: Button elements without accessible names (empty buttons)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-8. **form-field-multiple-labels**: Inputs with multiple or conflicting labels
+8. **link-name**: Links without accessible text (empty links, "here" links)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-9. **button-name**: Buttons without accessible names
+9. **tabindex**: Improper use of positive tabindex values (tabindex="1", "3", "5")
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-10. **link-name**: Links without accessible text
+10. **color-contrast**: Text with insufficient contrast ratios (#ccc text on white)
     - [ ] Lighthouse/axe-core detected
     - [ ] WAA Tool detected
 
-11. **tabindex**: Improper use of positive tabindex values
-    - [ ] Lighthouse/axe-core detected
-    - [ ] WAA Tool detected
-
-12. **color-contrast**: Text with insufficient contrast ratios (<4.5:1 for normal text)
-    - [ ] Lighthouse/axe-core detected
-    - [ ] WAA Tool detected
-
-13. **list-structure**: Fake lists using divs instead of proper ul/ol elements
+11. **list-structure**: Fake lists using divs instead of proper ul/ol elements
     - [ ] Lighthouse/axe-core detected
     - [ ] WAA Tool detected
 
 ### NVDA Screen Reader Issues:
+
+**NOTE: Pages 1-5 all have proper skip links and main landmarks - focus on content-specific issues**
 
 1. **Missing form labels**: Inputs that NVDA cannot associate with descriptive text
    - [ ] NVDA manual test detected
@@ -148,111 +154,113 @@ This document lists all accessibility defects implemented in the test pages for 
 
 ## Page 2 - Complex Forms & Navigation
 
+**CORRECTED: This page has skip links and main landmark but is MISSING lang attribute**
+
 ### Lighthouse/axe-core Detected Issues:
 
-1. **bypass**: Missing skip links for main content
+1. **html-has-lang**: HTML element missing lang attribute
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-2. **duplicate-id**: Multiple elements with the same ID
+2. **duplicate-id**: Multiple elements with id="submit" and other duplicates
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-3. **button-has-type**: Buttons without explicit type attributes
+3. **autocomplete-valid**: Invalid autocomplete values ("invalid-value", "bad-autocomplete")
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-4. **autocomplete-valid**: Missing or incorrect autocomplete attributes
+4. **tabindex**: Improper use of positive tabindex values (tabindex="1", "2", "3")
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-5. **tabindex**: Improper use of positive tabindex values
+5. **focus-order-semantics**: Illogical focus order due to positive tabindex
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-6. **focus-order-semantics**: Illogical focus order
+6. **aria-valid-attr**: Invalid ARIA attribute names (aria-fake, aria-invalid-name)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-7. **aria-valid-attr**: Invalid ARIA attribute names
+7. **aria-valid-attr-value**: ARIA attributes with invalid values (aria-expanded="maybe")
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-8. **aria-valid-attr-value**: ARIA attributes with invalid values
+8. **aria-required-attr**: Missing required ARIA attributes for roles (progressbar missing valuemin/valuemax)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-9. **aria-required-attr**: Missing required ARIA attributes for roles
+9. **aria-allowed-attr**: ARIA attributes not allowed on specific elements
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-10. **aria-allowed-attr**: ARIA attributes not allowed on specific elements
-    - [ ] Lighthouse/axe-core detected
-    - [ ] WAA Tool detected
-
-11. **aria-hidden-focus**: Focusable elements with aria-hidden="true"
+10. **aria-hidden-focus**: Focusable elements with aria-hidden="true"
     - [ ] Lighthouse/axe-core detected
     - [ ] WAA Tool detected
 
 ### NVDA Screen Reader Issues:
 
-1. **Missing navigation landmarks**: Content areas not properly identified
+**NOTE: Page 2 has proper skip links and main landmarks - focus on form-specific issues**
+
+1. **Missing fieldset/legend**: Related form controls not grouped properly
    - [ ] NVDA manual test detected
    - [ ] WAA Tool detected
 
-2. **Missing fieldset/legend**: Related form controls not grouped properly
+2. **No current page indication**: Screen readers can't identify current location in navigation
    - [ ] NVDA manual test detected
    - [ ] WAA Tool detected
 
-3. **No current page indication**: Screen readers can't identify current location
+3. **Inconsistent navigation**: Navigation structure that confuses screen reader users
    - [ ] NVDA manual test detected
    - [ ] WAA Tool detected
 
-4. **Inconsistent navigation**: Navigation structure that confuses screen reader users
+4. **Keyboard traps**: Navigation that traps focus without escape mechanism
    - [ ] NVDA manual test detected
    - [ ] WAA Tool detected
 
-5. **Keyboard traps**: Navigation that traps focus without escape mechanism
+5. **Poor progress indication**: Multi-step forms without clear progress communication
    - [ ] NVDA manual test detected
    - [ ] WAA Tool detected
 
-6. **Poor progress indication**: Multi-step forms without clear progress communication
+6. **No error announcements**: Form validation errors not announced to screen readers
    - [ ] NVDA manual test detected
    - [ ] WAA Tool detected
 
-7. **No error announcements**: Form validation errors not announced to screen readers
+7. **Silent form submission**: Forms that submit without status feedback
    - [ ] NVDA manual test detected
    - [ ] WAA Tool detected
 
-8. **Silent form submission**: Forms that submit without status feedback
+8. **Invalid ARIA patterns**: ARIA attributes with incorrect or invalid values
    - [ ] NVDA manual test detected
    - [ ] WAA Tool detected
 
 ## Page 3 - Data Tables & Media
 
+**CORRECTED: This page has skip links and main landmark but is MISSING lang attribute**
+
 ### Lighthouse/axe-core Detected Issues:
 
-1. **table-headers**: Data tables without proper header elements
+1. **html-has-lang**: HTML element missing lang attribute
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-2. **th-has-data-cells**: Table headers without associated data cells
+2. **table-headers**: Data tables without proper header elements (tables using td instead of th)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-3. **td-headers-attr**: Table cells not associated with headers
+3. **th-has-data-cells**: Empty table cells in data tables
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-4. **scope-attr-valid**: Invalid scope attribute values
+4. **td-headers-attr**: Table cells incorrectly referencing non-existent headers (headers="pop-id")
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-5. **table-duplicate-name**: Tables with duplicate accessible names
+5. **presentation-role-conflict**: Layout tables with role="presentation" containing semantic markup
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-6. **video-caption**: Videos without captions
+6. **video-caption**: Videos without captions or transcripts
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
@@ -264,11 +272,11 @@ This document lists all accessibility defects implemented in the test pages for 
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-9. **presentation-role-conflict**: Elements with conflicting roles
+9. **frame-title**: iframe elements without title attributes
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-10. **meta-refresh**: Auto-refreshing content without warning
+10. **meta-refresh**: Auto-playing media without user control
     - [ ] Lighthouse/axe-core detected
     - [ ] WAA Tool detected
 
@@ -308,53 +316,59 @@ This document lists all accessibility defects implemented in the test pages for 
 
 ## Page 4 - Interactive Elements & ARIA
 
+**CORRECTED: This page has skip links and main landmark but is MISSING lang attribute**
+
 ### Lighthouse/axe-core Detected Issues:
 
-1. **button-has-type**: Buttons without explicit type attributes
+1. **html-has-lang**: HTML element missing lang attribute
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-2. **listitem**: List items not contained in proper list elements
+2. **aria-valid-attr-value**: Invalid ARIA attribute values (aria-pressed="maybe", aria-checked="undefined")
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-3. **dlitem**: Improper definition list structure
+3. **aria-required-attr**: Missing required ARIA attributes (progressbar missing valuemin/valuemax, slider with invalid range)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-4. **definition-list**: Invalid definition list markup
+4. **aria-required-parent**: ARIA elements missing required parent roles (tab, option without proper containers)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-5. **aria-roles**: Invalid or inappropriate ARIA roles
+5. **aria-required-children**: ARIA elements missing required children (listbox without options)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-6. **aria-required-parent**: ARIA roles missing required parent roles
+6. **aria-allowed-role**: Invalid role combinations (input with role="button", h1 with role="button")
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-7. **aria-required-children**: ARIA roles missing required child roles
+7. **aria-labelledby**: Invalid aria-labelledby references (referencing non-existent IDs)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-8. **aria-expanded**: Missing or incorrect aria-expanded values
+8. **aria-describedby**: Invalid aria-describedby references (referencing non-existent IDs)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-9. **aria-controls**: Missing aria-controls relationships
+9. **aria-controls**: aria-controls referencing non-existent elements
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-10. **aria-labelledby**: Invalid aria-labelledby references
+10. **aria-owns**: aria-owns referencing non-existent elements
     - [ ] Lighthouse/axe-core detected
     - [ ] WAA Tool detected
 
-11. **aria-describedby**: Invalid aria-describedby references
+11. **tabindex**: Improper use of positive tabindex values (tabindex="10")
     - [ ] Lighthouse/axe-core detected
     - [ ] WAA Tool detected
 
-12. **aria-hidden-body**: aria-hidden on document body
+12. **nested-interactive**: Button role on interactive elements, conflicting semantics
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+13. **aria-label**: Redundant aria-label when label element already exists
     - [ ] Lighthouse/axe-core detected
     - [ ] WAA Tool detected
 
@@ -398,49 +412,55 @@ This document lists all accessibility defects implemented in the test pages for 
 
 ## Page 5 - Advanced Components & Error Handling
 
+**CORRECTED: This page has skip links and main landmark but is MISSING lang attribute**
+
 ### Lighthouse/axe-core Detected Issues:
 
-1. **page-has-heading-one**: Missing h1 element
+1. **html-has-lang**: HTML element missing lang attribute
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-2. **duplicate-id**: Multiple instances of elements with same ID
+2. **duplicate-id**: Multiple instances of elements with same ID throughout page
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-3. **region**: Page regions not properly identified
+3. **color-contrast**: Error states indicated only by color (red borders without text)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-4. **landmark-unique**: Duplicate landmark labels
+4. **aria-required-children**: List role missing required listitem children
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-5. **scrollable-region-focusable**: Scrollable regions not keyboard accessible
+5. **aria-required-parent**: Multiple main landmarks (nested main elements)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-6. **focus-order-semantics**: Logical focus order violations
+6. **aria-allowed-attr**: Navigation elements with conflicting ARIA (nested nav elements)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-7. **aria-roles**: Invalid or inappropriate ARIA roles
+7. **aria-live**: Improper live region usage (aria-live="aggressive")
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-8. **aria-allowed-attr**: ARIA attributes not allowed on specific elements
+8. **form-field-multiple-labels**: Radio buttons with conflicting name attributes
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-9. **aria-required-children**: ARIA roles missing required child roles
+9. **label**: Form inputs without proper labels (multiple unlabeled inputs)
    - [ ] Lighthouse/axe-core detected
    - [ ] WAA Tool detected
 
-10. **aria-required-parent**: ARIA roles missing required parent roles
+10. **button-name**: Non-semantic elements styled as buttons (div with onclick)
     - [ ] Lighthouse/axe-core detected
     - [ ] WAA Tool detected
 
-11. **color-contrast**: Error states indicated only by color
+11. **frame-title**: iframe without title attribute
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
+12. **tabindex**: Positive tabindex disrupting logical focus order
     - [ ] Lighthouse/axe-core detected
     - [ ] WAA Tool detected
 

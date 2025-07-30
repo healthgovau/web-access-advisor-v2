@@ -115,10 +115,10 @@
             <h2 id="defective-heading">❌ DEFECTIVE EXAMPLES </h2>
             
             <h3>Text Content Issues</h3>
-            <h1>Wrong heading level - should be h4</h1>
-            <div style="font-size: 20px; font-weight: bold;">This looks like a heading but has no semantic meaning</div>
-            <p style="color: #999; background: white;">Poor contrast text - fails WCAG AA (2.5:1 ratio)</p>
-            <p style="color: #bbb; background: white;">Even worse contrast - fails WCAG AAA (1.8:1 ratio)</p>
+            <h1>Secondary heading using h1 tag</h1>
+            <div style="font-size: 20px; font-weight: bold;">Important Information</div>
+            <p style="color: #999; background: white;">This text appears lighter than the main content.</p>
+            <p style="color: #bbb; background: white;">Additional information in lighter text.</p>
             
             <!-- Missing alt attribute -->
             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlPC90ZXh0Pjwvc3ZnPg==" />
@@ -126,57 +126,47 @@
             <!-- Decorative image with unnecessary alt text -->
             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMjAiIGZpbGw9IiNjY2MiLz48L3N2Zz4=" alt="decorative circle" />
             
-            <h5>Skipped from h3 to h5</h5>
-            <h6></h6> <!-- Empty heading -->
+            <h5>Employment Benefits</h5>
+            <h6></h6>
             
             <div>
-                <span style="color: blue; text-decoration: underline;">Looks like a link but isn't</span>
+                <span style="color: blue; text-decoration: underline;">Additional Resources</span>
             </div>
             
-            <h3>Defective Forms - Multiple Accessibility Violations</h3>
+            <h3>Form Examples</h3>
             <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="defective-form-heading">
                 <h4 id="defective-form-heading" style="margin: 0 0 8px 0;">❌ STATIC ANALYSIS ONLY</h4>
-                <p style="margin: 0;"><strong>Defects:</strong> Duplicate IDs, missing labels, improper button semantics</p>
-                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Use automated tools and screen reader navigation - do not interact</p>
+                <p style="margin: 0;"><strong>Testing:</strong> Use automated tools and screen reader navigation - do not interact</p>
             </div>
             <form>
-                <!-- Multiple inputs with same ID (duplicate-id violation) -->
                 <input type="text" id="duplicate" placeholder="Enter your name" />
                 <input type="email" id="duplicate" placeholder="Email address" />
                 
-                <!-- No labels, only placeholders -->
                 <input type="password" placeholder="Password (8+ characters)" />
                 <input type="tel" placeholder="Phone Number" />
                 
-                <!-- Radio buttons without fieldset/legend -->
                 <div>Preferred Contact Method:</div>
                 <input type="radio" name="bad-contact" value="email" /> Email
                 <input type="radio" name="bad-contact" value="phone" /> Phone
                 <input type="radio" name="bad-contact" value="mail" /> Mail
                 
-                <!-- Button without type attribute -->
                 <button onclick="submitBadForm()">Submit</button>
                 
-                <!-- Fake button (div with click handler) -->
                 <div onclick="submitForm()" style="background: #007cba; color: white; padding: 10px; cursor: pointer; display: inline-block;">
                     Click to Submit
                 </div>
                 
-                <!-- Input with positive tabindex -->
                 <input type="text" placeholder="This field has tabindex=5" tabindex="5" />
                 
-                <!-- Hidden label (creates confusion) -->
                 <label for="hidden-input" style="display: none;">Hidden Label</label>
                 <input type="text" id="hidden-input" placeholder="Mysterious input" />
             </form>
             
-            <!-- Links without accessible text -->
             <p>
                 <a href="#" onclick="doSomething()">Click here</a> for more information.
                 <a href="#"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzAwN2NiYSIvPjwvc3ZnPg==" /></a>
             </p>
             
-            <!-- List structure violations -->
             <div>
                 <div>• Item 1</div>
                 <div>• Item 2</div>

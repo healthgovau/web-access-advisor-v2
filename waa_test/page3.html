@@ -107,11 +107,9 @@
         <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;">
             <h2>❌ DEFECTIVE EXAMPLES </h2>
             
-            <h3>Multiple Table Accessibility Violations</h3>
-            <!-- Table used for layout instead of data -->
+            <h3>Service Information Table</h3>
             <table>
                 <tr style="background: #ccc;">
-                    <!-- Using td instead of th for headers -->
                     <td><strong>Service</strong></td>
                     <td><strong>Fee</strong></td>
                     <td><strong>Time</strong></td>
@@ -121,28 +119,27 @@
                     <td>License</td>
                     <td>$35</td>
                     <td>2 weeks</td>
-                    <td style="color: green;">Active</td> <!-- Color-only indication -->
+                    <td style="color: green;">Active</td>
                 </tr>
                 <tr>
                     <td>Permit</td>
                     <td>$50</td>
-                    <td></td> <!-- Empty cell -->
+                    <td></td>
                     <td style="color: red;">Expired</td>
                 </tr>
                 <tr>
-                    <td></td> <!-- Empty header cell -->
+                    <td></td>
                     <td>$25</td>
                     <td>1 week</td>
                     <td>Pending</td>
                 </tr>
             </table>
             
-            <h3>Nested Tables and Layout Abuse</h3>
-            <table role="presentation"> <!-- Wrong use of role -->
+            <h3>Department Information Layout</h3>
+            <table role="presentation">
                 <tr>
                     <td>Department Info</td>
                     <td>
-                        <!-- Tables within tables -->
                         <table>
                             <tr><td><strong>Name</strong></td><td><strong>Contact</strong></td></tr>
                             <tr><td>DMV</td><td>555-1234</td></tr>
@@ -162,20 +159,17 @@
                 </tr>
             </table>
             
-            <h3>Inaccessible Media with Multiple Issues</h3>
+            <h3>Government Media Content</h3>
             <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="inaccessible-media-heading">
                 <h4 id="inaccessible-media-heading" style="margin: 0 0 8px 0;">❌ STATIC ANALYSIS ONLY</h4>
-                <p style="margin: 0;"><strong>Defects:</strong> Auto-playing media, missing captions, no transcripts</p>
                 <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Use automated tools to detect media accessibility violations</p>
             </div>
-            <!-- Auto-playing video without controls -->
             <video autoplay muted loop>
                 <source src="#" type="video/mp4" />
                 Video not supported
             </video>
-            <p>Government services overview (no captions, auto-plays, no transcript)</p>
+            <p>Government services overview</p>
             
-            <!-- Audio without alternatives -->
             <audio autoplay controls>
                 <source src="#" type="audio/mp3" />
                 Audio announcement
@@ -191,7 +185,6 @@
                     <td colspan="3">Filing Status</td>
                 </tr>
                 <tr>
-                    <!-- Missing scope attributes and IDs -->
                     <td>Single</td>
                     <td>Married Joint</td>
                     <td>Married Separate</td>
@@ -231,7 +224,6 @@
             </table>
             
             <h3>Data Tables with Accessibility Issues</h3>
-            <!-- Missing caption and summary -->
             <table border="1">
                 <tr>
                     <th>County</th>
@@ -240,7 +232,7 @@
                     <th>2024 Tax Rate</th>
                 </tr>
                 <tr>
-                    <td headers="wrong-id">Los Angeles</td> <!-- Invalid headers reference -->
+                    <td headers="pop-id">Los Angeles</td>
                     <td>10,014,009</td>
                     <td>1.25%</td>
                     <td>1.35%</td>

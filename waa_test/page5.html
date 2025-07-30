@@ -30,7 +30,7 @@
             <div class="test-note" style="background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="accessible-carousel-heading">
                 <h4 id="accessible-carousel-heading" style="margin: 0 0 8px 0;">✅ ACCESSIBLE REFERENCE IMPLEMENTATION</h4>
                 <p style="margin: 0;"><strong>Purpose:</strong> Demonstrates proper carousel with ARIA live regions and keyboard navigation</p>
-                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Compare against inaccessible carousel below - interaction optional for validation</p>
+                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Compare against carousel below - interaction optional for validation</p>
             </div>
             <div role="region" aria-labelledby="carousel-heading" class="carousel">
                 <h4 id="carousel-heading">Government Office Locations</h4>
@@ -113,12 +113,12 @@
         <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;">
             <h2>❌ DEFECTIVE EXAMPLES </h2>
             
-            <h3>Completely Inaccessible Carousel</h3>
+            <h3>Alternative Carousel Implementation</h3>
             <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;">
                 <strong>❌ NO INTERACTION:</strong> No keyboard support, no ARIA, no screen reader support.
                 <br><strong>Purpose:</strong> Compare with accessible carousel above - for static analysis only
             </div>
-            <div class="bad-carousel" style="position: relative; width: 300px; height: 200px; border: 1px solid #ccc;">
+            <div class="demo-carousel" style="position: relative; width: 300px; height: 200px; border: 1px solid #ccc;">
                 <div id="slide-container" style="overflow: hidden; width: 100%; height: 100%;">
                     <div class="slide" style="display: none;">
                         <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIDE8L3RleHQ+PC9zdmc+" />
@@ -143,36 +143,34 @@
             <h3>Catastrophic Error Handling</h3>
             <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;">
                 <strong>❌ NO INTERACTION:</strong> Form has duplicate IDs and no proper error handling.
-                <br><strong>Purpose:</strong> Structural validation issues for automated tools to detect
+                <br><strong>Purpose:</strong> Structural validation scenarios for automated tools to detect
             </div>
             <form onsubmit="return disastrousValidation()" autocomplete="off">
                 <!-- Multiple duplicate IDs -->
-                <input type="text" id="bad-id" placeholder="Social Security Number" />
-                <input type="email" id="bad-id" placeholder="Email Address" />
-                <input type="number" id="bad-id" placeholder="Annual Income" />
+                <input type="text" id="ssn-field" placeholder="Social Security Number" />
+                <input type="email" id="email-field" placeholder="Email Address" />
+                <input type="number" id="income-field" placeholder="Annual Income" />
                 
                 <!-- No validation, no error association -->
-                <input type="radio" name="bad-size" value="1" /> 1 person
-                <input type="radio" name="bad-size" value="2" /> 2 people
-                <input type="radio" name="bad-size" value="3" /> 3+ people
+                <input type="radio" name="family-size" value="1" /> 1 person
+                <input type="radio" name="family-size" value="2" /> 2 people
+                <input type="radio" name="family-size" value="3" /> 3+ people
                 
-                <!-- Missing form structure -->
+                
                 <select>
                     <option>Choose state</option>
                     <option value="">-- Empty value --</option>
                     <option value="CA">California</option>
                 </select>
                 
-                <!-- Button without type -->
-                <button onclick="badSubmit()">Submit Without Validation</button>
+                <button onclick="submitForm()">Submit Application</button>
             </form>
             
-            <!-- Error messages that appear but aren't associated -->
             <div id="floating-errors" style="color: red; display: none;">
-                Multiple errors occurred but we won't tell you which fields or how to fix them!
+                Application errors will be displayed here
             </div>
             
-            <h3>Timeout Issues and Session Management</h3>
+            <h3>Session and Timeout Management</h3>
             <div class="test-note" style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px; margin: 10px 0;">
                 <strong>⚠️ INTERACTION OPTIONAL:</strong> Button starts destructive 10-second countdown.
                 <br><strong>State Changes:</strong> Countdown timer, no warnings, session expiry - use with caution
@@ -180,7 +178,7 @@
             <p>Your session will expire in <span id="countdown">10</span> seconds with no warning...</p>
             <button type="button" onclick="startSilentTimeout()">Start Destructive Timeout</button>
             
-            <h3>Inaccessible Drag and Drop</h3>
+            <h3>Drag and Drop Interface</h3>
             <div id="drag-zone" style="border: 2px dashed #ccc; padding: 40px; text-align: center; margin: 20px 0;">
                 <p>Drag your tax documents here to upload</p>
                 <p style="font-size: 12px; color: #666;">(Only drag and drop - no alternative method)</p>
@@ -191,7 +189,7 @@
             <div class="test-note" style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="color-only-heading">
                 <h4 id="color-only-heading" style="margin: 0 0 8px 0;">⚠️ INTERACTION REQUIRED FOR DEFECT DETECTION</h4>
                 <p style="margin: 0;"><strong>State Changes:</strong> Form submission shows error indication only through red borders</p>
-                <p style="margin: 4px 0 0 0;"><strong>Purpose:</strong> Test color-only error communication - submit to see accessibility violation</p>
+                <p style="margin: 4px 0 0 0;"><strong>Purpose:</strong> Test color communication patterns - submit to see validation behavior</p>
             </div>
             <form onsubmit="return colorOnlyErrors()">
                 <input type="email" id="color-email" placeholder="Email" style="border: 2px solid red;" />
@@ -201,7 +199,7 @@
                 <button type="submit">Submit</button>
             </form>
             
-            <h3>Auto-Refresh and Motion Issues</h3>
+            <h3>Auto-Refresh and Motion Content</h3>
             <div id="auto-refresh-content">
                 <p>This content auto-refreshes every 5 seconds without warning</p>
                 <p>Current time: <span id="auto-time"></span></p>
@@ -225,19 +223,18 @@
             <div class="test-note" style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="loading-test-heading">
                 <h4 id="loading-test-heading" style="margin: 0 0 8px 0;">⚠️ INTERACTION REQUIRED FOR DEFECT DETECTION</h4>
                 <p style="margin: 0;"><strong>State Changes:</strong> Button changes but no loading announcements, no progress indication</p>
-                <p style="margin: 4px 0 0 0;"><strong>Purpose:</strong> Test missing live region updates and poor loading state communication</p>
+                <p style="margin: 4px 0 0 0;"><strong>Purpose:</strong> Test live region updates and loading state communication</p>
             </div>
-            <button type="button" onclick="badLoading()" id="bad-load-btn">
+            <button type="button" onclick="performLoading()" id="load-btn">
                 Process Application Silently
             </button>
-            <div id="bad-loading-area"></div>
+            <div id="loading-area"></div>
             
-            <h3>Form with Every Possible Accessibility Violation</h3>
-            <form method="post" action="#" onsubmit="return ultimateBadForm()">
-                <!-- Missing fieldset, no legend -->
+            <h3>Comprehensive Form Testing</h3>
+            <form method="post" action="#" onsubmit="return processForm()">
+                
                 <div>Personal Information</div>
                 
-                <!-- No labels, wrong input types, no validation -->
                 <input type="text" placeholder="SSN" autocomplete="off" />
                 <input type="text" placeholder="Birth Date" />
                 <input type="text" placeholder="Income" />
@@ -338,7 +335,7 @@
                 }, 3000);
             }
             
-            // Bad functions for defective examples
+            // Functions for interactive examples
             function prevSlide() {
                 const slides = document.querySelectorAll('.slide');
                 slides[currentSlide].style.display = 'none';
@@ -369,8 +366,8 @@
                 return false;
             }
             
-            function badSubmit() {
-                alert('Form submitted with no validation! Data may be invalid.');
+            function submitForm() {
+                alert('Form submitted for processing');
             }
             
             function startSilentTimeout() {

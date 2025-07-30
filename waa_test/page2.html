@@ -102,39 +102,32 @@
             
 
             
-            <h3>Broken Multi-Step Form - Multiple Violations</h3>
+            <h3>Employment Application Form</h3>
             <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="broken-multistep-heading">
                 <h4 id="broken-multistep-heading" style="margin: 0 0 8px 0;">❌ STATIC ANALYSIS ONLY</h4>
-                <p style="margin: 0;"><strong>Defects:</strong> Missing labels, improper ARIA, broken focus management</p>
                 <p style="margin: 4px 0 0 0;"><strong>Warning:</strong> Contains keyboard traps - do not interact</p>
             </div>
-            <!-- Missing progress indicator and no semantic structure -->
             <div>Step 1 of 3</div>
             
             <form autocomplete="off">
-                <!-- Not a fieldset, just a div -->
                 <div>Employment Information</div>
                 
-                <!-- No labels, missing autocomplete, no validation -->
                 <input type="text" placeholder="Current Employer" />
                 <input type="text" placeholder="Job Title" />
                 <input type="text" placeholder="Start Date (MM/DD/YYYY)" />
                 
-                <!-- Invalid date input -->
                 <input type="text" placeholder="End Date" autocomplete="nope" />
                 
-                <!-- No grouping for related checkboxes -->
                 <div>Employment Status:</div>
-                <input type="checkbox" id="bad1" /> Full-time
-                <input type="checkbox" id="bad2" /> Part-time
-                <input type="checkbox" id="bad3" /> Contractor
+                <input type="checkbox" id="status1" /> Full-time
+                <input type="checkbox" id="status2" /> Part-time
+                <input type="checkbox" id="status3" /> Contractor
                 
-                <!-- Multiple ARIA violations -->
                 <div onclick="nextStep()" tabindex="-1" role="button" aria-pressed="maybe">Continue</div>
                 <div role="textbox" aria-required="true">Not actually a textbox</div>
             </form>
             
-            <h3>Inaccessible Navigation with Keyboard Traps</h3>
+            <h3>Service Navigation Menu</h3>
             <div class="nav-menu">
                 <div onclick="showMenu()" tabindex="0" aria-expanded="false">Services</div>
                 <div style="display: none;" id="submenu">
@@ -144,9 +137,9 @@
                 </div>
             </div>
             
-            <h3>Form Validation Issues - Silent Failures</h3>
+            <h3>Contact Information Form</h3>
             <form onsubmit="return badValidation()">
-                <input type="email" placeholder="Email" id="bad-email" />
+                <input type="email" placeholder="Email" id="contact-email" />
                 <div id="error1" style="color: red; display: none;">Invalid email</div>
                 
                 <input type="password" placeholder="Password" id="bad-password" />

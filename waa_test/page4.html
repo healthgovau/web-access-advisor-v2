@@ -91,49 +91,48 @@
         <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;">
             <h2>❌ DEFECTIVE EXAMPLES </h2>
             
-            <h3>Multiple ARIA and Interactive Element Violations</h3>
-            <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="aria-violations-heading">
-                <h4 id="aria-violations-heading" style="margin: 0 0 8px 0;">❌ STATIC ANALYSIS ONLY</h4>
-                <p style="margin: 0;"><strong>Defects:</strong> Invalid ARIA attributes, missing required properties, conflicting semantics</p>
-                <p style="margin: 4px 0 0 0;"><strong>Warning:</strong> Defective widgets may trap focus or behave unpredictably</p>
+            <h3>Multiple ARIA and Interactive Elements</h3>
+            <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="aria-section-heading">
+                <h4 id="aria-section-heading" style="margin: 0 0 8px 0;">❌ STATIC ANALYSIS ONLY</h4>
+                <p style="margin: 0;"><strong>Note:</strong> Advanced ARIA patterns and interactive elements</p>
+                <p style="margin: 4px 0 0 0;"><strong>Warning:</strong> Complex widgets may trap focus or behave unpredictably</p>
             </div>
             
-            <!-- Inaccessible modal with focus issues -->
-            <div onclick="showBadModal()" style="color: blue; cursor: pointer;">Click for Info</div>
-            <div id="bad-modal" style="display: none; position: fixed; top: 50px; left: 50px; background: white; border: 1px solid black; padding: 20px; z-index: 1000;">
+            <div onclick="showInfoModal()" style="color: blue; cursor: pointer;">Click for Info</div>
+            <div id="info-modal" style="display: none; position: fixed; top: 50px; left: 50px; background: white; border: 1px solid black; padding: 20px; z-index: 1000;">
                 <div>Important Information</div>
-                <div onclick="hideBadModal()" style="float: right; cursor: pointer;">X</div>
+                <div onclick="hideInfoModal()" style="float: right; cursor: pointer;">X</div>
                 <p>This modal has no proper focus management, ARIA attributes, or keyboard support</p>
                 <input type="text" placeholder="Trapped input" />
             </div>
             
-            <!-- Multiple ARIA violations -->
-            <div role="button" aria-pressed="maybe" tabindex="0">Invalid ARIA value for aria-pressed</div>
+            
+            <div role="button" aria-pressed="maybe" tabindex="0">Button state toggle</div>
             <div role="textbox" aria-required="yes" onclick="fakeTextbox()">This isn't actually a textbox</div>
-            <div role="checkbox" aria-checked="undefined">Invalid checkbox state</div>
-            <div role="slider" aria-valuemin="10" aria-valuemax="5">Invalid slider range (min > max)</div>
+            <div role="checkbox" aria-checked="undefined">Custom checkbox</div>
+            <div role="slider" aria-valuemin="10" aria-valuemax="5">Range slider</div>
             
-            <!-- Missing required ARIA attributes -->
-            <div role="progressbar">Progress bar without required attributes</div>
-            <div role="tab">Tab without tabpanel association</div>
-            <div role="option">Option without listbox parent</div>
             
-            <!-- Conflicting ARIA and HTML semantics -->
-            <button role="link" onclick="doNothing()">Button with link role</button>
+            <div role="progressbar">Loading progress</div>
+            <div role="tab">Tab option</div>
+            <div role="option">Selection option</div>
+            
+            
+            <button role="link" onclick="doNothing()">Action button</button>
             <input type="checkbox" role="button" />
             <h1 role="button">Heading with button role</h1>
             
-            <!-- Keyboard accessibility issues -->
+            
             <div onclick="doSomething()" style="cursor: pointer; color: blue; padding: 5px;">
-                Looks like a button but no keyboard support
+                Interactive element
             </div>
             
-            <div tabindex="10" onclick="badAction()">Positive tabindex creates wrong order</div>
-            <div tabindex="0" onmousedown="onlyMouseAction()">Keyboard focusable but only mouse functional</div>
+            <div tabindex="10" onclick="primaryAction()">High priority interactive element</div>
+            <div tabindex="0" onmousedown="primaryMouseAction()">Mouse functional element</div>
             
-            <!-- ARIA relationships that don't exist -->
-            <div aria-labelledby="nonexistent-label">Element references missing label</div>
-            <div aria-describedby="missing-description">Element references missing description</div>
+            
+            <div aria-labelledby="related-label">Element with label reference</div>
+            <div aria-describedby="related-description">Element with description reference</div>
             <div aria-controls="nowhere">Element controls nothing</div>
             <div aria-owns="phantom-child">Element owns non-existent child</div>
             
@@ -147,19 +146,18 @@
                 </div>
             </div>
             
-            <!-- Missing state information -->
+            
             <div onclick="toggleContent()" style="cursor: pointer; color: blue;">
-                Expandable Content (no aria-expanded)
+                Expandable Content
             </div>
             <div id="hidden-content" style="display: none;">
-                <p>This content appears/disappears without proper state indication</p>
+                <p>This content appears/disappears dynamically</p>
             </div>
             
-            <!-- Form elements with ARIA issues -->
             <form>
                 <div role="group">
-                    <div aria-required="true">Fake required field</div>
-                    <input type="text" aria-invalid="yes" /> <!-- Invalid without error -->
+                    <div>Required field marker</div>
+                    <input type="text" aria-invalid="yes" />
                     <div role="alert" style="display: none;">Hidden error message</div>
                 </div>
                 
@@ -167,34 +165,34 @@
                 <label for="redundant-input" aria-label="Redundant label">Name</label>
                 <input type="text" id="redundant-input" aria-label="Also redundant" />
                 
-                <!-- Invalid ARIA hierarchy -->
+                
                 <div role="listbox">
-                    <div role="button">Button inside listbox</div> <!-- Wrong child -->
+                    <div role="button">Interactive element</div>
                     <div role="option">Valid option</div>
                 </div>
             </form>
             
-            <!-- Silent updates and missing live regions -->
+            
             <button type="button" onclick="silentUpdate()">Update Content Silently</button>
             <div id="silent-content">Original content</div>
             
-            <button type="button" onclick="updateWithWrongLiveRegion()">Wrong Live Region</button>
-            <div aria-live="aggressive" id="wrong-live">Content updated incorrectly</div> <!-- Invalid value -->
+            <button type="button" onclick="updateWithLiveRegion()">Update with Live Region</button>
+            <div aria-live="aggressive" id="dynamic-live">Content updated dynamically</div>
             
-            <!-- Accessibility violations in lists -->
+            
             <div role="list">
-                <div>Not a listitem</div> <!-- Should have role="listitem" -->
+                <div>List element</div>
                 <div role="listitem">Valid listitem</div>
                 <span role="listitem">Another listitem</span>
             </div>
             
-            <!-- Landmark issues -->
+            
             <div role="main">
-                <div role="main">Nested main landmarks</div> <!-- Should be unique -->
+                <div role="main">Main content area</div>
             </div>
             
             <nav aria-label="Navigation">
-                <nav>Nested nav without label</nav>
+                <nav>Secondary navigation</nav>
             </nav>
         </section>
         
@@ -233,42 +231,42 @@
                 statusRegion.textContent = 'Status updated: Application is being processed. You will receive email confirmation within 24 hours.';
             }
             
-            // Bad examples - functions for defective components
-            function showBadModal() {
-                document.getElementById('bad-modal').style.display = 'block';
-                // No focus management, no escape key support
+            // Functions for interactive components
+            function showInfoModal() {
+                document.getElementById('info-modal').style.display = 'block';
+                // Focus management implementation
             }
             
-            function hideBadModal() {
-                document.getElementById('bad-modal').style.display = 'none';
-                // Doesn't return focus to trigger element
+            function hideInfoModal() {
+                document.getElementById('info-modal').style.display = 'none';
+                // Return focus implementation
             }
             
             function doSomething() {
-                alert('This div looks like a button but has no keyboard support!');
+                alert('Interactive element activated');
             }
             
-            function badAction() {
-                alert('Wrong tab order - this element has tabindex="10"');
+            function primaryAction() {
+                alert('Primary action triggered');
             }
             
             function fakeTextbox() {
-                alert('This div has role="textbox" but is not actually editable!');
+                alert('Textbox interaction');
             }
             
-            function onlyMouseAction() {
-                alert('This only works with mouse, not keyboard!');
+            function primaryMouseAction() {
+                alert('Mouse action performed');
             }
             
             function doNothing() {
-                // Intentionally does nothing to show broken functionality
+                // Function implementation
             }
             
             function toggleDropdown() {
                 const options = document.getElementById('dropdown-options');
                 const isVisible = options.style.display !== 'none';
                 options.style.display = isVisible ? 'none' : 'block';
-                // No ARIA state management, no keyboard support
+                // State management implementation
             }
             
             function selectOption(value) {
@@ -288,9 +286,9 @@
                 // No live region announcement
             }
             
-            function updateWithWrongLiveRegion() {
-                document.getElementById('wrong-live').textContent = 'Updated content with invalid aria-live value';
-                // aria-live="aggressive" is not a valid value
+            function updateWithLiveRegion() {
+                document.getElementById('dynamic-live').textContent = 'Updated content with live region';
+                // Live region update implementation
             }
         </script>
     </div>
