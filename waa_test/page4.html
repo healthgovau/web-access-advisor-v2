@@ -2,28 +2,24 @@
 <html>
 <head>
     <title>Test Page 4</title>
-    <style>
-        body { margin: 0; font-family: Arial; }
-        .nav { width: 200px; background: #ccc; position: fixed; height: 100vh; }
-        .nav ul { list-style: none; padding: 10px; }
-        .nav a { text-decoration: none; color: black; display: block; padding: 5px; }
-        .nav a:hover { background: #aaa; }
-        .content { margin-left: 200px; padding: 20px; }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
     <div class="nav">
+        <h2>🔍 WAA Test Suite</h2>
         <ul>
-            <li><a href="index.html">Home</a></li>
-            <li><a href="page1.html">Test Page 1</a></li>
-            <li><a href="page2.html">Test Page 2</a></li>
-            <li><a href="page3.html">Test Page 3</a></li>
-            <li><a href="page4.html">Test Page 4</a></li>
-            <li><a href="page5.html">Test Page 5</a></li>
+            <li><a href="index.html">🏠 Home</a></li>
+            <li><a href="page1.html">📝 Test Page 1</a></li>
+            <li><a href="page2.html">📋 Test Page 2</a></li>
+            <li><a href="page3.html">📊 Test Page 3</a></li>
+            <li><a href="page4.html" aria-current="page">⚙️ Test Page 4</a></li>
+            <li><a href="page5.html">🚀 Test Page 5</a></li>
         </ul>
     </div>
     
-    <div class="content">
+    <main id="main-content" class="content">
         <h1>Page 4: Interactive Elements & ARIA</h1>
         
         <!-- ACCESSIBLE SECTION -->
@@ -31,6 +27,11 @@
             <h2>✅ ACCESSIBLE EXAMPLES</h2>
             
             <h3>Accessible Modal Dialog</h3>
+            <div class="test-note" style="background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="accessible-modal-heading">
+                <h4 id="accessible-modal-heading" style="margin: 0 0 8px 0;">✅ ACCESSIBLE REFERENCE IMPLEMENTATION</h4>
+                <p style="margin: 0;"><strong>Purpose:</strong> Demonstrates proper modal structure, focus management, and ARIA</p>
+                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Compare against defective widgets below - interaction optional for validation</p>
+            </div>
             <button type="button" onclick="openModal()" aria-describedby="modal-desc">
                 Apply for Benefits
             </button>
@@ -51,6 +52,11 @@
             </div>
             
             <h3>Accessible Expandable Content</h3>
+            <div class="test-note" style="background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="accessible-expandable-heading">
+                <h4 id="accessible-expandable-heading" style="margin: 0 0 8px 0;">✅ ACCESSIBLE REFERENCE IMPLEMENTATION</h4>
+                <p style="margin: 0;"><strong>Purpose:</strong> Demonstrates proper expandable content with correct ARIA states</p>
+                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Compare against defective widgets below - interaction optional for validation</p>
+            </div>
             <button type="button" aria-expanded="false" aria-controls="details-content" onclick="toggleDetails(this)">
                 View Application Requirements
             </button>
@@ -83,9 +89,14 @@
         
         <!-- DEFECTIVE SECTION -->
         <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;">
-            <h2>❌ DEFECTIVE EXAMPLES (DO NOT COPY)</h2>
+            <h2>❌ DEFECTIVE EXAMPLES </h2>
             
             <h3>Multiple ARIA and Interactive Element Violations</h3>
+            <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="aria-violations-heading">
+                <h4 id="aria-violations-heading" style="margin: 0 0 8px 0;">❌ STATIC ANALYSIS ONLY</h4>
+                <p style="margin: 0;"><strong>Defects:</strong> Invalid ARIA attributes, missing required properties, conflicting semantics</p>
+                <p style="margin: 4px 0 0 0;"><strong>Warning:</strong> Defective widgets may trap focus or behave unpredictably</p>
+            </div>
             
             <!-- Inaccessible modal with focus issues -->
             <div onclick="showBadModal()" style="color: blue; cursor: pointer;">Click for Info</div>

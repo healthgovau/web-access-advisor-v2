@@ -2,31 +2,92 @@
 <html>
 <head>
     <title>Test Site - Home</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        body { margin: 0; font-family: Arial; }
-        .nav { width: 200px; background: #ccc; position: fixed; height: 100vh; }
-        .nav ul { list-style: none; padding: 10px; }
-        .nav a { text-decoration: none; color: black; display: block; padding: 5px; }
-        .nav a:hover { background: #aaa; }
-        .content { margin-left: 200px; padding: 20px; }
+        .welcome-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-card h3 {
+            color: #667eea;
+            margin-top: 0;
+        }
     </style>
 </head>
 <body>
     <div class="nav">
+        <h2>🔍 WAA Test Suite</h2>
         <ul>
-            <li><a href="index.html">Home</a></li>
-            <li><a href="page1.html">Test Page 1</a></li>
-            <li><a href="page2.html">Test Page 2</a></li>
-            <li><a href="page3.html">Test Page 3</a></li>
-            <li><a href="page4.html">Test Page 4</a></li>
-            <li><a href="page5.html">Test Page 5</a></li>
+            <li><a href="index.html" aria-current="page">🏠 Home</a></li>
+            <li><a href="page1.html">📝 Test Page 1</a></li>
+            <li><a href="page2.html">📋 Test Page 2</a></li>
+            <li><a href="page3.html">📊 Test Page 3</a></li>
+            <li><a href="page4.html">⚙️ Test Page 4</a></li>
+            <li><a href="page5.html">🚀 Test Page 5</a></li>
         </ul>
     </div>
     
     <div class="content">
-        <h1>Test Site Home</h1>
-        <p>Welcome to the test site.</p>
-        <p>Use the navigation to access the test pages.</p>
+        <h1>Web Access Advisor Test Suite</h1>
+        
+        <div class="welcome-card">
+            <h2>Welcome to the Accessibility Testing Platform</h2>
+            <p>This test suite contains intentionally created accessibility defects designed to benchmark and validate accessibility testing tools.</p>
+        </div>
+        
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>🎯 Comprehensive Testing</h3>
+                <p>Test against 100+ accessibility defects across 5 different pages, covering WCAG 2.1 Level A and AA guidelines.</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🔧 Multiple Tools</h3>
+                <p>Compare results from Lighthouse, axe-core, NVDA screen reader, and your custom WAA tool.</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>📊 Benchmarking</h3>
+                <p>Track detection rates and identify areas for improvement in your accessibility testing tools.</p>
+            </div>
+        </div>
+        
+        <p><strong>Instructions:</strong> Navigate through the test pages using the sidebar menu. Each page contains specific types of accessibility defects. Use the <code>accessibility-defects.md</code> file to track your testing results.</p>
+        
+        <div class="card">
+            <h3>🧪 Testing Guidelines</h3>
+            <ul>
+                <li><strong>Static Analysis:</strong> Run Lighthouse, axe-core, and your WAA tool on each page</li>
+                <li><strong>Interactive Testing:</strong> Some forms are meant to be filled out and submitted, others should only be analyzed statically</li>
+                <li><strong>Screen Reader Testing:</strong> Use NVDA to navigate through all content and interactions</li>
+                <li><strong>Form Instructions:</strong> Each page clearly indicates which forms to interact with and which to leave alone</li>
+            </ul>
+        </div>
     </div>
 </body>
 </html>

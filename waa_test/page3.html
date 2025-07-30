@@ -2,28 +2,24 @@
 <html>
 <head>
     <title>Test Page 3</title>
-    <style>
-        body { margin: 0; font-family: Arial; }
-        .nav { width: 200px; background: #ccc; position: fixed; height: 100vh; }
-        .nav ul { list-style: none; padding: 10px; }
-        .nav a { text-decoration: none; color: black; display: block; padding: 5px; }
-        .nav a:hover { background: #aaa; }
-        .content { margin-left: 200px; padding: 20px; }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
     <div class="nav">
+        <h2>🔍 WAA Test Suite</h2>
         <ul>
-            <li><a href="index.html">Home</a></li>
-            <li><a href="page1.html">Test Page 1</a></li>
-            <li><a href="page2.html">Test Page 2</a></li>
-            <li><a href="page3.html">Test Page 3</a></li>
-            <li><a href="page4.html">Test Page 4</a></li>
-            <li><a href="page5.html">Test Page 5</a></li>
+            <li><a href="index.html">🏠 Home</a></li>
+            <li><a href="page1.html">📝 Test Page 1</a></li>
+            <li><a href="page2.html">📋 Test Page 2</a></li>
+            <li><a href="page3.html" aria-current="page">📊 Test Page 3</a></li>
+            <li><a href="page4.html">⚙️ Test Page 4</a></li>
+            <li><a href="page5.html">🚀 Test Page 5</a></li>
         </ul>
     </div>
     
-    <div class="content">
+    <main id="main-content" class="content">
         <h1>Page 3: Data Tables & Media</h1>
         
         <!-- ACCESSIBLE SECTION -->
@@ -91,6 +87,11 @@
             </table>
             
             <h3>Accessible Media</h3>
+            <div class="test-note" style="background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="accessible-media-heading">
+                <h4 id="accessible-media-heading" style="margin: 0 0 8px 0;">✅ ACCESSIBLE REFERENCE IMPLEMENTATION</h4>
+                <p style="margin: 0;"><strong>Purpose:</strong> Demonstrates proper video structure with controls and captions</p>
+                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Compare against inaccessible media below - controls may not work (no video source)</p>
+            </div>
             <video controls aria-labelledby="video-title" aria-describedby="video-desc">
                 <source src="#" type="video/mp4" />
                 <track kind="captions" srclang="en" label="English Captions" src="captions.vtt" />
@@ -104,7 +105,7 @@
         
         <!-- DEFECTIVE SECTION -->
         <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;">
-            <h2>❌ DEFECTIVE EXAMPLES (DO NOT COPY)</h2>
+            <h2>❌ DEFECTIVE EXAMPLES </h2>
             
             <h3>Multiple Table Accessibility Violations</h3>
             <!-- Table used for layout instead of data -->
@@ -162,6 +163,11 @@
             </table>
             
             <h3>Inaccessible Media with Multiple Issues</h3>
+            <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="inaccessible-media-heading">
+                <h4 id="inaccessible-media-heading" style="margin: 0 0 8px 0;">❌ STATIC ANALYSIS ONLY</h4>
+                <p style="margin: 0;"><strong>Defects:</strong> Auto-playing media, missing captions, no transcripts</p>
+                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Use automated tools to detect media accessibility violations</p>
+            </div>
             <!-- Auto-playing video without controls -->
             <video autoplay muted loop>
                 <source src="#" type="video/mp4" />

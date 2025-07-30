@@ -2,29 +2,32 @@
 <html>
 <head>
     <title>Test Page 2</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        body { margin: 0; font-family: Arial; }
-        .nav { width: 200px; background: #ccc; position: fixed; height: 100vh; }
-        .nav ul { list-style: none; padding: 10px; }
-        .nav a { text-decoration: none; color: black; display: block; padding: 5px; }
-        .nav a:hover { background: #aaa; }
-        .content { margin-left: 200px; padding: 20px; }
+        /* Page-specific styles for intentional defects */
+        .focus-trap { border: 2px solid red; }
+        .keyboard-trap input:focus { outline: none; background: yellow; }
     </style>
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
     <div class="nav">
+        <h2>🔍 WAA Test Suite</h2>
         <ul>
-            <li><a href="index.html">Home</a></li>
-            <li><a href="page1.html">Test Page 1</a></li>
-            <li><a href="page2.html">Test Page 2</a></li>
-            <li><a href="page3.html">Test Page 3</a></li>
-            <li><a href="page4.html">Test Page 4</a></li>
-            <li><a href="page5.html">Test Page 5</a></li>
+            <li><a href="index.html">🏠 Home</a></li>
+            <li><a href="page1.html">📝 Test Page 1</a></li>
+            <li><a href="page2.html" aria-current="page">📋 Test Page 2</a></li>
+            <li><a href="page3.html">📊 Test Page 3</a></li>
+            <li><a href="page4.html">⚙️ Test Page 4</a></li>
+            <li><a href="page5.html">🚀 Test Page 5</a></li>
         </ul>
     </div>
     
-    <div class="content">
+    <main id="main-content" class="content">
         <h1>Page 2: Complex Forms & Navigation</h1>
+        
+
         
         <!-- ACCESSIBLE SECTION -->
         <section>
@@ -38,6 +41,11 @@
             </nav>
             
             <h3>Multi-Step Form with Progress</h3>
+            <div class="test-note" style="background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="multistep-form-heading">
+                <h4 id="multistep-form-heading" style="margin: 0 0 8px 0;">✅ ACCESSIBLE REFERENCE IMPLEMENTATION</h4>
+                <p style="margin: 0;"><strong>Purpose:</strong> Demonstrates proper multi-step form structure and progress indication</p>
+                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Compare against broken form below - interaction optional for validation</p>
+            </div>
             <div role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="3" aria-labelledby="progress-label">
                 <div id="progress-label">Step 1 of 3: Basic Information</div>
                 <div style="width: 33%; background: #007cba; height: 10px;"></div>
@@ -90,9 +98,16 @@
         
         <!-- DEFECTIVE SECTION -->
         <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;">
-            <h2>❌ DEFECTIVE EXAMPLES (DO NOT COPY)</h2>
+            <h2>❌ DEFECTIVE EXAMPLES </h2>
+            
+
             
             <h3>Broken Multi-Step Form - Multiple Violations</h3>
+            <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="broken-multistep-heading">
+                <h4 id="broken-multistep-heading" style="margin: 0 0 8px 0;">❌ STATIC ANALYSIS ONLY</h4>
+                <p style="margin: 0;"><strong>Defects:</strong> Missing labels, improper ARIA, broken focus management</p>
+                <p style="margin: 4px 0 0 0;"><strong>Warning:</strong> Contains keyboard traps - do not interact</p>
+            </div>
             <!-- Missing progress indicator and no semantic structure -->
             <div>Step 1 of 3</div>
             
