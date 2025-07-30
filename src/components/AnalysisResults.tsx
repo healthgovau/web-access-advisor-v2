@@ -206,7 +206,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
       )}      {/* Screen Reader Analysis Results */}
       {analysisData.analysis && analysisData.analysis.components && analysisData.analysis.components.length > 0 && (        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card -mx-6">
           <div className="flex items-center justify-center py-5 px-4 relative">
-            <h2 className="text-xl font-medium text-gray-900 text-center">
+            <h2 className="font-medium text-gray-900 text-center" style={{ fontSize: '20px' }}>
               Screen Reader Accessibility Issues ({analysisData.analysis.components.length})
             </h2>            <button
               onClick={() => setIsScreenReaderExpanded(!isScreenReaderExpanded)}
@@ -415,7 +415,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
       {analysisData.analysis && analysisData.analysis.components && analysisData.analysis.components.length === 0 && (
         <details className="mt-6 border-t border-gray-200 pt-6">
           <summary className="cursor-pointer flex items-center justify-center">
-            <h4 className="text-lg font-medium text-gray-900 text-center">
+            <h4 className="font-medium text-gray-900 text-center" style={{ fontSize: '20px' }}>
               Screen Reader Accessibility Issues
             </h4>
             <span className="text-sm text-green-600 font-medium ml-4">
