@@ -394,7 +394,46 @@ Assess complex accessibility patterns:
 - Error location: Confirm errors are properly associated with problematic fields
 - Recovery guidance: Assess clear instructions for fixing validation errors
 
-**7. SCREEN READER CRITICAL COMPONENTS**
+**7. NAVIGATION ANTI-PATTERN DETECTION**
+Identify navigation sabotage patterns that specifically target and disable keyboard/screen reader accessibility:
+
+**Focus Sabotage Patterns:**
+- \`onfocus="blur()"\` or \`onfocus="this.blur()"\` - Malicious focus removal that prevents keyboard navigation
+- \`onfocus="setTimeout(function(){this.blur()}, 0)"\` - Delayed focus removal to bypass detection
+- Elements with \`tabindex="-1"\` on interactive elements that should be keyboard accessible
+- Focus event handlers that programmatically move focus away from actionable elements
+
+**Fake Navigation Links:**
+- \`<a href="javascript:void(0)">\` without proper click handlers or ARIA attributes
+- \`<a href="javascript:">\` links that don't provide alternative keyboard activation
+- \`<a href="#">\` links without preventDefault() that cause page jumps
+- Links with \`href\` values that don't work for keyboard users (e.g., only mouse click handlers)
+
+**Keyboard Trap Detection:**
+- Elements that capture focus but provide no escape mechanism (missing escape key handling)
+- Modal dialogs without proper focus containment and escape functionality
+- Custom widgets that trap focus without implementing proper ARIA navigation patterns
+- Focus loops that don't include all necessary interactive elements
+
+**Interactive Element Sabotage:**
+- \`<div>\` or \`<span>\` elements with click handlers but no keyboard equivalents
+- Interactive elements without \`role="button"\` or proper semantic markup
+- Custom controls missing \`aria-expanded\`, \`aria-selected\`, or state management
+- Elements with visual interactivity but no programmatic accessibility
+
+**Dynamic Content Navigation Issues:**
+- Content that changes without updating screen reader context (missing aria-live regions)
+- Navigation state changes that don't notify assistive technology users
+- Progressive disclosure that breaks keyboard navigation flow
+- AJAX content updates that don't manage focus appropriately
+
+**Screen Reader Bypass Patterns:**
+- Content hidden with \`aria-hidden="true"\` that should be accessible to screen readers
+- Important interactive elements marked as presentation (\`role="presentation"\`)
+- Text content that relies solely on visual positioning without semantic structure
+- Navigation menus that work visually but lack proper ARIA navigation support
+
+**8. SCREEN READER CRITICAL COMPONENTS**
 Prioritize analysis of components that directly impact screen reader navigation and interaction:
 - Expandable/Collapsible Content (aria-expanded, aria-controls implementation)
 - Dropdown Menus (role="menu", aria-haspopup, aria-expanded coordination)
@@ -413,7 +452,7 @@ Prioritize analysis of components that directly impact screen reader navigation 
 - Validation Messages (aria-describedby associations, error announcements)
 - Live Regions (aria-live, aria-atomic configuration)
 
-**8. COMPREHENSIVE ISSUE IDENTIFICATION**
+**9. COMPREHENSIVE ISSUE IDENTIFICATION**
 For each identified component, examine ALL of these screen reader compatibility factors:
 
 **Semantic Foundation:**
@@ -431,6 +470,14 @@ For each identified component, examine ALL of these screen reader compatibility 
 - Accurate relationship properties (controls, owns, activedescendant)
 - Appropriate presentation properties (hidden, readonly, disabled)
 - Live region configuration for dynamic content
+
+**Navigation Anti-Pattern Detection:**
+- Focus sabotage patterns (\`onfocus="blur()"\`, \`onfocus="this.blur()"\`)
+- Fake navigation links (\`href="javascript:void(0)"\` without proper handlers)
+- Keyboard traps without escape mechanisms
+- Interactive \`<div>\`/\`<span>\` elements without keyboard support
+- Missing ARIA states for dynamic navigation elements
+- Screen reader bypass patterns (inappropriate \`aria-hidden\` usage)
 
 **Content Quality:**
 - Descriptive alternative text for images and complex content
@@ -461,6 +508,7 @@ Based on the above comprehensive framework, identify ALL accessibility issues th
 - ARIA implementation gaps (missing attributes, incorrect values, broken relationships)  
 - Content accessibility issues (poor alt text, generic link text, missing language attributes)
 - Navigation structure problems (poor tab order, missing skip links, inadequate focus management)
+- Navigation anti-patterns (focus sabotage, fake links, keyboard traps, screen reader bypass patterns)
 - Dynamic interaction issues (when before/after comparison is available)
 
 **ANALYSIS PRIORITY:**
@@ -661,6 +709,7 @@ ${JSON.stringify(this.filterAxeResultsForAnalysis(step.axeResults || []), null, 
    - Evaluate keyboard navigation and focus management for screen reader users
    - Check ARIA attributes and role consistency throughout the interaction sequence
    - Verify proper screen reader announcements during state transitions
+   - **Navigation Anti-Pattern Detection**: Identify focus sabotage (\`onfocus="blur()"\`), fake links (\`href="javascript:void(0)"\`), keyboard traps, and screen reader bypass patterns
 
 3. **Screen Reader Before/After State Comparison**:
    - Compare DOM states between related steps focusing on ARIA attribute changes
