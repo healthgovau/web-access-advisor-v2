@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Page 4</title>
+    <style>
+        body { margin: 0; font-family: Arial; }
+        .nav { width: 200px; background: #ccc; position: fixed; height: 100vh; }
+        .nav ul { list-style: none; padding: 10px; }
+        .nav a { text-decoration: none; color: black; display: block; padding: 5px; }
+        .nav a:hover { background: #aaa; }
+        .content { margin-left: 200px; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="page1.html">Test Page 1</a></li>
+            <li><a href="page2.html">Test Page 2</a></li>
+            <li><a href="page3.html">Test Page 3</a></li>
+            <li><a href="page4.html">Test Page 4</a></li>
+            <li><a href="page5.html">Test Page 5</a></li>
+        </ul>
+    </div>
+    
+    <div class="content">
+        <h1>Page 4: Interactive Elements & ARIA</h1>
+        
+        <!-- ACCESSIBLE SECTION -->
+        <section>
+            <h2>✅ ACCESSIBLE EXAMPLES</h2>
+            
+            <h3>Accessible Modal Dialog</h3>
+            <button type="button" onclick="openModal()" aria-describedby="modal-desc">
+                Apply for Benefits
+            </button>
+            <div id="modal-desc">Opens a form to begin your benefits application</div>
+            
+            <div id="modal" role="dialog" aria-labelledby="modal-title" aria-modal="true" style="display: none;">
+                <div role="document">
+                    <h3 id="modal-title">Benefits Application</h3>
+                    <p>Please complete the following form to begin your application.</p>
+                    <button type="button" onclick="closeModal()" aria-label="Close dialog">×</button>
+                    <form>
+                        <label for="modal-name">Full Name</label>
+                        <input type="text" id="modal-name" name="name" />
+                        <button type="submit">Submit Application</button>
+                        <button type="button" onclick="closeModal()">Cancel</button>
+                    </form>
+                </div>
+            </div>
+            
+            <h3>Accessible Expandable Content</h3>
+            <button type="button" aria-expanded="false" aria-controls="details-content" onclick="toggleDetails(this)">
+                View Application Requirements
+            </button>
+            <div id="details-content" style="display: none;">
+                <ul>
+                    <li>Valid government-issued ID</li>
+                    <li>Proof of income (last 3 months)</li>
+                    <li>Social Security card</li>
+                    <li>Proof of residence</li>
+                </ul>
+            </div>
+            
+            <h3>Accessible Custom Select</h3>
+            <div class="custom-select">
+                <label for="state-select">Select Your State</label>
+                <div role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-labelledby="state-label" tabindex="0" id="state-select">
+                    <span id="state-label">Choose a state</span>
+                    <ul role="listbox" style="display: none;">
+                        <li role="option" aria-selected="false" tabindex="-1">California</li>
+                        <li role="option" aria-selected="false" tabindex="-1">Texas</li>
+                        <li role="option" aria-selected="false" tabindex="-1">New York</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3>Live Region for Status Updates</h3>
+            <button type="button" onclick="updateStatus()">Check Application Status</button>
+            <div aria-live="polite" aria-atomic="true" id="status-region"></div>
+        </section>
+        
+        <!-- DEFECTIVE SECTION -->
+        <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;">
+            <h2>❌ DEFECTIVE EXAMPLES (DO NOT COPY)</h2>
+            
+            <h3>Multiple ARIA and Interactive Element Violations</h3>
+            
+            <!-- Inaccessible modal with focus issues -->
+            <div onclick="showBadModal()" style="color: blue; cursor: pointer;">Click for Info</div>
+            <div id="bad-modal" style="display: none; position: fixed; top: 50px; left: 50px; background: white; border: 1px solid black; padding: 20px; z-index: 1000;">
+                <div>Important Information</div>
+                <div onclick="hideBadModal()" style="float: right; cursor: pointer;">X</div>
+                <p>This modal has no proper focus management, ARIA attributes, or keyboard support</p>
+                <input type="text" placeholder="Trapped input" />
+            </div>
+            
+            <!-- Multiple ARIA violations -->
+            <div role="button" aria-pressed="maybe" tabindex="0">Invalid ARIA value for aria-pressed</div>
+            <div role="textbox" aria-required="yes" onclick="fakeTextbox()">This isn't actually a textbox</div>
+            <div role="checkbox" aria-checked="undefined">Invalid checkbox state</div>
+            <div role="slider" aria-valuemin="10" aria-valuemax="5">Invalid slider range (min > max)</div>
+            
+            <!-- Missing required ARIA attributes -->
+            <div role="progressbar">Progress bar without required attributes</div>
+            <div role="tab">Tab without tabpanel association</div>
+            <div role="option">Option without listbox parent</div>
+            
+            <!-- Conflicting ARIA and HTML semantics -->
+            <button role="link" onclick="doNothing()">Button with link role</button>
+            <input type="checkbox" role="button" />
+            <h1 role="button">Heading with button role</h1>
+            
+            <!-- Keyboard accessibility issues -->
+            <div onclick="doSomething()" style="cursor: pointer; color: blue; padding: 5px;">
+                Looks like a button but no keyboard support
+            </div>
+            
+            <div tabindex="10" onclick="badAction()">Positive tabindex creates wrong order</div>
+            <div tabindex="0" onmousedown="onlyMouseAction()">Keyboard focusable but only mouse functional</div>
+            
+            <!-- ARIA relationships that don't exist -->
+            <div aria-labelledby="nonexistent-label">Element references missing label</div>
+            <div aria-describedby="missing-description">Element references missing description</div>
+            <div aria-controls="nowhere">Element controls nothing</div>
+            <div aria-owns="phantom-child">Element owns non-existent child</div>
+            
+            <!-- Broken custom widgets -->
+            <div class="fake-dropdown" onclick="toggleDropdown()" tabindex="0">
+                Select Option ▼
+                <div id="dropdown-options" style="display: none; border: 1px solid #ccc;">
+                    <div onclick="selectOption('a')" style="padding: 5px;">Option A</div>
+                    <div onclick="selectOption('b')" style="padding: 5px;">Option B</div>
+                    <div onclick="selectOption('c')" style="padding: 5px;">Option C</div>
+                </div>
+            </div>
+            
+            <!-- Missing state information -->
+            <div onclick="toggleContent()" style="cursor: pointer; color: blue;">
+                Expandable Content (no aria-expanded)
+            </div>
+            <div id="hidden-content" style="display: none;">
+                <p>This content appears/disappears without proper state indication</p>
+            </div>
+            
+            <!-- Form elements with ARIA issues -->
+            <form>
+                <div role="group">
+                    <div aria-required="true">Fake required field</div>
+                    <input type="text" aria-invalid="yes" /> <!-- Invalid without error -->
+                    <div role="alert" style="display: none;">Hidden error message</div>
+                </div>
+                
+                <!-- Redundant ARIA -->
+                <label for="redundant-input" aria-label="Redundant label">Name</label>
+                <input type="text" id="redundant-input" aria-label="Also redundant" />
+                
+                <!-- Invalid ARIA hierarchy -->
+                <div role="listbox">
+                    <div role="button">Button inside listbox</div> <!-- Wrong child -->
+                    <div role="option">Valid option</div>
+                </div>
+            </form>
+            
+            <!-- Silent updates and missing live regions -->
+            <button type="button" onclick="silentUpdate()">Update Content Silently</button>
+            <div id="silent-content">Original content</div>
+            
+            <button type="button" onclick="updateWithWrongLiveRegion()">Wrong Live Region</button>
+            <div aria-live="aggressive" id="wrong-live">Content updated incorrectly</div> <!-- Invalid value -->
+            
+            <!-- Accessibility violations in lists -->
+            <div role="list">
+                <div>Not a listitem</div> <!-- Should have role="listitem" -->
+                <div role="listitem">Valid listitem</div>
+                <span role="listitem">Another listitem</span>
+            </div>
+            
+            <!-- Landmark issues -->
+            <div role="main">
+                <div role="main">Nested main landmarks</div> <!-- Should be unique -->
+            </div>
+            
+            <nav aria-label="Navigation">
+                <nav>Nested nav without label</nav>
+            </nav>
+        </section>
+        
+        <script>
+            function openModal() {
+                const modal = document.getElementById('modal');
+                modal.style.display = 'block';
+                modal.querySelector('input').focus();
+                // Trap focus within modal
+                document.addEventListener('keydown', trapFocus);
+            }
+            
+            function closeModal() {
+                document.getElementById('modal').style.display = 'none';
+                document.querySelector('button[onclick="openModal()"]').focus();
+                document.removeEventListener('keydown', trapFocus);
+            }
+            
+            function trapFocus(e) {
+                if (e.key === 'Escape') {
+                    closeModal();
+                }
+                // Additional focus trapping logic would go here
+            }
+            
+            function toggleDetails(button) {
+                const content = document.getElementById('details-content');
+                const isExpanded = button.getAttribute('aria-expanded') === 'true';
+                
+                button.setAttribute('aria-expanded', !isExpanded);
+                content.style.display = isExpanded ? 'none' : 'block';
+            }
+            
+            function updateStatus() {
+                const statusRegion = document.getElementById('status-region');
+                statusRegion.textContent = 'Status updated: Application is being processed. You will receive email confirmation within 24 hours.';
+            }
+            
+            // Bad examples - functions for defective components
+            function showBadModal() {
+                document.getElementById('bad-modal').style.display = 'block';
+                // No focus management, no escape key support
+            }
+            
+            function hideBadModal() {
+                document.getElementById('bad-modal').style.display = 'none';
+                // Doesn't return focus to trigger element
+            }
+            
+            function doSomething() {
+                alert('This div looks like a button but has no keyboard support!');
+            }
+            
+            function badAction() {
+                alert('Wrong tab order - this element has tabindex="10"');
+            }
+            
+            function fakeTextbox() {
+                alert('This div has role="textbox" but is not actually editable!');
+            }
+            
+            function onlyMouseAction() {
+                alert('This only works with mouse, not keyboard!');
+            }
+            
+            function doNothing() {
+                // Intentionally does nothing to show broken functionality
+            }
+            
+            function toggleDropdown() {
+                const options = document.getElementById('dropdown-options');
+                const isVisible = options.style.display !== 'none';
+                options.style.display = isVisible ? 'none' : 'block';
+                // No ARIA state management, no keyboard support
+            }
+            
+            function selectOption(value) {
+                alert('Selected: ' + value + ' (but no proper state management)');
+                document.getElementById('dropdown-options').style.display = 'none';
+            }
+            
+            function toggleContent() {
+                const content = document.getElementById('hidden-content');
+                const isVisible = content.style.display !== 'none';
+                content.style.display = isVisible ? 'none' : 'block';
+                // No ARIA state indication
+            }
+            
+            function silentUpdate() {
+                document.getElementById('silent-content').textContent = 'Content changed without announcement to screen readers';
+                // No live region announcement
+            }
+            
+            function updateWithWrongLiveRegion() {
+                document.getElementById('wrong-live').textContent = 'Updated content with invalid aria-live value';
+                // aria-live="aggressive" is not a valid value
+            }
+        </script>
+    </div>
+</body>
+</html>

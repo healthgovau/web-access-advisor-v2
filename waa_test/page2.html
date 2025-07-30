@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Page 2</title>
+    <style>
+        body { margin: 0; font-family: Arial; }
+        .nav { width: 200px; background: #ccc; position: fixed; height: 100vh; }
+        .nav ul { list-style: none; padding: 10px; }
+        .nav a { text-decoration: none; color: black; display: block; padding: 5px; }
+        .nav a:hover { background: #aaa; }
+        .content { margin-left: 200px; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="page1.html">Test Page 1</a></li>
+            <li><a href="page2.html">Test Page 2</a></li>
+            <li><a href="page3.html">Test Page 3</a></li>
+            <li><a href="page4.html">Test Page 4</a></li>
+            <li><a href="page5.html">Test Page 5</a></li>
+        </ul>
+    </div>
+    
+    <div class="content">
+        <h1>Page 2: Complex Forms & Navigation</h1>
+        
+        <!-- ACCESSIBLE SECTION -->
+        <section>
+            <h2>✅ ACCESSIBLE EXAMPLES</h2>
+            
+            <nav aria-label="Breadcrumb">
+                <ol>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="page2.html" aria-current="page">Complex Forms</a></li>
+                </ol>
+            </nav>
+            
+            <h3>Multi-Step Form with Progress</h3>
+            <div role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="3" aria-labelledby="progress-label">
+                <div id="progress-label">Step 1 of 3: Basic Information</div>
+                <div style="width: 33%; background: #007cba; height: 10px;"></div>
+            </div>
+            
+            <form novalidate>
+                <fieldset>
+                    <legend>Employment Information</legend>
+                    
+                    <label for="employer">Current Employer</label>
+                    <input type="text" id="employer" name="employer" autocomplete="organization" aria-describedby="employer-help" />
+                    <div id="employer-help">Enter the legal name of your current employer</div>
+                    
+                    <label for="position">Job Title</label>
+                    <input type="text" id="position" name="position" autocomplete="organization-title" />
+                    
+                    <label for="start-date">Start Date</label>
+                    <input type="date" id="start-date" name="start-date" aria-describedby="start-date-help" />
+                    <div id="start-date-help">Use format MM/DD/YYYY</div>
+                    
+                    <fieldset>
+                        <legend>Employment Status (Required)</legend>
+                        <input type="checkbox" id="full-time" name="employment-type" value="full-time" />
+                        <label for="full-time">Full-time</label>
+                        
+                        <input type="checkbox" id="part-time" name="employment-type" value="part-time" />
+                        <label for="part-time">Part-time</label>
+                        
+                        <input type="checkbox" id="contractor" name="employment-type" value="contractor" />
+                        <label for="contractor">Independent Contractor</label>
+                    </fieldset>
+                </fieldset>
+                
+                <button type="button" onclick="validateStep()">Continue to Step 2</button>
+            </form>
+            
+            <h3>Accessible Navigation Menu</h3>
+            <nav aria-label="Main navigation">
+                <ul role="menubar">
+                    <li role="none">
+                        <a href="#services" role="menuitem" aria-haspopup="true" aria-expanded="false">Services</a>
+                        <ul role="menu" aria-label="Services submenu">
+                            <li role="none"><a href="#tax" role="menuitem">Tax Services</a></li>
+                            <li role="none"><a href="#benefits" role="menuitem">Benefits</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </nav>
+        </section>
+        
+        <!-- DEFECTIVE SECTION -->
+        <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;">
+            <h2>❌ DEFECTIVE EXAMPLES (DO NOT COPY)</h2>
+            
+            <h3>Broken Multi-Step Form - Multiple Violations</h3>
+            <!-- Missing progress indicator and no semantic structure -->
+            <div>Step 1 of 3</div>
+            
+            <form autocomplete="off">
+                <!-- Not a fieldset, just a div -->
+                <div>Employment Information</div>
+                
+                <!-- No labels, missing autocomplete, no validation -->
+                <input type="text" placeholder="Current Employer" />
+                <input type="text" placeholder="Job Title" />
+                <input type="text" placeholder="Start Date (MM/DD/YYYY)" />
+                
+                <!-- Invalid date input -->
+                <input type="text" placeholder="End Date" autocomplete="nope" />
+                
+                <!-- No grouping for related checkboxes -->
+                <div>Employment Status:</div>
+                <input type="checkbox" id="bad1" /> Full-time
+                <input type="checkbox" id="bad2" /> Part-time
+                <input type="checkbox" id="bad3" /> Contractor
+                
+                <!-- Multiple ARIA violations -->
+                <div onclick="nextStep()" tabindex="-1" role="button" aria-pressed="maybe">Continue</div>
+                <div role="textbox" aria-required="true">Not actually a textbox</div>
+            </form>
+            
+            <h3>Inaccessible Navigation with Keyboard Traps</h3>
+            <div class="nav-menu">
+                <div onclick="showMenu()" tabindex="0" aria-expanded="false">Services</div>
+                <div style="display: none;" id="submenu">
+                    <div onclick="goTo('tax')" tabindex="1">Tax Services</div>
+                    <div onclick="goTo('benefits')" tabindex="2">Benefits</div>
+                    <div onclick="goTo('licenses')" tabindex="3">Licenses</div>
+                </div>
+            </div>
+            
+            <h3>Form Validation Issues - Silent Failures</h3>
+            <form onsubmit="return badValidation()">
+                <input type="email" placeholder="Email" id="bad-email" />
+                <div id="error1" style="color: red; display: none;">Invalid email</div>
+                
+                <input type="password" placeholder="Password" id="bad-password" />
+                <div style="color: red;">Password must be 8 characters</div>
+                
+                <!-- Missing name attributes -->
+                <input type="text" placeholder="Username" />
+                <input type="tel" placeholder="Phone" />
+                
+                <!-- Duplicate IDs -->
+                <input type="text" id="duplicate-field" placeholder="Field 1" />
+                <input type="text" id="duplicate-field" placeholder="Field 2" />
+                
+                <button type="submit">Submit</button>
+            </form>
+            
+            <h3>Missing Skip Links and Landmarks</h3>
+            <div class="fake-nav">
+                <div onclick="navigate('home')">Home</div>
+                <div onclick="navigate('about')">About</div>
+                <div onclick="navigate('services')">Services</div>
+                <div onclick="navigate('contact')">Contact</div>
+            </div>
+            
+            <h3>ARIA Violations and Invalid Attributes</h3>
+            <div role="invalid-role" aria-fake="true">Invalid ARIA role and attribute</div>
+            <div role="button" aria-expanded="yes">Invalid aria-expanded value</div>
+            <div role="textbox" aria-required="maybe">Invalid aria-required value</div>
+            <input type="text" aria-labelledby="nonexistent-id" />
+            <div aria-hidden="true" tabindex="0">Focusable but hidden element</div>
+        </section>
+        
+        <script>
+            function validateStep() {
+                // Accessible validation example
+                const employer = document.getElementById('employer');
+                if (!employer.value) {
+                    employer.setAttribute('aria-invalid', 'true');
+                    employer.setAttribute('aria-describedby', 'employer-error');
+                    const errorMsg = document.createElement('div');
+                    errorMsg.id = 'employer-error';
+                    errorMsg.textContent = 'Employer name is required';
+                    errorMsg.setAttribute('role', 'alert');
+                    employer.parentNode.appendChild(errorMsg);
+                } else {
+                    // Clear error if valid
+                    employer.removeAttribute('aria-invalid');
+                    const existingError = document.getElementById('employer-error');
+                    if (existingError) {
+                        existingError.remove();
+                    }
+                }
+            }
+            
+            // Bad validation function
+            function badValidation() {
+                document.getElementById('error1').style.display = 'block';
+                return false; // Prevents form submission but doesn't help user
+            }
+            
+            // Functions for defective examples
+            function showMenu() {
+                const submenu = document.getElementById('submenu');
+                submenu.style.display = submenu.style.display === 'none' ? 'block' : 'none';
+            }
+            
+            function goTo(page) {
+                alert('Navigation to ' + page + ' - but this is inaccessible!');
+            }
+            
+            function nextStep() {
+                alert('Form would advance but has no validation!');
+            }
+            
+            function navigate(page) {
+                alert('Fake navigation to ' + page);
+            }
+        </script>
+    </div>
+</body>
+</html>

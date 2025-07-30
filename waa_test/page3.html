@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Page 3</title>
+    <style>
+        body { margin: 0; font-family: Arial; }
+        .nav { width: 200px; background: #ccc; position: fixed; height: 100vh; }
+        .nav ul { list-style: none; padding: 10px; }
+        .nav a { text-decoration: none; color: black; display: block; padding: 5px; }
+        .nav a:hover { background: #aaa; }
+        .content { margin-left: 200px; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="page1.html">Test Page 1</a></li>
+            <li><a href="page2.html">Test Page 2</a></li>
+            <li><a href="page3.html">Test Page 3</a></li>
+            <li><a href="page4.html">Test Page 4</a></li>
+            <li><a href="page5.html">Test Page 5</a></li>
+        </ul>
+    </div>
+    
+    <div class="content">
+        <h1>Page 3: Data Tables & Media</h1>
+        
+        <!-- ACCESSIBLE SECTION -->
+        <section>
+            <h2>✅ ACCESSIBLE EXAMPLES</h2>
+            
+            <h3>Accessible Data Table</h3>
+            <table>
+                <caption>Government Service Fees by Department</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Service Type</th>
+                        <th scope="col">Department</th>
+                        <th scope="col">Fee</th>
+                        <th scope="col">Processing Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">Driver's License</th>
+                        <td>DMV</td>
+                        <td>$35.00</td>
+                        <td>2-3 weeks</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Business License</th>
+                        <td>Commerce</td>
+                        <td>$150.00</td>
+                        <td>4-6 weeks</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Birth Certificate</th>
+                        <td>Vital Records</td>
+                        <td>$25.00</td>
+                        <td>1-2 weeks</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>Complex Table with Headers</h3>
+            <table>
+                <caption>Tax Rate Schedule by Income Level and Filing Status</caption>
+                <thead>
+                    <tr>
+                        <th rowspan="2" scope="col">Income Range</th>
+                        <th colspan="2" scope="colgroup">Tax Rate</th>
+                    </tr>
+                    <tr>
+                        <th scope="col">Single</th>
+                        <th scope="col">Married</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">$0 - $10,000</th>
+                        <td>10%</td>
+                        <td>10%</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">$10,001 - $40,000</th>
+                        <td>12%</td>
+                        <td>12%</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>Accessible Media</h3>
+            <video controls aria-labelledby="video-title" aria-describedby="video-desc">
+                <source src="#" type="video/mp4" />
+                <track kind="captions" srclang="en" label="English Captions" src="captions.vtt" />
+                <track kind="descriptions" srclang="en" label="Audio Descriptions" src="descriptions.vtt" />
+                Your browser does not support the video element.
+            </video>
+            <h4 id="video-title">How to Apply for Benefits</h4>
+            <p id="video-desc">This video explains the step-by-step process for applying for government benefits online.</p>
+            <a href="transcript.html">View Full Transcript</a>
+        </section>
+        
+        <!-- DEFECTIVE SECTION -->
+        <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;">
+            <h2>❌ DEFECTIVE EXAMPLES (DO NOT COPY)</h2>
+            
+            <h3>Multiple Table Accessibility Violations</h3>
+            <!-- Table used for layout instead of data -->
+            <table>
+                <tr style="background: #ccc;">
+                    <!-- Using td instead of th for headers -->
+                    <td><strong>Service</strong></td>
+                    <td><strong>Fee</strong></td>
+                    <td><strong>Time</strong></td>
+                    <td><strong>Status</strong></td>
+                </tr>
+                <tr>
+                    <td>License</td>
+                    <td>$35</td>
+                    <td>2 weeks</td>
+                    <td style="color: green;">Active</td> <!-- Color-only indication -->
+                </tr>
+                <tr>
+                    <td>Permit</td>
+                    <td>$50</td>
+                    <td></td> <!-- Empty cell -->
+                    <td style="color: red;">Expired</td>
+                </tr>
+                <tr>
+                    <td></td> <!-- Empty header cell -->
+                    <td>$25</td>
+                    <td>1 week</td>
+                    <td>Pending</td>
+                </tr>
+            </table>
+            
+            <h3>Nested Tables and Layout Abuse</h3>
+            <table role="presentation"> <!-- Wrong use of role -->
+                <tr>
+                    <td>Department Info</td>
+                    <td>
+                        <!-- Tables within tables -->
+                        <table>
+                            <tr><td><strong>Name</strong></td><td><strong>Contact</strong></td></tr>
+                            <tr><td>DMV</td><td>555-1234</td></tr>
+                            <tr><td>IRS</td><td>555-5678</td></tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <table>
+                            <tr>
+                                <td>Hours</td>
+                                <td>Mon-Fri 9-5</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            
+            <h3>Inaccessible Media with Multiple Issues</h3>
+            <!-- Auto-playing video without controls -->
+            <video autoplay muted loop>
+                <source src="#" type="video/mp4" />
+                Video not supported
+            </video>
+            <p>Government services overview (no captions, auto-plays, no transcript)</p>
+            
+            <!-- Audio without alternatives -->
+            <audio autoplay controls>
+                <source src="#" type="audio/mp3" />
+                Audio announcement
+            </audio>
+            
+            <!-- Embedded content without alternatives -->
+            <iframe src="about:blank" width="400" height="300"></iframe>
+            
+            <h3>Complex Table Without Proper Headers</h3>
+            <table>
+                <tr>
+                    <td rowspan="2">Tax Year</td>
+                    <td colspan="3">Filing Status</td>
+                </tr>
+                <tr>
+                    <!-- Missing scope attributes and IDs -->
+                    <td>Single</td>
+                    <td>Married Joint</td>
+                    <td>Married Separate</td>
+                </tr>
+                <tr>
+                    <td>2023</td>
+                    <td>$13,850</td>
+                    <td>$27,700</td>
+                    <td>$13,850</td>
+                </tr>
+                <tr>
+                    <td>2024</td>
+                    <td>$14,600</td>
+                    <td>$29,200</td>
+                    <td>$14,600</td>
+                </tr>
+            </table>
+            
+            <h3>Layout Tables Misusing Semantic Elements</h3>
+            <table>
+                <tr>
+                    <td>
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMjAiIGZpbGw9IiNjY2MiLz48L3N2Zz4=" alt="decorative circle icon" />
+                    </td>
+                    <td>
+                        <h4>Service Information</h4>
+                        <p>Details about the service that should not be in a table</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <div style="text-align: center;">
+                            <button>Apply Now</button>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            
+            <h3>Data Tables with Accessibility Issues</h3>
+            <!-- Missing caption and summary -->
+            <table border="1">
+                <tr>
+                    <th>County</th>
+                    <th>Population</th>
+                    <th>2023 Tax Rate</th>
+                    <th>2024 Tax Rate</th>
+                </tr>
+                <tr>
+                    <td headers="wrong-id">Los Angeles</td> <!-- Invalid headers reference -->
+                    <td>10,014,009</td>
+                    <td>1.25%</td>
+                    <td>1.35%</td>
+                </tr>
+                <tr>
+                    <td>Orange</td>
+                    <td>3,186,989</td>
+                    <td></td> <!-- Empty data cell -->
+                    <td>1.15%</td>
+                </tr>
+            </table>
+        </section>
+    </div>
+</body>
+</html>

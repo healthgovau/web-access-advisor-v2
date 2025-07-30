@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Test Page 1 - Text Content & Basic Forms</title>
+    <style>
+        body { margin: 0; font-family: Arial; }
+        .nav { width: 200px; background: #ccc; position: fixed; height: 100vh; }
+        .nav ul { list-style: none; padding: 10px; }
+        .nav a { text-decoration: none; color: black; display: block; padding: 5px; }
+        .nav a:hover { background: #aaa; }
+        .content { margin-left: 200px; padding: 20px; }
+        .error { color: #d73527; font-weight: bold; }
+        .required::after { content: " *"; color: #d73527; }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <div class="nav">
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="page1.html" aria-current="page">Test Page 1</a></li>
+            <li><a href="page2.html">Test Page 2</a></li>
+            <li><a href="page3.html">Test Page 3</a></li>
+            <li><a href="page4.html">Test Page 4</a></li>
+            <li><a href="page5.html">Test Page 5</a></li>
+        </ul>
+    </div>
+    
+    <main id="main-content" class="content">
+        <h1>Page 1: Text Content & Basic Forms</h1>
+        
+        <!-- ACCESSIBLE SECTION -->
+        <section aria-labelledby="accessible-heading">
+            <h2 id="accessible-heading">✅ ACCESSIBLE EXAMPLES</h2>
+            
+            <h3>Properly Structured Text Content</h3>
+            <p>This paragraph demonstrates proper text content with adequate color contrast (4.5:1 ratio minimum). The heading structure follows logical order without skipping levels.</p>
+            
+            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkdvdmVybm1lbnQgQnVpbGRpbmc8L3RleHQ+PC9zdmc+" alt="Government building with American flag, main entrance facing street" />
+            
+            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMjAiIGZpbGw9IiNjY2MiLz48L3N2Zz4=" alt="" role="presentation" />
+            
+            <h4>Government Service Categories</h4>
+            <ul>
+                <li><a href="#tax-services">Tax filing and payment services</a></li>
+                <li><a href="#benefits">Social security and benefits application</a></li>
+                <li><a href="#licenses">Professional and business licensing</a></li>
+                <li><a href="#vital-records">Birth certificates and vital records</a></li>
+            </ul>
+            
+            <h3>Accessible Basic Form</h3>
+            <form novalidate aria-describedby="form-instructions">
+                <div id="form-instructions">Complete all required fields marked with an asterisk (*). Help text is provided for each field.</div>
+                
+                <div role="alert" id="error-summary" style="display: none;">
+                    <h4>Please correct the following errors:</h4>
+                    <ul id="error-list"></ul>
+                </div>
+                
+                <fieldset>
+                    <legend>Personal Information</legend>
+                    
+                    <label for="fullname" class="required">Full Legal Name</label>
+                    <input type="text" id="fullname" name="fullname" required 
+                           autocomplete="name" aria-describedby="fullname-help fullname-error" />
+                    <div id="fullname-help">Enter your complete legal name as it appears on official documents</div>
+                    <div id="fullname-error" class="error" role="alert" style="display: none;"></div>
+                    
+                    <label for="email" class="required">Email Address</label>
+                    <input type="email" id="email" name="email" required 
+                           autocomplete="email" aria-describedby="email-help email-error" />
+                    <div id="email-help">We will use this email for important notifications about your application</div>
+                    <div id="email-error" class="error" role="alert" style="display: none;"></div>
+                    
+                    <label for="phone">Phone Number (Optional)</label>
+                    <input type="tel" id="phone" name="phone" 
+                           autocomplete="tel" aria-describedby="phone-help" />
+                    <div id="phone-help">Format: (555) 123-4567</div>
+                </fieldset>
+                
+                <fieldset>
+                    <legend>Contact Preferences <span class="required" aria-label="required"></span></legend>
+                    <div id="contact-help">Choose your preferred method for receiving updates</div>
+                    
+                    <input type="radio" id="contact-email" name="contact-method" value="email" required 
+                           aria-describedby="contact-help contact-error" />
+                    <label for="contact-email">Email notifications</label>
+                    
+                    <input type="radio" id="contact-phone" name="contact-method" value="phone" required 
+                           aria-describedby="contact-help contact-error" />
+                    <label for="contact-phone">Phone calls</label>
+                    
+                    <input type="radio" id="contact-mail" name="contact-method" value="mail" required 
+                           aria-describedby="contact-help contact-error" />
+                    <label for="contact-mail">Postal mail</label>
+                    
+                    <div id="contact-error" class="error" role="alert" style="display: none;"></div>
+                </fieldset>
+                
+                <button type="submit" onclick="validateAccessibleForm(event)">Submit Application</button>
+                <button type="reset">Clear Form</button>
+            </form>
+        </section>
+        
+        <!-- DEFECTIVE SECTION -->
+        <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;" aria-labelledby="defective-heading">
+            <h2 id="defective-heading">❌ DEFECTIVE EXAMPLES (DO NOT COPY)</h2>
+            
+            <h3>Text Content Issues</h3>
+            <h1>Wrong heading level - should be h4</h1>
+            <div style="font-size: 20px; font-weight: bold;">This looks like a heading but has no semantic meaning</div>
+            <p style="color: #999; background: white;">Poor contrast text - fails WCAG AA (2.5:1 ratio)</p>
+            <p style="color: #bbb; background: white;">Even worse contrast - fails WCAG AAA (1.8:1 ratio)</p>
+            
+            <!-- Missing alt attribute -->
+            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlPC90ZXh0Pjwvc3ZnPg==" />
+            
+            <!-- Decorative image with unnecessary alt text -->
+            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMjAiIGZpbGw9IiNjY2MiLz48L3N2Zz4=" alt="decorative circle" />
+            
+            <h5>Skipped from h3 to h5</h5>
+            <h6></h6> <!-- Empty heading -->
+            
+            <div>
+                <span style="color: blue; text-decoration: underline;">Looks like a link but isn't</span>
+            </div>
+            
+            <h3>Defective Forms - Multiple Accessibility Violations</h3>
+            <form>
+                <!-- Multiple inputs with same ID (duplicate-id violation) -->
+                <input type="text" id="duplicate" placeholder="Enter your name" />
+                <input type="email" id="duplicate" placeholder="Email address" />
+                
+                <!-- No labels, only placeholders -->
+                <input type="password" placeholder="Password (8+ characters)" />
+                <input type="tel" placeholder="Phone Number" />
+                
+                <!-- Radio buttons without fieldset/legend -->
+                <div>Preferred Contact Method:</div>
+                <input type="radio" name="bad-contact" value="email" /> Email
+                <input type="radio" name="bad-contact" value="phone" /> Phone
+                <input type="radio" name="bad-contact" value="mail" /> Mail
+                
+                <!-- Button without type attribute -->
+                <button onclick="submitBadForm()">Submit</button>
+                
+                <!-- Fake button (div with click handler) -->
+                <div onclick="submitForm()" style="background: #007cba; color: white; padding: 10px; cursor: pointer; display: inline-block;">
+                    Click to Submit
+                </div>
+                
+                <!-- Input with positive tabindex -->
+                <input type="text" placeholder="This field has tabindex=5" tabindex="5" />
+                
+                <!-- Hidden label (creates confusion) -->
+                <label for="hidden-input" style="display: none;">Hidden Label</label>
+                <input type="text" id="hidden-input" placeholder="Mysterious input" />
+            </form>
+            
+            <!-- Links without accessible text -->
+            <p>
+                <a href="#" onclick="doSomething()">Click here</a> for more information.
+                <a href="#"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzAwN2NiYSIvPjwvc3ZnPg==" /></a>
+            </p>
+            
+            <!-- List structure violations -->
+            <div>
+                <div>• Item 1</div>
+                <div>• Item 2</div>
+                <div>• Item 3</div>
+            </div>
+        </section>
+        
+        <script>
+            function validateAccessibleForm(event) {
+                event.preventDefault();
+                
+                const errors = [];
+                const errorSummary = document.getElementById('error-summary');
+                const errorList = document.getElementById('error-list');
+                
+                // Clear previous errors
+                errorList.innerHTML = '';
+                document.querySelectorAll('.error[role="alert"]').forEach(el => {
+                    el.style.display = 'none';
+                    el.textContent = '';
+                });
+                document.querySelectorAll('input[aria-invalid]').forEach(el => {
+                    el.removeAttribute('aria-invalid');
+                });
+                
+                // Validate full name
+                const fullname = document.getElementById('fullname');
+                if (!fullname.value.trim()) {
+                    errors.push({element: fullname, message: 'Full name is required'});
+                    document.getElementById('fullname-error').textContent = 'Please enter your full legal name';
+                    document.getElementById('fullname-error').style.display = 'block';
+                    fullname.setAttribute('aria-invalid', 'true');
+                }
+                
+                // Validate email
+                const email = document.getElementById('email');
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!email.value.trim()) {
+                    errors.push({element: email, message: 'Email address is required'});
+                    document.getElementById('email-error').textContent = 'Please enter your email address';
+                    document.getElementById('email-error').style.display = 'block';
+                    email.setAttribute('aria-invalid', 'true');
+                } else if (!emailPattern.test(email.value)) {
+                    errors.push({element: email, message: 'Email address format is invalid'});
+                    document.getElementById('email-error').textContent = 'Please enter a valid email address (example@domain.com)';
+                    document.getElementById('email-error').style.display = 'block';
+                    email.setAttribute('aria-invalid', 'true');
+                }
+                
+                // Validate contact method
+                const contactMethod = document.querySelector('input[name="contact-method"]:checked');
+                if (!contactMethod) {
+                    errors.push({element: document.getElementById('contact-email'), message: 'Contact preference is required'});
+                    document.getElementById('contact-error').textContent = 'Please select your preferred contact method';
+                    document.getElementById('contact-error').style.display = 'block';
+                    document.querySelectorAll('input[name="contact-method"]').forEach(el => {
+                        el.setAttribute('aria-invalid', 'true');
+                    });
+                }
+                
+                // Show error summary if errors exist
+                if (errors.length > 0) {
+                    errors.forEach(error => {
+                        const li = document.createElement('li');
+                        const link = document.createElement('a');
+                        link.href = '#' + error.element.id;
+                        link.textContent = error.message;
+                        link.onclick = (e) => {
+                            e.preventDefault();
+                            error.element.focus();
+                        };
+                        li.appendChild(link);
+                        errorList.appendChild(li);
+                    });
+                    errorSummary.style.display = 'block';
+                    errorSummary.focus();
+                } else {
+                    alert('Form submitted successfully! All accessibility requirements met.');
+                }
+            }
+            
+            // Bad form function (for defective example)
+            function submitBadForm() {
+                alert('This form has multiple accessibility violations!');
+                return false;
+            }
+        </script>
+    </main>
+</body>
+</html>
