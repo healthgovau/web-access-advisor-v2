@@ -680,7 +680,7 @@ function App() {
                 Web Access Advisor <span className="text-xl font-normal text-orange-600 bg-orange-100 px-2 py-1 rounded-md">alpha</span>
               </h1>
               <p className="text-base text-slate mt-1">
-                AI-powered accessibility testing and analysis
+                AI-powered accessibility testing and advice
               </p>
             </div>
             <div className="flex items-center space-x-4">
