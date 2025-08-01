@@ -15,6 +15,7 @@ import SessionModeToggle from './components/SessionModeToggle';
 import SessionSelector from './components/SessionSelector';
 import { useAccessibilityAnalysis } from './hooks/useAccessibilityAnalysis';
 import { exportAnalysisToPDF } from './utils/pdfExport';
+import { exportAnalysisToCSV } from './utils/csvExport';
 import * as recordingApi from './services/recordingApi';
 import type { AppState, ProgressStage } from './types';
 import './App.css';
@@ -222,6 +223,22 @@ function App() {
       await exportAnalysisToPDF(state.analysisResult, state.actions);
     } catch (error) {
       console.error('PDF export failed:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // CSV Export handler
+  const handleExportCSV = async () => {
+    if (!state.analysisResult) return;
+
+    setIsExporting(true);
+    try {
+      await exportAnalysisToCSV(state.analysisResult);
+      addToast('CSV export completed successfully', 'info');
+    } catch (error) {
+      console.error('CSV export failed:', error);
+      addToast('Failed to export CSV', 'error');
     } finally {
       setIsExporting(false);
     }
@@ -832,7 +849,17 @@ function App() {
                         <h2 className="text-xl font-medium text-gray-900 text-center flex-1">
                           Accessibility Analysis Results
                         </h2>
-                        <div className="flex items-center justify-end">
+                        <div className="flex items-center justify-end space-x-3">
+                          <button
+                            onClick={handleExportCSV}
+                            disabled={isExporting}
+                            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <span className="text-sm">📊</span>
+                            <span className="text-sm font-medium whitespace-nowrap">
+                              {isExporting ? 'Generating CSV...' : 'Export CSV'}
+                            </span>
+                          </button>
                           <button
                             onClick={handleExportPDF}
                             disabled={isExporting}

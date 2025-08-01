@@ -156,10 +156,10 @@
 
 /* Button styles using design system */
 .btn-primary {
-  background-color: var(--blueberry);
+  background-color: #16a34a;
   color: var(--neutral-white);
-  border: 1px solid var(--blueberry-dark);
-  padding: 0.75rem 2rem;
+  border: none;
+  padding: 0.625rem 2rem;
   border-radius: 0.375rem;
   font-weight: 500;
   font-size: 1rem;
@@ -168,12 +168,11 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--blueberry-dark);
-  border-color: var(--blueberry-80);
+  background-color: #15803d;
 }
 
 .btn-primary:focus {
-  outline: 2px solid var(--blueberry-30);
+  outline: 2px solid #22c55e;
   outline-offset: 2px;
 }
 

@@ -21,17 +21,16 @@
     </div>
     
     <main id="main-content" class="content">
-        <h1>Page 5: Advanced Components & Error Handling</h1>
+        <h1>Page 5: Components & Error Handling</h1>
         
-        <!-- ACCESSIBLE SECTION -->
+        
         <section>
-            <h2>✅ ACCESSIBLE EXAMPLES</h2>
+            <h2>Reference Implementation</h2>
             
-            <h3>Accessible Image Carousel</h3>
+            <h3>Image Carousel</h3>
             <div class="test-note" style="background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="accessible-carousel-heading">
-                <h4 id="accessible-carousel-heading" style="margin: 0 0 8px 0;">✅ ACCESSIBLE REFERENCE IMPLEMENTATION</h4>
-                <p style="margin: 0;"><strong>Purpose:</strong> Demonstrates proper carousel with ARIA live regions and keyboard navigation</p>
-                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Compare against carousel below - interaction optional for validation</p>
+                <h4 id="accessible-carousel-heading" style="margin: 0 0 8px 0;">Carousel Example</h4>
+                <p style="margin: 0;">Carousel with ARIA live regions and keyboard navigation</p>
             </div>
             <div role="region" aria-labelledby="carousel-heading" class="carousel">
                 <h4 id="carousel-heading">Government Office Locations</h4>
@@ -51,9 +50,8 @@
             
             <h3>Comprehensive Form with Error Handling</h3>
             <div class="test-note" style="background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="accessible-form-error-heading">
-                <h4 id="accessible-form-error-heading" style="margin: 0 0 8px 0;">✅ ACCESSIBLE REFERENCE IMPLEMENTATION</h4>
-                <p style="margin: 0;"><strong>Purpose:</strong> Demonstrates proper form validation and error handling patterns</p>
-                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Compare against defective forms below - interaction optional for validation testing</p>
+                <h4 id="accessible-form-error-heading" style="margin: 0 0 8px 0;">Form Validation Example</h4>
+                <p style="margin: 0;">Form validation and error handling patterns</p>
             </div>
             <form novalidate aria-describedby="form-instructions">
                 <div id="form-instructions">All fields marked with * are required. Errors will be displayed at the top of the form.</div>
@@ -98,11 +96,10 @@
                 <button type="submit" onclick="validateAccessibleForm(event)">Submit Application</button>
             </form>
             
-            <h3>Accessible Loading States</h3>
+            <h3>Loading States</h3>
             <div class="test-note" style="background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="accessible-loading-heading">
-                <h4 id="accessible-loading-heading" style="margin: 0 0 8px 0;">✅ ACCESSIBLE REFERENCE IMPLEMENTATION</h4>
-                <p style="margin: 0;"><strong>Purpose:</strong> Demonstrates proper loading state communication with live regions</p>
-                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Compare against silent loading example below - interaction optional for validation</p>
+                <h4 id="accessible-loading-heading" style="margin: 0 0 8px 0;">Loading Example</h4>
+                <p style="margin: 0;">Loading state communication with live regions</p>
             </div>
             <button type="button" onclick="simulateLoading()" id="load-btn">
                 Process Application
@@ -110,14 +107,14 @@
             <div aria-live="polite" id="loading-status"></div>
         </section>
         
-        <!-- DEFECTIVE SECTION -->
+        
         <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;">
-            <h2>❌ DEFECTIVE EXAMPLES </h2>
+            <h2>Additional Examples </h2>
             
             <h3>Alternative Carousel Implementation</h3>
             <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;">
-                <strong>❌ NO INTERACTION:</strong> No keyboard support, no ARIA, no screen reader support.
-                <br><strong>Purpose:</strong> Compare with accessible carousel above - for static analysis only
+                Static image carousel example
+                <br>Image display without keyboard support
             </div>
             <div class="demo-carousel" style="position: relative; width: 300px; height: 200px; border: 1px solid #ccc;">
                 <div id="slide-container" style="overflow: hidden; width: 100%; height: 100%;">
@@ -131,7 +128,7 @@
                         <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIDM8L3RleHQ+PC9zdmc+" />
                     </div>
                 </div>
-                <!-- No keyboard support, no ARIA, no screen reader support -->
+                
                 <span onclick="prevSlide()" style="position: absolute; left: 10px; top: 50%; cursor: pointer; font-size: 24px;">←</span>
                 <span onclick="nextSlide()" style="position: absolute; right: 10px; top: 50%; cursor: pointer; font-size: 24px;">→</span>
                 <div style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);">
@@ -143,16 +140,16 @@
             
             <h3>Catastrophic Error Handling</h3>
             <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;">
-                <strong>❌ NO INTERACTION:</strong> Form has duplicate IDs and no proper error handling.
-                <br><strong>Purpose:</strong> Structural validation scenarios for automated tools to detect
+                Form with duplicate IDs and error handling
+                <br>Structural validation scenarios for testing
             </div>
             <form onsubmit="return disastrousValidation()" autocomplete="off">
-                <!-- Multiple duplicate IDs -->
+                
                 <input type="text" id="ssn-field" placeholder="Social Security Number" />
                 <input type="email" id="email-field" placeholder="Email Address" />
                 <input type="number" id="income-field" placeholder="Annual Income" />
                 
-                <!-- No validation, no error association -->
+                
                 <input type="radio" name="family-size" value="1" /> 1 person
                 <input type="radio" name="family-size" value="2" /> 2 people
                 <input type="radio" name="family-size" value="3" /> 3+ people
@@ -190,7 +187,7 @@
             <div class="test-note" style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="color-only-heading">
                 <h4 id="color-only-heading" style="margin: 0 0 8px 0;">⚠️ INTERACTION REQUIRED FOR DEFECT DETECTION</h4>
                 <p style="margin: 0;"><strong>State Changes:</strong> Form submission shows error indication only through red borders</p>
-                <p style="margin: 4px 0 0 0;"><strong>Purpose:</strong> Test color communication patterns - submit to see validation behavior</p>
+                <p style="margin: 4px 0 0 0;">Color communication patterns - submit to see validation behavior</p>
             </div>
             <form onsubmit="return colorOnlyErrors()">
                 <input type="email" id="color-email" placeholder="Email" style="border: 2px solid red;" />
@@ -206,16 +203,16 @@
                 <p>Current time: <span id="auto-time"></span></p>
             </div>
             
-            <h3>Complex Widget Without Accessibility</h3>
+            <h3>Widget Without Accessibility</h3>
             <div class="fake-datepicker" onclick="toggleCalendar()" style="border: 1px solid #ccc; padding: 10px; cursor: pointer; width: 200px;">
                 <span id="selected-date">Select a date</span>
                 <div id="calendar" style="display: none; position: absolute; background: white; border: 1px solid #ccc; z-index: 1000;">
-                    <!-- Fake calendar grid -->
+                    
                     <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 10px;">
                         <div onclick="selectDate('2024-01-01')" style="padding: 5px; text-align: center; cursor: pointer;">1</div>
                         <div onclick="selectDate('2024-01-02')" style="padding: 5px; text-align: center; cursor: pointer;">2</div>
                         <div onclick="selectDate('2024-01-03')" style="padding: 5px; text-align: center; cursor: pointer;">3</div>
-                        <!-- More dates would be here -->
+                        
                     </div>
                 </div>
             </div>
@@ -224,7 +221,7 @@
             <div class="test-note" style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="loading-test-heading">
                 <h4 id="loading-test-heading" style="margin: 0 0 8px 0;">⚠️ INTERACTION REQUIRED FOR DEFECT DETECTION</h4>
                 <p style="margin: 0;"><strong>State Changes:</strong> Button changes but no loading announcements, no progress indication</p>
-                <p style="margin: 4px 0 0 0;"><strong>Purpose:</strong> Test live region updates and loading state communication</p>
+                <p style="margin: 4px 0 0 0;">Live region updates and loading state communication</p>
             </div>
             <button type="button" onclick="performLoading()" id="load-btn">
                 Process Application Silently
@@ -240,19 +237,19 @@
                 <input type="text" placeholder="Birth Date" />
                 <input type="text" placeholder="Income" />
                 
-                <!-- Radio buttons with no grouping -->
+                
                 <div>Marital Status:</div>
                 <input type="radio" /> Single
                 <input type="radio" /> Married
                 <input type="radio" /> Other
                 
-                <!-- Checkboxes with conflicting names -->
+                
                 <div>Services (check all that apply):</div>
                 <input type="checkbox" name="service1" /> Health Insurance
                 <input type="checkbox" name="service1" /> Life Insurance
                 <input type="checkbox" name="service1" /> Disability
                 
-                <!-- Custom elements that aren't accessible -->
+                
                 <div class="fake-select" onclick="showOptions()" style="border: 1px solid #ccc; padding: 5px;">
                     Select your state
                     <div class="options" style="display: none;">
@@ -261,7 +258,7 @@
                     </div>
                 </div>
                 
-                <!-- Submit button that doesn't work -->
+                
                 <div onclick="fakeSubmit()" style="background: #ccc; padding: 10px; text-align: center; cursor: pointer;">
                     Submit (Not Actually a Button)
                 </div>

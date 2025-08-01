@@ -4,7 +4,6 @@
     <title>Test Page 2</title>
     <link rel="stylesheet" href="styles.css">
     <style>
-        /* Page-specific styles for intentional defects */
         .focus-trap { border: 2px solid red; }
         .keyboard-trap input:focus { outline: none; background: yellow; }
     </style>
@@ -30,9 +29,8 @@
         
 
         
-        <!-- ACCESSIBLE SECTION -->
         <section>
-            <h2>✅ ACCESSIBLE EXAMPLES</h2>
+            <h2>Reference Implementation</h2>
             
             <nav aria-label="Breadcrumb">
                 <ol>
@@ -43,9 +41,8 @@
             
             <h3>Multi-Step Form with Progress</h3>
             <div class="test-note" style="background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="multistep-form-heading">
-                <h4 id="multistep-form-heading" style="margin: 0 0 8px 0;">✅ ACCESSIBLE REFERENCE IMPLEMENTATION</h4>
-                <p style="margin: 0;"><strong>Purpose:</strong> Demonstrates proper multi-step form structure and progress indication</p>
-                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Compare against broken form below - interaction optional for validation</p>
+                <h4 id="multistep-form-heading" style="margin: 0 0 8px 0;">Primary Application Form</h4>
+                <p style="margin: 0;">Complete employment application with progress tracking</p>
             </div>
             <div role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="3" aria-labelledby="progress-label">
                 <div id="progress-label">Step 1 of 3: Basic Information</div>
@@ -83,7 +80,7 @@
                 <button type="button" onclick="validateStep()">Continue to Step 2</button>
             </form>
             
-            <h3>Accessible Navigation Menu</h3>
+            <h3>Navigation Menu</h3>
             <nav aria-label="Main navigation">
                 <ul role="menubar">
                     <li role="none">
@@ -97,16 +94,15 @@
             </nav>
         </section>
         
-        <!-- DEFECTIVE SECTION -->
         <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;">
-            <h2>❌ DEFECTIVE EXAMPLES </h2>
+            <h2>Additional Form Examples</h2>
             
 
             
             <h3>Employment Application Form</h3>
             <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="broken-multistep-heading">
-                <h4 id="broken-multistep-heading" style="margin: 0 0 8px 0;">❌ STATIC ANALYSIS ONLY</h4>
-                <p style="margin: 4px 0 0 0;"><strong>Warning:</strong> Contains keyboard traps - do not interact</p>
+                <h4 id="broken-multistep-heading" style="margin: 0 0 8px 0;">Secondary Application Form</h4>
+                <p style="margin: 4px 0 0 0;">Additional form examples for testing</p>
             </div>
             <div>Step 1 of 3</div>
             
@@ -146,18 +142,16 @@
                 <input type="password" placeholder="Password" id="bad-password" />
                 <div style="color: red;">Password must be 8 characters</div>
                 
-                <!-- Missing name attributes -->
                 <input type="text" placeholder="Username" />
                 <input type="tel" placeholder="Phone" />
                 
-                <!-- Duplicate IDs -->
                 <input type="text" id="duplicate-field" placeholder="Field 1" />
                 <input type="text" id="duplicate-field" placeholder="Field 2" />
                 
                 <button type="submit">Submit</button>
             </form>
             
-            <h3>Missing Skip Links and Landmarks</h3>
+            <h3>Additional Navigation</h3>
             <div class="fake-nav">
                 <div onclick="navigate('home')">Home</div>
                 <div onclick="navigate('about')">About</div>
@@ -165,7 +159,7 @@
                 <div onclick="navigate('contact')">Contact</div>
             </div>
             
-            <h3>ARIA Violations and Invalid Attributes</h3>
+            <h3>Custom Components</h3>
             <div role="invalid-role" aria-fake="true">Invalid ARIA role and attribute</div>
             <div role="button" aria-expanded="yes">Invalid aria-expanded value</div>
             <div role="textbox" aria-required="maybe">Invalid aria-required value</div>
@@ -175,7 +169,6 @@
         
         <script>
             function validateStep() {
-                // Accessible validation example
                 const employer = document.getElementById('employer');
                 if (!employer.value) {
                     employer.setAttribute('aria-invalid', 'true');
@@ -186,7 +179,6 @@
                     errorMsg.setAttribute('role', 'alert');
                     employer.parentNode.appendChild(errorMsg);
                 } else {
-                    // Clear error if valid
                     employer.removeAttribute('aria-invalid');
                     const existingError = document.getElementById('employer-error');
                     if (existingError) {
@@ -195,20 +187,18 @@
                 }
             }
             
-            // Bad validation function
             function badValidation() {
                 document.getElementById('error1').style.display = 'block';
-                return false; // Prevents form submission but doesn't help user
+                return false;
             }
             
-            // Functions for defective examples
             function showMenu() {
                 const submenu = document.getElementById('submenu');
                 submenu.style.display = submenu.style.display === 'none' ? 'block' : 'none';
             }
             
             function goTo(page) {
-                alert('Navigation to ' + page + ' - but this is inaccessible!');
+                alert('Navigation to ' + page);
             }
             
             function nextStep() {

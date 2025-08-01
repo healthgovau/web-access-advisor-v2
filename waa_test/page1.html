@@ -4,7 +4,6 @@
     <title>Test Page 1 - Text Content & Basic Forms</title>
     <link rel="stylesheet" href="styles.css">
     <style>
-        /* Page-specific styles for intentional defects */
         .poor-contrast { color: #ccc; background: #ddd; }
         .fake-list div { margin-left: 20px; }
         .fake-list div::before { content: "• "; }
@@ -31,11 +30,8 @@
     <main id="main-content" class="content">
         <h1>Page 1: Text Content & Basic Forms</h1>
         
-
-        
-        <!-- ACCESSIBLE SECTION -->
         <section aria-labelledby="accessible-heading">
-            <h2 id="accessible-heading">✅ ACCESSIBLE EXAMPLES</h2>
+            <h2 id="accessible-heading">Reference Implementation</h2>
             
             <h3>Properly Structured Text Content</h3>
             <p>This paragraph demonstrates proper text content with adequate color contrast (4.5:1 ratio minimum). The heading structure follows logical order without skipping levels.</p>
@@ -52,11 +48,10 @@
                 <li><a href="#vital-records">Birth certificates and vital records</a></li>
             </ul>
             
-            <h3>Accessible Basic Form</h3>
+            <h3>Contact Form</h3>
             <div class="test-note" style="background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="accessible-form-heading">
-                <h4 id="accessible-form-heading" style="margin: 0 0 8px 0;">✅ ACCESSIBLE REFERENCE IMPLEMENTATION</h4>
-                <p style="margin: 0;"><strong>Purpose:</strong> Compare this well-structured form against defective examples below</p>
-                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Use for static analysis and screen reader navigation - interaction optional</p>
+                <h4 id="accessible-form-heading" style="margin: 0 0 8px 0;">Primary Contact Form</h4>
+                <p style="margin: 0;">Main application form for government services</p>
             </div>
             <form novalidate aria-describedby="form-instructions">
                 <div id="form-instructions">Complete all required fields marked with an asterisk (*). Help text is provided for each field.</div>
@@ -111,50 +106,42 @@
             </form>
         </section>
         
-        <!-- DEFECTIVE SECTION -->
         <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;" aria-labelledby="defective-heading">
-            <h2 id="defective-heading">❌ DEFECTIVE EXAMPLES </h2>
+            <h2 id="defective-heading">Additional Content Examples</h2>
             
             <h3>Text Content Issues</h3>
             <h1 id="duplicate">Secondary heading using h1 tag</h1>
-            <div class="fake-heading">Important Information (styled as heading but not semantic)</div>
+            <div class="fake-heading">Important Information</div>
             <p style="color: #999; background: white;">This text appears lighter than the main content.</p>
             <p style="color: #bbb; background: white;">Additional information in lighter text.</p>
             
-            <!-- Overly verbose alt text (like W3C Note 01) -->
             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkdvdmVybm1lbnQgQnVpbGRpbmc8L3RleHQ+PC9zdmc+" alt="A rectangular government building with a classic architectural design featuring white columns and a triangular pediment, with an American flag flying prominently on a tall flagpole positioned to the left of the main entrance, which faces toward the street and includes concrete steps leading up to large glass doors" />
             
-            <!-- Missing alt attribute -->
             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlPC90ZXh0Pjwvc3ZnPg==" />
             
-            <!-- Decorative image with unnecessary alt text (like W3C Note 08) -->
             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMjAiIGZpbGw9IiNjY2MiLz48L3N2Zz4=" alt="decorative circle" />
             
-            <!-- Placeholder/outdated alt text (like W3C Note 10) -->
             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjUwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNkZGQiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSIjMzMzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+UGhvbmU8L3RleHQ+PC9zdmc+" alt="555-1234" />
             
-            <!-- CSS background image without proper alternative -->
             <div style="background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjUwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiM0Y2FmNTAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkNoZWNrbWFyazwvdGV4dD48L3N2Zz4='); width: 100px; height: 50px; display: inline-block;" title="checkmark"></div>
             
             <h5>Employment Benefits</h5>
             <h6></h6>
             
-            <!-- Link that looks like heading (like W3C Note 03) -->
             <div>
                 <a href="#benefits" style="color: black; text-decoration: none; font-size: 1.2em; font-weight: bold; display: block; margin: 10px 0;">heat wave linked to temperature</a>
             </div>
             
-            <!-- Visual list not marked up semantically (like W3C Note 09) -->
             <div class="fake-list">
                 <div>• Killer bees</div>
                 <div>• Onions</div>
                 <div>• Budget cuts</div>
             </div>
             
-            <h3>Form Examples</h3>
+            <h3>Additional Forms</h3>
             <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="defective-form-heading">
-                <h4 id="defective-form-heading" style="margin: 0 0 8px 0;">❌ STATIC ANALYSIS ONLY</h4>
-                <p style="margin: 0;"><strong>Testing:</strong> Use automated tools and screen reader navigation - do not interact</p>
+                <h4 id="defective-form-heading" style="margin: 0 0 8px 0;">Secondary Forms</h4>
+                <p style="margin: 0;">Additional form examples for testing</p>
             </div>
             <form>
                 <input type="text" id="duplicate" placeholder="Enter your name" />
@@ -163,11 +150,9 @@
                 <input type="password" placeholder="Password (8+ characters)" />
                 <input type="tel" placeholder="Phone Number" />
                 
-                <!-- Non-descriptive link text (like W3C Note 05) -->
                 <p><a href="terms.html">Read more...</a> about our privacy policy.</p>
                 <p>For additional help, <a href="help.html">click here</a> to access resources.</p>
                 
-                <!-- Link with image but empty alt (like W3C Note 07) -->
                 <a href="news.html"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBvbHlnb24gcG9pbnRzPSI1LDEwIDEwLDUgMTAsMTUiIGZpbGw9IiMwMDdjYmEiLz48L3N2Zz4=" alt="" /></a>
                 
                 <div>Preferred Contact Method:</div>
@@ -175,7 +160,6 @@
                 <input type="radio" name="bad-contact" value="phone" /> Phone
                 <input type="radio" name="bad-contact" value="mail" /> Mail
                 
-                <!-- Select without label (to match W3C example) -->
                 <select onchange="location.href = this.value;">
                     <option value="">Choose a page</option>
                     <option value="home.html">Home</option>
@@ -194,14 +178,13 @@
                 <label for="hidden-input" style="display: none;">Hidden Label</label>
                 <input type="text" id="hidden-input" placeholder="Mysterious input" />
                 
-                <!-- Screen reader specific defects -->
+                <label for="hidden-input" style="display: none;">Hidden Label</label>
+                <input type="text" id="hidden-input" placeholder="Mysterious input" />
                 
-                <!-- Focusable div that looks interactive but does nothing -->
                 <div tabindex="0" style="border: 1px solid #ccc; padding: 5px; margin: 5px 0;">
-                    This div is focusable but has no accessible name or role
+                    This div is focusable but has no name or role
                 </div>
                 
-                <!-- Text that only appears on hover/focus (context-only instructions) -->
                 <div>
                     <input type="text" placeholder="Hover for instructions" />
                     <span style="position: absolute; left: -9999px;" id="hover-instructions">
@@ -209,33 +192,26 @@
                     </span>
                 </div>
                 
-                <!-- Live region that doesn't announce changes -->
                 <div id="broken-live-region" aria-live="polite">
                     Status: Ready
                 </div>
-                <button onclick="updateBrokenLiveRegion()">Update Status (Silent)</button>
+                <button onclick="updateBrokenLiveRegion()">Update Status</button>
                 
-                <!-- False positive accessibility - looks good but isn't -->
                 <div role="button" aria-label="Submit form" onclick="fakeFunctionality()">
                     Click me (but I don't actually work)
                 </div>
                 
-                <!-- Content that appears/disappears without focus management -->
                 <button onclick="toggleHiddenContent()">Show/Hide Content</button>
                 <div id="toggled-content" style="display: none;">
                     <p>This content appears without focus management!</p>
                     <button>I'm a button that appears suddenly</button>
                 </div>
                 
-                <!-- Additional W3C-inspired screen reader defects -->
-                
-                <!-- JavaScript navigation links (problematic for screen readers) -->
                 <div style="margin: 10px 0;">
                     <a href="javascript:location.href='home.html';">JavaScript Home Link</a> |
                     <a href="javascript:void(0);" onclick="window.location='news.html'">JavaScript News Link</a>
                 </div>
                 
-                <!-- Layout table used for design (not data) -->
                 <table style="width: 100%; border: 1px solid #ccc;">
                     <tr>
                         <td style="width: 50%; padding: 10px; vertical-align: top;">
@@ -249,7 +225,6 @@
                     </tr>
                 </table>
                 
-                <!-- Nested interactive elements -->
                 <div onclick="handleClick()" style="cursor: pointer; padding: 10px; border: 1px solid #999;">
                     <p>This div is clickable and contains:</p>
                     <button onclick="event.stopPropagation(); innerButtonClick()">A nested button</button>
@@ -262,7 +237,6 @@
                 <a href="#"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzAwN2NiYSIvPjwvc3ZnPg==" /></a>
             </p>
             
-            <!-- Reading sequence problems (like W3C Note 06) -->
             <div style="display: flex;">
                 <div style="width: 33%; padding-right: 10px;">
                     <p>After three years of effort city scientists now agree that the primary cause of the 2003 heatwave was hot air from our Mayor:</p>
@@ -356,13 +330,11 @@
                 }
             }
             
-            // Bad form function (for defective example)
             function submitBadForm() {
                 alert('This form has multiple accessibility violations!');
                 return false;
             }
             
-            // Additional functions for defective examples
             function doSomething() {
                 alert('Non-descriptive link clicked!');
             }
@@ -371,31 +343,24 @@
                 alert('Fake submit button clicked!');
             }
             
-            // Screen reader specific defect functions
             function updateBrokenLiveRegion() {
-                // This updates content but the live region won't announce it properly
                 const liveRegion = document.getElementById('broken-live-region');
                 liveRegion.textContent = 'Status: Updated at ' + new Date().toLocaleTimeString();
-                // Problem: No aria-live announcement because the element isn't properly configured
             }
             
             function fakeFunctionality() {
-                // This function does nothing, demonstrating false positive accessibility
-                console.log('This button looks accessible but has no real functionality');
+                console.log('Button functionality');
             }
             
             function toggleHiddenContent() {
                 const content = document.getElementById('toggled-content');
                 if (content.style.display === 'none') {
                     content.style.display = 'block';
-                    // Problem: No focus management - screen reader users don't know content appeared
                 } else {
                     content.style.display = 'none';
-                    // Problem: If focus was inside, it's now lost
                 }
             }
             
-            // Additional functions for W3C-inspired defects
             function handleClick() {
                 alert('Outer clickable div clicked - this creates nested interactive confusion');
             }

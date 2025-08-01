@@ -34,7 +34,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
           <button
             onClick={onStartRecording}
             disabled={!canStartRecording}
-            className="w-full px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {!isNavigated ? 'Navigate to a URL first' : 'Start Recording'}
           </button>

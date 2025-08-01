@@ -23,15 +23,14 @@
     <main id="main-content" class="content">
         <h1>Page 4: Interactive Elements & ARIA</h1>
         
-        <!-- ACCESSIBLE SECTION -->
+        
         <section>
-            <h2>✅ ACCESSIBLE EXAMPLES</h2>
+            <h2>Reference Implementation</h2>
             
-            <h3>Accessible Modal Dialog</h3>
+            <h3>Modal Dialog</h3>
             <div class="test-note" style="background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="accessible-modal-heading">
-                <h4 id="accessible-modal-heading" style="margin: 0 0 8px 0;">✅ ACCESSIBLE REFERENCE IMPLEMENTATION</h4>
-                <p style="margin: 0;"><strong>Purpose:</strong> Demonstrates proper modal structure, focus management, and ARIA</p>
-                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Compare against defective widgets below - interaction optional for validation</p>
+                <h4 id="accessible-modal-heading" style="margin: 0 0 8px 0;">Modal Example</h4>
+                <p style="margin: 0;">Modal structure with focus management and ARIA</p>
             </div>
             <button type="button" onclick="openModal()" aria-describedby="modal-desc">
                 Apply for Benefits
@@ -52,11 +51,10 @@
                 </div>
             </div>
             
-            <h3>Accessible Expandable Content</h3>
+            <h3>Expandable Content</h3>
             <div class="test-note" style="background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="accessible-expandable-heading">
-                <h4 id="accessible-expandable-heading" style="margin: 0 0 8px 0;">✅ ACCESSIBLE REFERENCE IMPLEMENTATION</h4>
-                <p style="margin: 0;"><strong>Purpose:</strong> Demonstrates proper expandable content with correct ARIA states</p>
-                <p style="margin: 4px 0 0 0;"><strong>Testing:</strong> Compare against defective widgets below - interaction optional for validation</p>
+                <h4 id="accessible-expandable-heading" style="margin: 0 0 8px 0;">Expandable Example</h4>
+                <p style="margin: 0;">Expandable content with ARIA states</p>
             </div>
             <button type="button" aria-expanded="false" aria-controls="details-content" onclick="toggleDetails(this)">
                 View Application Requirements
@@ -70,7 +68,7 @@
                 </ul>
             </div>
             
-            <h3>Accessible Custom Select</h3>
+            <h3>Custom Select</h3>
             <div class="custom-select">
                 <label for="state-select">Select Your State</label>
                 <div role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-labelledby="state-label" tabindex="0" id="state-select">
@@ -88,15 +86,15 @@
             <div aria-live="polite" aria-atomic="true" id="status-region"></div>
         </section>
         
-        <!-- DEFECTIVE SECTION -->
+        
         <section style="border-top: 3px solid red; margin-top: 40px; padding-top: 20px;">
-            <h2>❌ DEFECTIVE EXAMPLES </h2>
+            <h2>Additional Examples </h2>
             
             <h3>Multiple ARIA and Interactive Elements</h3>
             <div class="test-note" style="background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0;" role="region" aria-labelledby="aria-section-heading">
-                <h4 id="aria-section-heading" style="margin: 0 0 8px 0;">❌ STATIC ANALYSIS ONLY</h4>
-                <p style="margin: 0;"><strong>Note:</strong> Advanced ARIA patterns and interactive elements</p>
-                <p style="margin: 4px 0 0 0;"><strong>Warning:</strong> Complex widgets may trap focus or behave unpredictably</p>
+                <h4 id="aria-section-heading" style="margin: 0 0 8px 0;">ARIA Implementation Examples</h4>
+                <p style="margin: 0;">ARIA patterns and interactive elements</p>
+                <p style="margin: 4px 0 0 0;">Interactive widgets with focus management</p>
             </div>
             
             <div onclick="showInfoModal()" style="color: blue; cursor: pointer;">Click for Info</div>
@@ -137,7 +135,7 @@
             <div aria-controls="nowhere">Element controls nothing</div>
             <div aria-owns="phantom-child">Element owns non-existent child</div>
             
-            <!-- Broken custom widgets -->
+            
             <div class="fake-dropdown" onclick="toggleDropdown()" tabindex="0">
                 Select Option ▼
                 <div id="dropdown-options" style="display: none; border: 1px solid #ccc;">
@@ -162,7 +160,7 @@
                     <div role="alert" style="display: none;">Hidden error message</div>
                 </div>
                 
-                <!-- Redundant ARIA -->
+                
                 <label for="redundant-input" aria-label="Redundant label">Name</label>
                 <input type="text" id="redundant-input" aria-label="Also redundant" />
                 
