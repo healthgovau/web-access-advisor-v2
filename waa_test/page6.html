@@ -23,72 +23,59 @@
     <main id="main-content" class="content">
         <h1>Page 6: Advanced ARIA & Screen Reader Edge Cases</h1>
         
-        <!-- SECTION: ARIA defects that Lighthouse/axe often miss -->
         <section style="border-top: 3px solid orange; margin-top: 20px; padding-top: 20px;">
-            <h2>🎯 ARIA DEFECTS OFTEN MISSED BY AUTOMATED TOOLS</h2>
+            <h2>🎯 Interactive Elements & ARIA Components</h2>
             <div class="test-note" style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px; margin: 10px 0;">
-                <strong>⚠️ ADVANCED TESTING:</strong> These defects require screen reader testing or sophisticated static analysis
-                <br><strong>Purpose:</strong> Test WAA tool's ability to detect subtle ARIA violations that Lighthouse/axe may miss
+                <strong>⚠️ INTERACTION REQUIRED:</strong> This page contains interactive elements that must be tested with user actions (clicks, keyboard navigation, focus changes) to detect all accessibility issues.
             </div>
             
-            <h3>Context and State Management Issues</h3>
+            <h3>Button Controls</h3>
             
-            <!-- ARIA states that change without proper updates -->
             <div role="button" aria-pressed="false" onclick="toggleButton(this)" id="inconsistent-state">
-                Toggle Button (state doesn't update properly)
+                Toggle Button
             </div>
             
-            <!-- ARIA-expanded without corresponding show/hide behavior -->
             <button aria-expanded="false" aria-controls="fake-content" onclick="fakeToggle()">
-                Expand Details (no actual content to expand)
+                Expand Details
             </button>
             
-            <!-- Live region that doesn't actually announce changes -->
             <div aria-live="polite" id="silent-live-region">
-                Content that changes but isn't announced
+                Status updates appear here
             </div>
-            <button onclick="silentUpdate()">Update Content Silently</button>
+            <button onclick="silentUpdate()">Update Status</button>
             
-            <!-- ARIA-current with wrong values -->
             <nav aria-label="Pagination">
-                <a href="#" aria-current="yes">Page 1</a>  <!-- Should be "page" -->
-                <a href="#" aria-current="active">Page 2</a>  <!-- Should be "page" -->
-                <a href="#" aria-current="true">Page 3</a>  <!-- Should be "page" -->
+                <a href="#" aria-current="yes">Page 1</a>
+                <a href="#" aria-current="active">Page 2</a>
+                <a href="#" aria-current="true">Page 3</a>
             </nav>
             
-            <h3>Contextual ARIA Violations</h3>
+            <h3>Form Elements</h3>
             
-            <!-- ARIA-describedby pointing to hidden content -->
             <input type="password" aria-describedby="hidden-help" placeholder="Password" />
             <div id="hidden-help" style="display: none;">Password must be 8+ characters</div>
             
-            <!-- ARIA labels that contradict visible text -->
             <button aria-label="Cancel operation">Save Document</button>
             <button aria-label="Submit form">Delete Account</button>
             
-            <!-- ARIA-level violations -->
-            <div role="heading" aria-level="7">Heading Level Too High</div>
-            <div role="heading" aria-level="0">Heading Level Too Low</div>
-            <div role="heading" aria-level="cat">Invalid Heading Level</div>
+            <div role="heading" aria-level="7">Important Notice</div>
+            <div role="heading" aria-level="0">System Alert</div>
+            <div role="heading" aria-level="cat">Error Message</div>
             
-            <!-- Redundant or conflicting ARIA -->
-            <button aria-pressed="true" aria-checked="false">Mixed State Conflict</button>
-            <input type="checkbox" aria-pressed="true" />  <!-- Checkboxes don't use pressed -->
+            <button aria-pressed="true" aria-checked="false">Mixed State Control</button>
+            <input type="checkbox" aria-pressed="true" />
             
-            <h3>Complex Widget State Issues</h3>
+            <h3>Custom Components</h3>
             
-            <!-- Combobox without proper keyboard support -->
             <div role="combobox" aria-expanded="false" aria-haspopup="listbox" tabindex="0">
                 <span>Select Option</span>
-                <!-- Missing aria-activedescendant management -->
                 <ul role="listbox" style="display: none;">
                     <li role="option">Option 1</li>
                     <li role="option" aria-selected="true">Option 2</li>
-                    <li role="option" aria-selected="true">Option 3</li>  <!-- Multiple selected -->
+                    <li role="option" aria-selected="true">Option 3</li>
                 </ul>
             </div>
             
-            <!-- Tree widget with broken navigation -->
             <div role="tree" aria-labelledby="tree-label">
                 <div id="tree-label">File Explorer</div>
                 <div role="treeitem" aria-expanded="true" tabindex="0">
@@ -97,14 +84,12 @@
                         <div role="treeitem" tabindex="-1">file1.txt</div>
                         <div role="treeitem" aria-expanded="false" tabindex="-1">
                             <span>Subfolder</span>
-                            <!-- Missing nested group -->
-                            <div role="treeitem">nested-file.txt</div>  <!-- Wrong structure -->
+                            <div role="treeitem">nested-file.txt</div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Grid with incorrect header associations -->
             <div role="grid" aria-labelledby="grid-label">
                 <div id="grid-label">Data Grid</div>
                 <div role="row">
@@ -113,29 +98,27 @@
                     <div role="columnheader" id="col3">City</div>
                 </div>
                 <div role="row">
-                    <div role="gridcell" aria-describedby="col1">John</div>  <!-- Should use headers, not describedby -->
-                    <div role="gridcell" aria-labelledby="wrong-id">30</div>  <!-- Wrong reference -->
-                    <div role="gridcell">New York</div>  <!-- No header association -->
+                    <div role="gridcell" aria-describedby="col1">John</div>
+                    <div role="gridcell" aria-labelledby="wrong-id">30</div>
+                    <div role="gridcell">New York</div>
                 </div>
             </div>
             
-            <h3>Screen Reader Context Violations</h3>
+            <h3>Data Tables</h3>
             
-            <!-- Form fields with misleading context -->
             <fieldset>
                 <legend>Credit Card Information</legend>
                 <label for="cc-number">Card Number</label>
-                <input type="text" id="cc-number" aria-label="Social Security Number" />  <!-- Misleading -->
+                <input type="text" id="cc-number" aria-label="Social Security Number" />
                 
                 <label for="cc-exp">Expiry Date</label>
-                <input type="text" id="cc-exp" aria-describedby="birthday-help" />  <!-- Wrong help text -->
+                <input type="text" id="cc-exp" aria-describedby="birthday-help" />
                 <div id="birthday-help">Enter your date of birth</div>
             </fieldset>
             
-            <!-- Tables with semantic confusion -->
             <table role="presentation">
                 <tr>
-                    <th>Name</th>  <!-- th in presentation table -->
+                    <th>Name</th>
                     <th>Department</th>
                 </tr>
                 <tr>
@@ -144,57 +127,48 @@
                 </tr>
             </table>
             
-            <!-- Lists with broken semantics -->
             <div role="list" aria-label="Navigation Menu">
                 <div role="listitem">
-                    <a href="#" role="menuitem">Home</a>  <!-- Conflicting roles -->
+                    <a href="#" role="menuitem">Home</a>
                 </div>
                 <div role="listitem">
-                    <button role="option">Services</button>  <!-- Wrong role -->
+                    <button role="option">Services</button>
                 </div>
-                <span>Contact</span>  <!-- Not a listitem -->
+                <span>Contact</span>
             </div>
             
-            <h3>Dynamic Content Issues</h3>
+            <h3>Interactive Content</h3>
             
-            <!-- Content that appears/disappears without ARIA communication -->
             <button onclick="toggleHiddenContent()">Toggle Content</button>
             <div id="dynamic-content" style="display: none;" aria-hidden="false">
-                This content is hidden but aria-hidden says it's visible
+                This content appears and disappears
             </div>
             
-            <!-- Loading states without proper announcements -->
             <button onclick="simulateBadLoading()" id="load-button">
                 Start Process
             </button>
             <div id="loading-indicator" style="display: none;">
-                <!-- No aria-live, no status role -->
                 Processing...
             </div>
             
-            <!-- Modal that doesn't manage focus properly -->
             <button onclick="showBrokenModal()">Open Modal</button>
             <div id="broken-modal" role="dialog" aria-modal="true" style="display: none;">
                 <h3>Important Notice</h3>
-                <p>This modal doesn't trap focus or manage focus return</p>
-                <input type="text" placeholder="Focusable input" />
+                <p>This modal contains important information</p>
+                <input type="text" placeholder="Enter response" />
                 <button onclick="hideBrokenModal()">Close</button>
-                <!-- Focus can escape to background content -->
             </div>
             
-            <h3>Keyboard Navigation Traps</h3>
+            <h3>Navigation Controls</h3>
             
-            <!-- Custom widget with broken keyboard support -->
             <div role="tablist" aria-label="Settings Tabs">
                 <div role="tab" aria-selected="true" tabindex="0" id="tab1" aria-controls="panel1">
                     General
                 </div>
                 <div role="tab" aria-selected="false" tabindex="0" id="tab2" aria-controls="panel2">
-                    <!-- Both tabs have tabindex="0" - wrong! -->
                     Privacy
                 </div>
                 <div role="tab" aria-selected="false" tabindex="0" id="tab3" aria-controls="nonexistent">
-                    <!-- References non-existent panel -->
                     Advanced
                 </div>
             </div>
@@ -205,23 +179,20 @@
             <div role="tabpanel" id="panel2" aria-labelledby="tab2" hidden>
                 <p>Privacy settings content</p>
             </div>
-            <!-- Missing panel3 -->
             
-            <!-- Custom dropdown with focus management issues -->
             <div class="custom-select">
                 <button aria-haspopup="listbox" aria-expanded="false" id="custom-trigger">
                     Choose Option
                 </button>
                 <ul role="listbox" style="display: none;" aria-labelledby="custom-trigger">
-                    <li role="option" tabindex="0">Option A</li>  <!-- Options shouldn't have tabindex="0" -->
+                    <li role="option" tabindex="0">Option A</li>
                     <li role="option" tabindex="0">Option B</li>
                     <li role="option" tabindex="0">Option C</li>
                 </ul>
             </div>
             
-            <h3>Announcement and Context Issues</h3>
+            <h3>Status Indicators</h3>
             
-            <!-- Error messages that appear without focus management -->
             <form>
                 <label for="bad-email">Email Address</label>
                 <input type="email" id="bad-email" />
@@ -231,20 +202,16 @@
                 <button type="button" onclick="showErrorSilently()">Validate</button>
             </form>
             
-            <!-- Progress indicators without proper announcements -->
             <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
-                <!-- Visual progress bar -->
                 <div style="width: 50%; height: 20px; background: blue;"></div>
             </div>
             <button onclick="updateProgressSilently()">Update Progress</button>
             
-            <!-- Time-sensitive content without warnings -->
             <div aria-live="assertive" id="countdown-timer">
                 Session expires in: <span id="timer">5:00</span>
             </div>
-            <button onclick="startCountdown()">Start 5-Minute Countdown</button>
+            <button onclick="startCountdown()">Start 5-Minute Timer</button>
             
-            <!-- Instructions that only appear on hover/focus -->
             <input type="password" id="pwd-complex" />
             <div id="pwd-instructions" style="display: none;">
                 Password must contain: uppercase, lowercase, number, special character
@@ -253,32 +220,25 @@
         </section>
         
         <script>
-            // Functions for interactive examples
             function toggleButton(button) {
-                // Deliberately doesn't update aria-pressed
                 button.style.background = button.style.background === 'blue' ? '' : 'blue';
             }
             
             function fakeToggle() {
-                // Toggles aria-expanded but no content changes
                 const button = event.target;
                 const expanded = button.getAttribute('aria-expanded') === 'true';
                 button.setAttribute('aria-expanded', !expanded);
-                // No actual content is shown/hidden
             }
             
             function silentUpdate() {
-                // Updates content but doesn't trigger live region
                 const region = document.getElementById('silent-live-region');
                 region.innerHTML = 'Content updated at ' + new Date().toLocaleTimeString();
-                // Content changed but aria-live doesn't work due to implementation
             }
             
             function toggleHiddenContent() {
                 const content = document.getElementById('dynamic-content');
                 const isHidden = content.style.display === 'none';
                 content.style.display = isHidden ? 'block' : 'none';
-                // aria-hidden value doesn't match actual visibility
             }
             
             function simulateBadLoading() {
@@ -288,28 +248,23 @@
                 button.disabled = true;
                 indicator.style.display = 'block';
                 
-                // No aria-live announcement
                 setTimeout(() => {
                     button.disabled = false;
                     indicator.style.display = 'none';
-                    // No completion announcement
                 }, 3000);
             }
             
             function showBrokenModal() {
                 document.getElementById('broken-modal').style.display = 'block';
-                // Doesn't manage focus or trap it
             }
             
             function hideBrokenModal() {
                 document.getElementById('broken-modal').style.display = 'none';
-                // Doesn't return focus to trigger
             }
             
             function showErrorSilently() {
                 const error = document.getElementById('email-error');
                 error.style.display = 'block';
-                // Error appears but focus isn't managed, no announcement
             }
             
             function updateProgressSilently() {
@@ -318,12 +273,11 @@
                 const newValue = Math.min(current + 10, 100);
                 progress.setAttribute('aria-valuenow', newValue);
                 progress.querySelector('div').style.width = newValue + '%';
-                // Visual update but no announcement of progress change
             }
             
             let countdownInterval;
             function startCountdown() {
-                let seconds = 300; // 5 minutes
+                let seconds = 300;
                 const timer = document.getElementById('timer');
                 
                 countdownInterval = setInterval(() => {
@@ -334,13 +288,11 @@
                     
                     if (seconds <= 0) {
                         clearInterval(countdownInterval);
-                        // Sudden session expiry without adequate warning
                         alert('Session expired!');
                     }
                 }, 1000);
             }
             
-            // Show password instructions on focus (should be persistent)
             document.getElementById('pwd-complex').addEventListener('focus', () => {
                 document.getElementById('pwd-instructions').style.display = 'block';
             });
