@@ -757,7 +757,7 @@ function App() {
 
             {/* Recording Mode */}
             {state.mode === 'recording' && (
-              <>                <div className="bg-white rounded-lg shadow p-6">
+              <>                <div className="bg-white border border-gray-200 rounded-lg shadow-card p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-medium text-gray-900">
                     Recording Session
@@ -793,7 +793,7 @@ function App() {
                 )}
 
                 {/* Session Info - Show during analysis */}
-                <div className="bg-white rounded-lg shadow-card p-4">
+                <div className="bg-white border border-gray-200 rounded-lg shadow-card p-4">
                   <div className="flex items-center justify-center flex-wrap gap-3">
                     <div className="flex items-center space-x-3 flex-wrap justify-center">
                       <span className="text-sm font-bold text-gray-700">Session:</span>
@@ -835,9 +835,12 @@ function App() {
               <>
                 {/* Ready Bar - Show only when results are displayed */}
                 {state.mode === 'results' && state.analysisResult && (
-                  <div className="bg-white rounded-lg shadow-card p-4">
+                  <div className="bg-white border border-gray-200 rounded-lg shadow-card p-4">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-medium text-gray-900">Ready</h2>
+                      <div className="text-left">
+                        <h2 className="text-lg font-medium text-gray-900">Ready</h2>
+                        <p className="text-sm text-gray-600 mt-1">View results below or start a new session</p>
+                      </div>
                       <button
                         onClick={handleReset}
                         className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
@@ -859,7 +862,7 @@ function App() {
 
                 {/* Session Info - Show when ready for analysis or when analysis is complete */}
                 {(state.mode === 'ready' || (state.mode === 'results' && state.analysisResult)) && (
-                  <div className="bg-white rounded-lg shadow-card p-4">
+                  <div className="bg-white border border-gray-200 rounded-lg shadow-card p-4">
                     <div className="flex items-center justify-center flex-wrap gap-3">
                       <div className="flex items-center space-x-3 flex-wrap justify-center">
                         <span className="text-sm font-bold text-gray-700">Session:</span>
