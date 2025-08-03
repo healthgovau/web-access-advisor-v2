@@ -712,7 +712,23 @@ function App() {
             </div>
           </div>
         </header>        <main className="mt-8">
-          <div className="space-y-6">          {/* Session Mode - Only visible during setup */}
+          <div className="space-y-6">
+
+            {/* Three-Phase Status - Always visible at top */}
+            <ThreePhaseStatus
+              currentStage={state.progress.stage}
+              error={state.progress.error}
+              actionCount={state.actions.length}
+              snapshotCount={(() => {
+                const snapshotCount = state.progress.snapshotCount || state.analysisResult?.snapshotCount || 0;
+                return snapshotCount;
+              })()}
+              batchCurrent={state.progress.batchCurrent}
+              batchTotal={state.progress.batchTotal}
+              warnings={state.analysisResult?.warnings || []}
+            />
+
+          {/* Session Mode - Only visible during setup */}
             {state.mode === 'setup' && (
               // Interactive session mode during setup only
               <>
@@ -736,21 +752,7 @@ function App() {
                   />
                 )}
               </>
-            )}
-
-            {/* Three-Phase Status - Always visible */}
-            <ThreePhaseStatus
-              currentStage={state.progress.stage}
-              error={state.progress.error}
-              actionCount={state.actions.length}
-              snapshotCount={(() => {
-                const snapshotCount = state.progress.snapshotCount || state.analysisResult?.snapshotCount || 0;
-                return snapshotCount;
-              })()}
-              batchCurrent={state.progress.batchCurrent}
-              batchTotal={state.progress.batchTotal}
-              warnings={state.analysisResult?.warnings || []}
-            />            {/* Error Display */}
+            )}            {/* Error Display */}
             {state.error && <ErrorDisplay error={state.error} />}
 
             {/* Recording Mode */}
@@ -781,6 +783,15 @@ function App() {
             )}            {/* Analyzing Mode */}
             {state.mode === 'analyzing' && (
               <>
+                {/* Actions List - Keep visible during analysis for consistency */}
+                {state.actions.length > 0 && (
+                  <ActionList
+                    actions={state.actions}
+                    isRecording={false}
+                    sessionId={state.sessionId}
+                  />
+                )}
+
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card">
                   <div className="flex items-center justify-center py-6 px-2 relative">
                     <div className="text-center">
@@ -793,8 +804,12 @@ function App() {
                     </div>
                   </div>
                 </div>
+              </>
+            )}
 
-                {/* Actions List - Keep visible during analysis for consistency */}
+            {/* Ready/Results Mode */}            {(state.mode === 'ready' || state.mode === 'results') && (
+              <>
+                {/* Actions List */}
                 {state.actions.length > 0 && (
                   <ActionList
                     actions={state.actions}
@@ -802,20 +817,6 @@ function App() {
                     sessionId={state.sessionId}
                   />
                 )}
-              </>
-            )}
-
-            {/* Ready/Results Mode */}            {(state.mode === 'ready' || state.mode === 'results') && (
-              <>
-                <AnalysisControls
-                  hasActions={state.actions.length > 0}
-                  hasAnalysisResult={!!state.analysisResult}
-                  isLoading={state.loading}
-                  staticSectionMode={staticSectionMode}
-                  onStaticSectionModeChange={setStaticSectionMode}
-                  onStartAnalysis={handleStartAnalysis}
-                  onReset={handleReset}
-                />
 
                 {/* Session Info - Show when ready for analysis or when analysis is complete */}
                 {(state.mode === 'ready' || (state.mode === 'results' && state.analysisResult)) && (
@@ -841,14 +842,17 @@ function App() {
                       </div>
                     </div>
                   </div>
-                )}                {/* Actions List */}
-                {state.actions.length > 0 && (
-                  <ActionList
-                    actions={state.actions}
-                    isRecording={false}
-                    sessionId={state.sessionId}
-                  />
-                )}                {/* Analysis Results */}
+                )}
+
+                <AnalysisControls
+                  hasActions={state.actions.length > 0}
+                  hasAnalysisResult={!!state.analysisResult}
+                  isLoading={state.loading}
+                  staticSectionMode={staticSectionMode}
+                  onStaticSectionModeChange={setStaticSectionMode}
+                  onStartAnalysis={handleStartAnalysis}
+                  onReset={handleReset}
+                />                {/* Analysis Results */}
                 {state.analysisResult && (
                   <div className="card rounded-lg overflow-hidden">
                     <div className="p-6">
