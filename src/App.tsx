@@ -792,6 +792,30 @@ function App() {
                   />
                 )}
 
+                {/* Session Info - Show during analysis */}
+                <div className="bg-white rounded-lg shadow-card p-4">
+                  <div className="flex items-center justify-center flex-wrap gap-3">
+                    <div className="flex items-center space-x-3 flex-wrap justify-center">
+                      <span className="text-sm font-bold text-gray-700">Session:</span>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${sessionMode === 'new'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-green-100 text-green-800'
+                        }`}>
+                        {sessionMode === 'new' ? 'New Recording' : 'Loaded Session'}
+                      </span>                    {state.sessionId && (
+                        <span className="text-sm text-gray-600 font-mono">
+                          <span className="font-bold">ID:</span> {state.sessionId}
+                        </span>
+                      )}
+                      {state.url && (
+                        <span className="text-sm text-gray-600">
+                          <span className="font-bold">Start URL:</span> {state.url}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card">
                   <div className="flex items-center justify-center py-6 px-2 relative">
                     <div className="text-center">
@@ -809,6 +833,21 @@ function App() {
 
             {/* Ready/Results Mode */}            {(state.mode === 'ready' || state.mode === 'results') && (
               <>
+                {/* Ready Bar - Show only when results are displayed */}
+                {state.mode === 'results' && state.analysisResult && (
+                  <div className="bg-white rounded-lg shadow-card p-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-medium text-gray-900">Ready</h2>
+                      <button
+                        onClick={handleReset}
+                        className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+                      >
+                        <span className="text-sm font-medium">Start New Test</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Actions List */}
                 {state.actions.length > 0 && (
                   <ActionList
@@ -820,7 +859,7 @@ function App() {
 
                 {/* Session Info - Show when ready for analysis or when analysis is complete */}
                 {(state.mode === 'ready' || (state.mode === 'results' && state.analysisResult)) && (
-                  <div className="bg-white rounded-lg shadow p-4">
+                  <div className="bg-white rounded-lg shadow-card p-4">
                     <div className="flex items-center justify-center flex-wrap gap-3">
                       <div className="flex items-center space-x-3 flex-wrap justify-center">
                         <span className="text-sm font-bold text-gray-700">Session:</span>
@@ -844,15 +883,20 @@ function App() {
                   </div>
                 )}
 
-                <AnalysisControls
-                  hasActions={state.actions.length > 0}
-                  hasAnalysisResult={!!state.analysisResult}
-                  isLoading={state.loading}
-                  staticSectionMode={staticSectionMode}
-                  onStaticSectionModeChange={setStaticSectionMode}
-                  onStartAnalysis={handleStartAnalysis}
-                  onReset={handleReset}
-                />                {/* Analysis Results */}
+                {/* Analysis Controls - Only show in ready mode, not when results are displayed */}
+                {state.mode === 'ready' && (
+                  <AnalysisControls
+                    hasActions={state.actions.length > 0}
+                    hasAnalysisResult={!!state.analysisResult}
+                    isLoading={state.loading}
+                    staticSectionMode={staticSectionMode}
+                    onStaticSectionModeChange={setStaticSectionMode}
+                    onStartAnalysis={handleStartAnalysis}
+                    onReset={handleReset}
+                  />
+                )}
+
+                {/* Analysis Results */}
                 {state.analysisResult && (
                   <div className="card rounded-lg overflow-hidden">
                     <div className="p-6">
