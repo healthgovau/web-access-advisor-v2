@@ -564,6 +564,9 @@ function App() {
         message: 'Ready to start accessibility testing'
       }
     });
+    
+    // Scroll to top when starting new session
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Handle session mode change
@@ -709,9 +712,9 @@ function App() {
             </div>
           </div>
         </header>        <main className="mt-8">
-          <div className="space-y-6">          {/* Session Mode - Always visible */}
-            {state.mode === 'setup' || state.mode === 'ready' || (state.mode === 'results' && sessionMode === 'load' && !state.analysisResult) ? (
-              // Interactive session mode during setup, ready state, or when in results mode with loaded session (before analysis)
+          <div className="space-y-6">          {/* Session Mode - Only visible during setup */}
+            {state.mode === 'setup' && (
+              // Interactive session mode during setup only
               <>
                 <SessionModeToggle
                   mode={sessionMode}
@@ -733,31 +736,9 @@ function App() {
                   />
                 )}
               </>
-            ) : state.mode === 'analyzing' || (state.mode === 'results' && state.analysisResult) ? (
-              // Read-only session mode indicator during analysis or when analysis is complete
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center space-x-3 flex-wrap">
-                    <span className="text-sm font-bold text-gray-700">Session:</span>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${sessionMode === 'new'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-green-100 text-green-800'
-                      }`}>
-                      {sessionMode === 'new' ? 'New Recording' : 'Loaded Session'}
-                    </span>                  {state.sessionId && (
-                      <span className="text-sm text-gray-600 font-mono">
-                        <span className="font-bold">ID:</span> {state.sessionId}
-                      </span>
-                    )}
-                    {state.url && (
-                      <span className="text-sm text-gray-600">
-                        <span className="font-bold">Start URL:</span> {state.url}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : null}{/* Three-Phase Status - Always visible */}
+            )}
+
+            {/* Three-Phase Status - Always visible */}
             <ThreePhaseStatus
               currentStage={state.progress.stage}
               error={state.progress.error}
@@ -834,7 +815,33 @@ function App() {
                   onStaticSectionModeChange={setStaticSectionMode}
                   onStartAnalysis={handleStartAnalysis}
                   onReset={handleReset}
-                />                {/* Actions List */}
+                />
+
+                {/* Session Info - Show when ready for analysis or when analysis is complete */}
+                {(state.mode === 'ready' || (state.mode === 'results' && state.analysisResult)) && (
+                  <div className="bg-white rounded-lg shadow p-4">
+                    <div className="flex items-center justify-center flex-wrap gap-3">
+                      <div className="flex items-center space-x-3 flex-wrap justify-center">
+                        <span className="text-sm font-bold text-gray-700">Session:</span>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${sessionMode === 'new'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-green-100 text-green-800'
+                          }`}>
+                          {sessionMode === 'new' ? 'New Recording' : 'Loaded Session'}
+                        </span>                      {state.sessionId && (
+                          <span className="text-sm text-gray-600 font-mono">
+                            <span className="font-bold">ID:</span> {state.sessionId}
+                          </span>
+                        )}
+                        {state.url && (
+                          <span className="text-sm text-gray-600">
+                            <span className="font-bold">Start URL:</span> {state.url}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}                {/* Actions List */}
                 {state.actions.length > 0 && (
                   <ActionList
                     actions={state.actions}
@@ -845,15 +852,16 @@ function App() {
                 {state.analysisResult && (
                   <div className="card rounded-lg overflow-hidden">
                     <div className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-medium text-gray-900 text-center flex-1">
+                      <div className="flex items-center mb-4">
+                        <div className="flex-1"></div>
+                        <h2 className="text-xl font-medium text-gray-900 text-center">
                           Accessibility Analysis Results
                         </h2>
-                        <div className="flex items-center justify-end space-x-3">
+                        <div className="flex-1 flex items-center justify-end space-x-3">
                           <button
                             onClick={handleExportCSV}
                             disabled={isExporting}
-                            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <span className="text-sm">📊</span>
                             <span className="text-sm font-medium whitespace-nowrap">

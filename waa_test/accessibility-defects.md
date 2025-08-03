@@ -191,6 +191,10 @@ This document lists all accessibility defects implemented in the test pages for 
     - [ ] Lighthouse/axe-core detected
     - [ ] WAA Tool detected
 
+30. **redundant-title-attributes**: Form inputs and buttons with title attributes that duplicate visible labels/text
+    - [ ] Lighthouse/axe-core detected
+    - [ ] WAA Tool detected
+
 ### NVDA Screen Reader Issues:
 
 **NOTE: Pages 1-5 all have proper skip links and main landmarks - focus on content-specific issues**
@@ -276,6 +280,10 @@ This document lists all accessibility defects implemented in the test pages for 
     - [ ] WAA Tool detected
 
 21. **Nested interactive element confusion**: Interactive elements inside other interactive elements causing navigation problems
+    - [ ] NVDA manual test detected
+    - [ ] WAA Tool detected
+
+22. **Redundant title attribute announcements**: Form controls and buttons with title attributes that duplicate visible text causing verbose announcements
     - [ ] NVDA manual test detected
     - [ ] WAA Tool detected
 
