@@ -757,21 +757,49 @@ function App() {
 
             {/* Recording Mode */}
             {state.mode === 'recording' && (
-              <>                <div className="bg-white border border-gray-200 rounded-lg shadow-card p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-medium text-gray-900">
-                    Recording Session
-                  </h2>                    <button
-                    onClick={handleStopRecording}
-                    className="flex items-center space-x-2 px-4 py-2 bg-red-700 text-white text-sm font-medium rounded-md hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
-                  >
-                    <span>Stop Recording</span>
-                    <div className="w-3 h-3 bg-white rounded-full"></div>
-                  </button>
-                </div>                  <div className="text-sm text-gray-600 text-left">
-                  Currently recording actions on: <span className="font-medium">{state.url}</span>
+              <>
+                {/* Session Info - Show during recording when session exists */}
+                {state.sessionId && (
+                  <div className="bg-white border border-gray-200 rounded-lg shadow-card p-4">
+                    <div className="flex items-center justify-center flex-wrap gap-3">
+                      <div className="flex items-center space-x-3 flex-wrap justify-center">
+                        <span className="text-sm font-bold text-gray-700">Session:</span>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${sessionMode === 'new'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-green-100 text-green-800'
+                          }`}>
+                          {sessionMode === 'new' ? 'New Recording' : 'Loaded Session'}
+                        </span>                      {state.sessionId && (
+                          <span className="text-sm text-gray-600 font-mono">
+                            <span className="font-bold">ID:</span> {state.sessionId}
+                          </span>
+                        )}
+                        {state.url && (
+                          <span className="text-sm text-gray-600">
+                            <span className="font-bold">Start URL:</span> {state.url}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white border border-gray-200 rounded-lg shadow-card p-6">
+                  <div className="flex items-center justify-between ml-4 mr-4">
+                    <h2 className="text-lg font-medium text-gray-900">
+                      Recording Session
+                    </h2>
+                    <button
+                      onClick={handleStopRecording}
+                      className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+                    >
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">Stop Recording</span>
+                    </button>
+                  </div>
                 </div>
-              </div>                {/* Actions List */}
+
+                {/* Actions List */}
                 {state.actions.length > 0 && (
                   <ActionList
                     actions={state.actions}
@@ -783,15 +811,6 @@ function App() {
             )}            {/* Analyzing Mode */}
             {state.mode === 'analyzing' && (
               <>
-                {/* Actions List - Keep visible during analysis for consistency */}
-                {state.actions.length > 0 && (
-                  <ActionList
-                    actions={state.actions}
-                    isRecording={false}
-                    sessionId={state.sessionId}
-                  />
-                )}
-
                 {/* Session Info - Show during analysis */}
                 <div className="bg-white border border-gray-200 rounded-lg shadow-card p-4">
                   <div className="flex items-center justify-center flex-wrap gap-3">
@@ -816,6 +835,15 @@ function App() {
                   </div>
                 </div>
 
+                {/* Actions List - Keep visible during analysis for consistency */}
+                {state.actions.length > 0 && (
+                  <ActionList
+                    actions={state.actions}
+                    isRecording={false}
+                    sessionId={state.sessionId}
+                  />
+                )}
+
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card">
                   <div className="flex items-center justify-center py-6 px-2 relative">
                     <div className="text-center">
@@ -835,11 +863,15 @@ function App() {
               <>
                 {/* Ready Bar - Show only when results are displayed */}
                 {state.mode === 'results' && state.analysisResult && (
-                  <div className="bg-white border border-gray-200 rounded-lg shadow-card p-4">
-                    <div className="flex items-center justify-between">
+                  <div className="bg-white border border-gray-200 rounded-lg shadow-card p-6">
+                    <div className="flex items-center justify-between ml-4 mr-4">
                       <div className="text-left">
-                        <h2 className="text-lg font-medium text-gray-900">Ready</h2>
-                        <p className="text-sm text-gray-600 mt-1">View results below or start a new session</p>
+                        <h2 className="text-lg font-medium text-gray-900">
+                          Ready
+                        </h2>
+                        <p className="text-sm text-gray-600 mt-1">
+                          View results below or start a new test.
+                        </p>
                       </div>
                       <button
                         onClick={handleReset}
@@ -849,15 +881,6 @@ function App() {
                       </button>
                     </div>
                   </div>
-                )}
-
-                {/* Actions List */}
-                {state.actions.length > 0 && (
-                  <ActionList
-                    actions={state.actions}
-                    isRecording={false}
-                    sessionId={state.sessionId}
-                  />
                 )}
 
                 {/* Session Info - Show when ready for analysis or when analysis is complete */}
@@ -884,6 +907,15 @@ function App() {
                       </div>
                     </div>
                   </div>
+                )}
+
+                {/* Actions List */}
+                {state.actions.length > 0 && (
+                  <ActionList
+                    actions={state.actions}
+                    isRecording={false}
+                    sessionId={state.sessionId}
+                  />
                 )}
 
                 {/* Analysis Controls - Only show in ready mode, not when results are displayed */}
@@ -914,7 +946,9 @@ function App() {
                             disabled={isExporting}
                             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
-                            <span className="text-sm">📊</span>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
                             <span className="text-sm font-medium whitespace-nowrap">
                               {isExporting ? 'Generating CSV...' : 'Export CSV'}
                             </span>
@@ -924,7 +958,9 @@ function App() {
                             disabled={isExporting}
                             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
-                            <span className="text-sm">📄</span>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
                             <span className="text-sm font-medium whitespace-nowrap">
                               {isExporting ? 'Generating PDF...' : 'Export PDF'}
                             </span>
