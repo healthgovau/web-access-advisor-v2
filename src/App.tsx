@@ -861,28 +861,6 @@ function App() {
 
             {/* Ready/Results Mode */}            {(state.mode === 'ready' || state.mode === 'results') && (
               <>
-                {/* Ready Bar - Show only when results are displayed */}
-                {state.mode === 'results' && state.analysisResult && (
-                  <div className="bg-white border border-gray-200 rounded-lg shadow-card p-6">
-                    <div className="flex items-center justify-between ml-4 mr-4">
-                      <div className="text-left">
-                        <h2 className="text-lg font-medium text-gray-900">
-                          Ready
-                        </h2>
-                        <p className="text-sm text-gray-600 mt-1">
-                          View results below or start a new test.
-                        </p>
-                      </div>
-                      <button
-                        onClick={handleReset}
-                        className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
-                      >
-                        <span className="text-sm font-medium">Start New Test</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {/* Session Info - Show when ready for analysis or when analysis is complete */}
                 {(state.mode === 'ready' || (state.mode === 'results' && state.analysisResult)) && (
                   <div className="bg-white border border-gray-200 rounded-lg shadow-card p-4">
@@ -905,6 +883,28 @@ function App() {
                           </span>
                         )}
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Ready Bar - Show only when results are displayed */}
+                {state.mode === 'results' && state.analysisResult && (
+                  <div className="bg-white border border-gray-200 rounded-lg shadow-card p-6">
+                    <div className="flex items-center justify-between ml-4 mr-4">
+                      <div className="text-left">
+                        <h2 className="text-lg font-medium text-gray-900">
+                          Ready
+                        </h2>
+                        <p className="text-sm text-gray-600 mt-1">
+                          View results below or start a new test.
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleReset}
+                        className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+                      >
+                        <span className="text-sm font-medium">Start New Test</span>
+                      </button>
                     </div>
                   </div>
                 )}
