@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { html as beautifyHtml } from 'js-beautify';
 import type { AnalysisResult } from '../types';
 import AxeResults from './AxeResults';
+import BackToTopButton from './BackToTopButton';
 import { isAuthUrl } from '../utils/authDetection';
 
 interface AnalysisResultsProps {
@@ -406,6 +407,9 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                   </div>
                 )}
               </div>
+              
+              {/* Back to Top Button */}
+              <BackToTopButton />
             </div>
           )}
         </div>

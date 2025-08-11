@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { html as beautifyHtml } from 'js-beautify';
 import type { AxeViolation, SessionManifest } from '../types';
+import BackToTopButton from './BackToTopButton';
 import { isAuthUrl } from '../utils/authDetection';
 
 interface AxeResultsProps {
@@ -445,6 +446,9 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
               </div>
             )}
           </div>
+          
+          {/* Back to Top Button */}
+          <BackToTopButton />
         </div>
       )}
     </div>
