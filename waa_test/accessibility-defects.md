@@ -5,8 +5,6 @@ This document lists all accessibility defects implemented in the test pages for 
 - **axe-core** accessibility engine (used by axe DevTools, axe-linter, etc.)
 - **NVDA screen reader** compatibility testing
 
-**⚠️ CRITICAL ACCURACY UPDATE:** This documentation has been corrected after comprehensive verification. Previous versions contained significant inaccuracies regarding structural elements.
-
 **VERIFIED STRUCTURAL STATUS:**
 - **index.html**: ❌ Missing lang, skip links, main landmark (uses div.nav, div.content)
 - **page1.html**: ✅ HAS lang="en", skip links, main landmark 
