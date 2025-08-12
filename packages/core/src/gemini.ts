@@ -11,6 +11,140 @@ export class GeminiService {
   private genAI: GoogleGenerativeAI;
   private modelName = "gemini-2.0-flash";
 
+  // Shared prompt components to eliminate duplication
+  private static readonly SHARED_JSON_SCHEMA = `{
+  "summary": "Brief overview of accessibility status",
+  "components": [
+    {
+      "componentName": "Use the axe-core naming convention for headings wherever possible. Example headings: ARIA progressbar nodes must have an accessible name; Form elements must have labels; Elements must meet minimum color contrast ratio thresholds; <html> element must have a lang attribute; Heading levels should only increase by one; All page content should be contained by landmarks. This format states both the element and the requirement/problem in one line, making the issue clear and actionable.",
+      "issue": "Clear description of the accessibility issue - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
+      "explanation": "Detailed explanation of why this is a problem - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
+      "relevantHtml": "EXACT HTML element(s) with the accessibility issue - show ONLY the specific problematic element, not <html>, <body>, or unrelated parent containers",
+      "correctedCode": "Fixed HTML showing the exact same element(s) with proper accessibility attributes",
+      "codeChangeSummary": "Brief summary of the fix (e.g., 'Added aria-label to button', 'Changed div to semantic heading')",
+      "impact": "critical|serious|moderate|minor",
+      "wcagRule": "WCAG 2.1 guideline reference (e.g., 4.1.2 Name, Role, Value)",
+      "wcagUrl": "Complete URL to the specific WCAG Understanding document (e.g., 'https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html')",
+      "selector": "CSS selector to identify the problematic element (e.g., '.nav-menu button', '#search-input', 'main .content h1')"
+    }
+  ],
+  "recommendations": ["actionable recommendations"],
+  "score": 0-100
+}`;
+
+  private static readonly SHARED_WCAG_URLS = `**WCAG URL Requirements:**
+- Always provide the complete URL to the specific WCAG 2.1 Understanding document
+- Use the format: https://www.w3.org/WAI/WCAG21/Understanding/[page-name].html
+- Common examples:
+  - 4.1.2 Name, Role, Value → https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html
+  - 1.4.3 Contrast (Minimum) → https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html
+  - 2.4.7 Focus Visible → https://www.w3.org/WAI/WCAG21/Understanding/focus-visible.html
+  - 2.1.1 Keyboard → https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html
+  - 1.1.1 Non-text Content → https://www.w3.org/WAI/WCAG21/Understanding/non-text-content.html
+  - 2.4.6 Headings and Labels → https://www.w3.org/WAI/WCAG21/Understanding/headings-and-labels.html
+- If unsure of the exact URL, use: https://www.w3.org/WAI/WCAG21/Understanding/`;
+
+  private static readonly SHARED_REQUIREMENTS = `**Requirements:**
+- Each component must have a specific, non-generic name
+- Issues must be actionable and specific
+- CRITICAL: ALWAYS wrap HTML element names in backticks in issue and explanation text
+- Examples: "page lacks a \`main\` landmark", "missing \`h1\` heading", "button needs \`aria-label\`", "\`div\` should be \`button\`"
+- NEVER write: "h1", "main", "button" - ALWAYS write: "\`h1\`", "\`main\`", "\`button\`"
+- relevantHtml must show ONLY the problematic element - NEVER show <html>, <body>, or unrelated parent containers
+- If the issue is "missing main landmark", show the container where <main> should be added
+- If the issue is "missing h1", show the section/div where the h1 should be placed
+- correctedCode should show the minimal fix for the exact same element(s) shown in relevantHtml
+- selector must be a valid CSS selector that uniquely identifies the problematic element(s)
+- For missing elements (like missing h1 or main), provide a selector for where the element should be added
+- Examples: ".header button", "#search-form input", "nav .menu-item", ".content > div:first-child", "body > .page-wrapper"
+- Use classes, IDs, and structural selectors to create precise, targetable selectors`;
+
+  private static readonly SHARED_SCREEN_READER_CONTEXT = `**SCREEN READER TECHNOLOGY CONTEXT:**
+This analysis targets compatibility with leading screen reader technologies including:
+- **JAWS (Job Access With Speech)** - Most widely used Windows screen reader
+- **NVDA (NonVisual Desktop Access)** - Popular open-source Windows screen reader  
+- **VoiceOver** - Built-in macOS and iOS screen reader
+- **TalkBack** - Android's built-in screen reader
+- **Dragon NaturallySpeaking** - Voice control and dictation software
+- **Windows Narrator** - Built-in Windows screen reader
+
+**ANALYSIS METHODOLOGY:**
+You are analyzing HTML markup and Axe accessibility test results to assess screen reader compatibility. You do NOT have access to actual screen reader testing, user behavior, or live interaction data. Your analysis must be based ENTIRELY on code structure, semantic markup, ARIA implementation, and static accessibility patterns that can be determined from HTML snapshots and Axe analysis summaries.`;
+
+  private static readonly SHARED_CRITICAL_INSTRUCTIONS = `**Important**: Report ONLY components with identified screen reader accessibility issues. Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
+
+**CRITICAL REQUIREMENTS:**
+1. **componentName Field Control**: The componentName field DIRECTLY controls the issue title in the UI. When matching axe violations, use EXACT axe violation descriptions as componentName values. For custom issues, create concise, descriptive titles that clearly communicate the specific accessibility problem.
+
+2. **Title Consistency Priority**: Maintain consistency between screen reader issue titles and axe violation titles when applicable. Use exact axe violation descriptions for the componentName field when the issue corresponds to an axe-core violation.
+
+3. **Comprehensive Analysis**: Analyze ALL provided content thoroughly. Do not ignore or skip any sections of HTML, CSS, or accessibility data provided in the input.
+
+4. **Evidence-Based Assessment**: Base all conclusions strictly on the provided HTML snapshot and Axe accessibility report data. Do not make assumptions about functionality not evident in the static analysis.
+
+5. **Zero False Positives**: Only report issues that can be definitively identified from the provided HTML and Axe data. When uncertain, err on the side of caution and do not report the issue.
+
+6. **Complete Context Analysis**: Consider the full HTML structure, CSS styling, and page context when evaluating accessibility compliance. Individual elements must be assessed within their complete DOM context.
+`;
+
+  private static readonly SHARED_COMPONENT_ANALYSIS_INSTRUCTIONS = `
+**PRIMARY OBJECTIVE: STATIC COMPONENT ACCESSIBILITY ANALYSIS**
+Focus EXCLUSIVELY on static component-level accessibility issues that can be identified from individual DOM snapshots. This analysis is designed to identify:
+- Missing or incorrect ARIA attributes on individual components
+- Semantic HTML structure issues within components  
+- Form labeling and control association problems
+- Color contrast and visual accessibility defects
+- Missing landmarks and heading structure issues
+- Individual interactive element accessibility problems
+
+**CRITICAL SCOPE DISTINCTION:**
+This function analyzes STATIC COMPONENT ISSUES only. Do NOT analyze:
+- Multi-step user flows or navigation patterns (handled by separate flow analysis)
+- Complex interaction sequences or state changes
+- Cross-page accessibility consistency
+- Dynamic content updates or live regions (unless clearly evident in static snapshot)
+
+Identify and address barriers in individual components and page structure that prevent screen reader users from accessing content and functionality, based solely on analysis of the provided code and accessibility reports.
+`;
+
+  private static readonly SHARED_FLOW_ANALYSIS_INSTRUCTIONS = `
+**PRIMARY OBJECTIVE: SCREEN READER ACCESSIBILITY FLOW ANALYSIS**
+The main requirement is to ensure the entire interaction flow maintains proper screen reader accessibility, with correct ARIA state transitions, focus management, and assistive technology announcements throughout the user journey.
+
+**Screen Reader Focused Interaction Flow Analysis Instructions:**
+Focus on analyzing multi-step interaction sequences to identify:
+- ARIA state management across steps
+- Focus management and keyboard navigation flow
+- Screen reader announcement continuity
+- Dynamic content updates and live regions
+- Cross-step accessibility consistency
+- Complex interaction sequences and state changes
+- Navigation pattern accessibility
+`;
+
+  private static readonly SHARED_OUTPUT_FORMAT = `${GeminiService.SHARED_CRITICAL_INSTRUCTIONS}
+
+**OUTPUT FORMAT REQUIREMENTS:**
+- RETURN ONLY VALID JSON with no additional text before or after
+- Do NOT use emoji, Unicode symbols, or special characters in any output text
+- Use plain ASCII text only for maximum compatibility with PDF export systems
+- Each component must have a specific, non-generic name
+- Issues must be actionable and specific
+- Start your response with { and end with }
+- Do not include any markdown formatting, code blocks, or explanatory text
+
+**Output Format:**
+Respond with a JSON object with this exact structure:
+${GeminiService.SHARED_JSON_SCHEMA}
+
+${GeminiService.SHARED_WCAG_URLS}
+
+${GeminiService.SHARED_REQUIREMENTS}
+
+**SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
+
+**CRITICAL: Return ONLY the JSON object - no other text.**`;
+
   constructor(apiKey: string) {
     this.genAI = new GoogleGenerativeAI(apiKey);
   }  /**
@@ -227,35 +361,12 @@ export class GeminiService {
     return `
 Analyze the provided DOM snapshot(s) and Axe Accessibility Report(s) with a primary focus on screen reader (ARIA) accessibility and compatibility with assistive technologies. Your objective is to identify deficiencies in the code that hinder optimal support for screen readers and related tools, and to recommend precise, actionable code fixes to address these issues.
 
-**SCREEN READER TECHNOLOGY CONTEXT:**
-This analysis targets compatibility with leading screen reader technologies including:
-- **JAWS (Job Access With Speech)** - Most widely used Windows screen reader
-- **NVDA (NonVisual Desktop Access)** - Popular open-source Windows screen reader  
-- **VoiceOver** - Built-in macOS and iOS screen reader
-- **TalkBack** - Android's built-in screen reader
-- **Dragon NaturallySpeaking** - Voice control and dictation software
-- **Windows Narrator** - Built-in Windows screen reader
+${GeminiService.SHARED_SCREEN_READER_CONTEXT}
 
 **ANALYSIS METHODOLOGY:**
 You are analyzing HTML markup and Axe accessibility test results to assess screen reader compatibility. You do NOT have access to actual screen reader testing, user behavior, or live interaction data. Your analysis must be based ENTIRELY on code structure, semantic markup, ARIA implementation, and static accessibility patterns that can be determined from HTML snapshots and Axe analysis summaries.
 
-**PRIMARY OBJECTIVE: STATIC COMPONENT ACCESSIBILITY ANALYSIS**
-Focus EXCLUSIVELY on static component-level accessibility issues that can be identified from individual DOM snapshots. This analysis is designed to identify:
-- Missing or incorrect ARIA attributes on individual components
-- Semantic HTML structure issues within components  
-- Form labeling and control association problems
-- Color contrast and visual accessibility defects
-- Missing landmarks and heading structure issues
-- Individual interactive element accessibility problems
-
-**CRITICAL SCOPE DISTINCTION:**
-This function analyzes STATIC COMPONENT ISSUES only. Do NOT analyze:
-- Multi-step user flows or navigation patterns (handled by separate flow analysis)
-- Complex interaction sequences or state changes
-- Cross-page accessibility consistency
-- Dynamic content updates or live regions (unless clearly evident in static snapshot)
-
-Identify and address barriers in individual components and page structure that prevent screen reader users from accessing content and functionality, based solely on analysis of the provided code and accessibility reports.
+${GeminiService.SHARED_COMPONENT_ANALYSIS_INSTRUCTIONS}
 
 **Context:**
 - URL: ${context.url}
@@ -532,85 +643,7 @@ Based on the above comprehensive framework, identify ALL accessibility issues th
 3. **Moderate Issues** (Create barriers): Generic link text, missing skip links, suboptimal ARIA patterns, missing language declarations
 4. **Minor Issues** (Polish and optimization): Redundant ARIA attributes, non-essential semantic improvements
 
-**Output Format:**
-Respond with a JSON object with this exact structure:
-{
-  "summary": "Brief overview of accessibility status",
-  "components": [
-    {
-      "componentName": "Use exact axe-core violation titles when the issue matches a known axe rule (e.g., 'Page must have one main landmark', 'Elements must have sufficient color contrast', 'Form elements must have labels'). For non-axe issues, use specific component names that maintain consistency with similar accessibility issue types.",
-      "issue": "Clear description of the accessibility issue - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
-      "explanation": "Detailed explanation of why this is a problem - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
-      "relevantHtml": "EXACT HTML element(s) with the accessibility issue - show ONLY the specific problematic element, not <html>, <body>, or unrelated parent containers",
-      "correctedCode": "Fixed HTML showing the exact same element(s) with proper accessibility attributes",
-      "codeChangeSummary": "Brief summary of the fix (e.g., 'Added aria-label to button', 'Changed div to semantic heading')",
-      "impact": "critical|serious|moderate|minor",
-      "wcagRule": "WCAG 2.1 guideline reference (e.g., 4.1.2 Name, Role, Value)",
-      "wcagUrl": "Complete URL to the specific WCAG Understanding document (e.g., 'https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html')",
-      "selector": "CSS selector to identify the problematic element (e.g., '.nav-menu button', '#search-input', 'main .content h1')"
-    }
-  ],
-  "recommendations": ["actionable recommendations"],
-  "score": 0-100
-}
-
-**WCAG URL Requirements:**
-- Always provide the complete URL to the specific WCAG 2.1 Understanding document
-- Use the format: https://www.w3.org/WAI/WCAG21/Understanding/[page-name].html
-- Common examples:
-  - 4.1.2 Name, Role, Value → https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html
-  - 1.4.3 Contrast (Minimum) → https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html
-  - 2.4.7 Focus Visible → https://www.w3.org/WAI/WCAG21/Understanding/focus-visible.html
-  - 2.1.1 Keyboard → https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html
-- If unsure of the exact URL, use: https://www.w3.org/WAI/WCAG21/Understanding/
-
-**Requirements:**
-- Each component must have a specific, non-generic name
-- Issues must be actionable and specific
-- CRITICAL: ALWAYS wrap HTML element names in backticks in issue and explanation text
-- Examples: "page lacks a \`main\` landmark", "missing \`h1\` heading", "button needs \`aria-label\`", "\`div\` should be \`button\`"
-- NEVER write: "h1", "main", "button" - ALWAYS write: "\`h1\`", "\`main\`", "\`button\`"
-- relevantHtml must show ONLY the problematic element - NEVER show <html>, <body>, or unrelated parent containers
-- If the issue is "missing main landmark", show the container where <main> should be added
-- If the issue is "missing h1", show the section/div where the h1 should be placed
-- correctedCode should show the minimal fix for the exact same element(s) shown in relevantHtml
-- selector must be a valid CSS selector that uniquely identifies the problematic element(s)
-- For missing elements (like missing h1 or main), provide a selector for where the element should be added
-- Examples: ".header button", "#search-form input", "nav .menu-item", ".content > div:first-child", "body > .page-wrapper"
-- Use classes, IDs, and structural selectors to create precise, targetable selectors
-- Provide concrete HTML fixes when possible
-- Focus on real accessibility barriers found in the captured snapshots
-- If no significant issues are found, return an empty components array
-
-Example of good relevantHtml vs correctedCode pairing:
-BAD: relevantHtml shows <html> but issue is missing heading
-GOOD: relevantHtml shows <div class="content"> and correctedCode shows <div class="content"><h1>Page Title</h1>
-
-BAD: relevantHtml shows <html> but issue is missing main landmark  
-GOOD: relevantHtml shows <body><div class="page-content"> and correctedCode shows <body><main><div class="page-content">
-
-**CRITICAL: relevantHtml MUST BE ACTUAL HTML CODE:**
-- NEVER provide text content like "Skip to main content" or "New Aged Care Act"
-- ALWAYS provide HTML markup with < > angle brackets
-- Example GOOD: <button class="nav-btn">Skip to content</button>
-- Example BAD: Skip to main content
-- If you cannot identify specific HTML, leave relevantHtml empty
-- The relevantHtml field is for CODE ONLY, not page text content
-
-**Important**: Report ONLY components with identified screen reader accessibility issues. Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
-
-**OUTPUT FORMAT REQUIREMENTS:**
-- RETURN ONLY VALID JSON with no additional text before or after
-- Do NOT use emoji, Unicode symbols, or special characters in any output text
-- Use plain ASCII text only for maximum compatibility with PDF export systems
-- Each component must have a specific, non-generic name
-- Issues must be actionable and specific
-- Start your response with { and end with }
-- Do not include any markdown formatting, code blocks, or explanatory text
-
-**SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
-
-**CRITICAL: Return ONLY the JSON object - no other text.**
+${GeminiService.SHARED_OUTPUT_FORMAT}
 `;
   }
   /**
@@ -677,14 +710,15 @@ ${progressiveContext.previousBatchSummaries.length > 0
 
     return `Your task is to analyze a user interaction flow${progressiveContext ? ` segment (batch ${progressiveContext.currentBatchMetadata.batchIndex + 1}/${progressiveContext.currentBatchMetadata.totalBatches})` : ''} consisting of ${context.totalSteps} steps captured during accessibility testing, with a PRIMARY FOCUS on screen reader (ARIA) accessibility and assistive technology compatibility. This analysis ensures that interaction sequences work correctly for screen reader users through proper ARIA implementation and state management.
 
-**PRIMARY OBJECTIVE: SCREEN READER ACCESSIBILITY FLOW ANALYSIS**
-The main requirement is to ensure the entire interaction flow maintains proper screen reader accessibility, with correct ARIA state transitions, focus management, and assistive technology announcements throughout the user journey.
+${GeminiService.SHARED_FLOW_ANALYSIS_INSTRUCTIONS}
 ${progressiveContextSection}
 **Session Context:**
 - URL: ${context.url}
 - Session ID: ${context.sessionId}
 - Total Steps: ${context.totalSteps}
 - Flow Groups: ${Object.keys(flowGroups).join(', ')}
+
+${GeminiService.SHARED_SCREEN_READER_CONTEXT}
 
 **Screen Reader Focused Interaction Flow Analysis:**
 
@@ -738,59 +772,8 @@ ${JSON.stringify(this.filterAxeResultsForAnalysis(step.axeResults || []), null, 
    - Navigation flows: Landmark navigation, heading hierarchy, breadcrumb accessibility
    - Dynamic content: Proper aria-live announcements and screen reader feedback
 
-**Output Format:**
-Respond with a JSON object with this exact structure:
-{
-  "summary": "Overview of accessibility findings across the interaction flow",
-  "components": [
-    {
-      "componentName": "Use exact axe-core violation titles when the issue matches a known axe rule (e.g., 'Page must have one main landmark', 'Elements must have sufficient color contrast', 'Form elements must have labels'). For non-axe issues, use specific component names that maintain consistency with similar accessibility issue types.",      
-      "issue": "Clear description of the accessibility issue - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
-      "explanation": "Detailed explanation of why this is a problem - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
-      "relevantHtml": "EXACT HTML element(s) with the accessibility issue - show ONLY the specific problematic element, not <html>, <body>, or unrelated parent containers",
-      "correctedCode": "Fixed HTML showing the exact same element(s) with proper accessibility attributes",
-      "codeChangeSummary": "Brief summary of the fix (e.g., 'Added aria-label to button', 'Changed div to semantic heading')",      
-      "impact": "critical|serious|moderate|minor",
-      "wcagRule": "WCAG 2.1 guideline reference (e.g., 1.3.1 Info and Relationships)",
-      "wcagUrl": "Complete URL to the specific WCAG Understanding document (e.g., 'https://www.w3.org/WAI/WCAG21/Understanding/info-and-relationships.html')",
-      "selector": "CSS selector to identify the problematic element (e.g., '.nav-menu button', '#search-input', 'main .content h1')"
-    }
-  ],
-  "recommendations": [
-    "Overall accessibility improvements for the interaction flow"
-  ],
-  "score": 75
-}
-
-**WCAG URL Requirements:**
-- Always provide the complete URL to the specific WCAG 2.1 Understanding document
-- Use the format: https://www.w3.org/WAI/WCAG21/Understanding/[page-name].html
-- Common examples:
-  - 1.3.1 Info and Relationships → https://www.w3.org/WAI/WCAG21/Understanding/info-and-relationships.html
-  - 4.1.2 Name, Role, Value → https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html
-  - 1.4.3 Contrast (Minimum) → https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html
-  - 2.4.7 Focus Visible → https://www.w3.org/WAI/WCAG21/Understanding/focus-visible.html
-  - 2.1.1 Keyboard → https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html
-  - 1.1.1 Non-text Content → https://www.w3.org/WAI/WCAG21/Understanding/non-text-content.html
-  - 2.4.6 Headings and Labels → https://www.w3.org/WAI/WCAG21/Understanding/headings-and-labels.html
-- If unsure of the exact URL, use: https://www.w3.org/WAI/WCAG21/Understanding/
-
-**Requirements:**
-- Each component must have a specific, non-generic name
-- Issues must be actionable and specific
-- CRITICAL: ALWAYS wrap HTML element names in backticks in issue and explanation text
-- Examples: "page lacks a \`main\` landmark", "missing \`h1\` heading", "button needs \`aria-label\`", "\`div\` should be \`button\`"
-- NEVER write: "h1", "main", "button" - ALWAYS write: "\`h1\`", "\`main\`", "\`button\`"
-- relevantHtml must show ONLY the problematic element - NEVER show <html>, <body>, or unrelated parent containers
-- If the issue is "missing main landmark", show the container where <main> should be added
-- If the issue is "missing h1", show the section/div where the h1 should be placed
-- correctedCode should show the minimal fix for the exact same element(s) shown in relevantHtml
-- selector must be a valid CSS selector that uniquely identifies the problematic element(s)
-- For missing elements (like missing h1 or main), provide a selector for where the element should be added
-- Examples: ".header button", "#search-form input", "nav .menu-item", ".content > div:first-child", "body > .page-wrapper"
-- Use classes, IDs, and structural selectors to create precise, targetable selectors
-
-**CRITICAL: Return ONLY the JSON object - no other text.**`;
+${GeminiService.SHARED_OUTPUT_FORMAT}
+`;
   }
 
   /**
