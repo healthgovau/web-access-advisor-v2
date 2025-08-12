@@ -93,12 +93,21 @@ const formatHtmlCode = (html: string): string => {
 const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoading, error }) => {
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
   const [isScreenReaderExpanded, setIsScreenReaderExpanded] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const [severityFilters, setSeverityFilters] = useState<Record<string, boolean>>({
     critical: true,
     serious: true,
     moderate: true,
     minor: true
   });
+
+  // Toggle individual item expansion
+  const toggleItemExpanded = (itemId: string) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [itemId]: !prev[itemId]
+    }));
+  };
 
   const handleCopyCode = async (code: string, id: string) => {
     try {
@@ -284,50 +293,75 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
               
               <div className="space-y-3">
                 {filteredComponents.length > 0 ? (
-                  filteredComponents.map((component, index) => (
-                    <div key={index} className="bg-white border border-gray-200 rounded overflow-hidden">
-                      {/* Header Section with Subtle Background */}
-                      <div className="bg-gray-100 border-b border-gray-200 px-4 py-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
-                          <div className="ml-4 text-right">
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${component.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
-                              component.impact === 'serious' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
-                                component.impact === 'moderate' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
-                                  'bg-blue-100 text-blue-800 border border-blue-300'
-                              }`}>
-                              {component.impact.toUpperCase()} IMPACT
-                            </span>
+                  filteredComponents.map((component, index) => {
+                    const itemId = `screen-reader-${index}`;
+                    const isExpanded = expandedItems[itemId] || false;
+                    
+                    return (
+                      <div key={index} className="bg-white border border-gray-200 rounded overflow-hidden">
+                        {/* Header Section - Always Visible */}
+                        <button
+                          onClick={() => toggleItemExpanded(itemId)}
+                          className="w-full bg-gray-100 border-b border-gray-200 px-4 py-4 hover:bg-gray-150 transition-colors text-left"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
+                            <div className="ml-4 text-right">
+                              <span className={`text-xs font-medium px-2 py-1 rounded-full ${component.impact === 'critical' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                component.impact === 'serious' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
+                                  component.impact === 'moderate' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
+                                    'bg-blue-100 text-blue-800 border border-blue-300'
+                                }`}>
+                                {component.impact.toUpperCase()} IMPACT
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center justify-between text-sm text-gray-500">
-                          <div className="flex items-center">
-                            <span>URL: </span>
-                            {(() => {
-                              const url = getStepUrl(component.step);
-                              const displayUrl = url.length > 100 ? url.substring(0, 97) + '...' : url;
-                              return (
-                                <a
-                                  href={url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title={url}
-                                  className="px-1 py-0.5 bg-white text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded text-sm font-mono border border-gray-200 ml-1 underline cursor-pointer"
-                                >
-                                  {displayUrl}
-                                </a>
-                              );
-                            })()}
+                          <div className="flex items-center justify-between text-sm text-gray-500">
+                            <div className="flex items-center flex-1">
+                              <span>URL: </span>
+                              {(() => {
+                                const url = getStepUrl(component.step);
+                                const displayUrl = url.length > 100 ? url.substring(0, 97) + '...' : url;
+                                return (
+                                  <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={url}
+                                    className="px-1 py-0.5 bg-white text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded text-sm font-mono border border-gray-200 ml-1 underline cursor-pointer"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {displayUrl}
+                                  </a>
+                                );
+                              })()}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs text-gray-400">
+                                screen reader accessibility
+                              </span>
+                              {/* Caret Icon */}
+                              <svg 
+                                className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'transform rotate-180' : ''}`}
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round" 
+                                  strokeWidth="2" 
+                                  d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
+                            </div>
                           </div>
-                          <span className="text-xs text-gray-400 mr-1">
-                            screen reader accessibility
-                          </span>
-                        </div>
-                      </div>
+                        </button>
 
-                      {/* Content Section */}
-                      <div className="p-4">
-                        <div className="space-y-6 text-left">
+                        {/* Expandable Content Section */}
+                        {isExpanded && (
+                          <div className="p-4">
+                            <div className="space-y-6 text-left">
                           <div>
                             <span className="text-base font-medium text-gray-700">Issue: </span>
                             <div className="text-base text-gray-600 mt-1" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}>
@@ -395,8 +429,10 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                           )}
                         </div>
                       </div>
+                    )}
                     </div>
-                  ))
+                  );
+                })
                 ) : (
                   <div className="text-center py-8">
                     <span className="text-gray-400 text-4xl">🔍</span>
