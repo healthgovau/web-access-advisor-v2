@@ -239,8 +239,23 @@ This analysis targets compatibility with leading screen reader technologies incl
 **ANALYSIS METHODOLOGY:**
 You are analyzing HTML markup and Axe accessibility test results to assess screen reader compatibility. You do NOT have access to actual screen reader testing, user behavior, or live interaction data. Your analysis must be based ENTIRELY on code structure, semantic markup, ARIA implementation, and static accessibility patterns that can be determined from HTML snapshots and Axe analysis summaries.
 
-**PRIMARY OBJECTIVE: COMPREHENSIVE SCREEN READER CODE ANALYSIS**
-Identify and address all barriers in the code that prevent the entire page — including structure, content, and interactive elements — from being fully accessible to screen reader users. Focus on ARIA usage, semantic HTML, and best practices for assistive technology support, based solely on analysis of the provided code and accessibility reports.
+**PRIMARY OBJECTIVE: STATIC COMPONENT ACCESSIBILITY ANALYSIS**
+Focus EXCLUSIVELY on static component-level accessibility issues that can be identified from individual DOM snapshots. This analysis is designed to identify:
+- Missing or incorrect ARIA attributes on individual components
+- Semantic HTML structure issues within components  
+- Form labeling and control association problems
+- Color contrast and visual accessibility defects
+- Missing landmarks and heading structure issues
+- Individual interactive element accessibility problems
+
+**CRITICAL SCOPE DISTINCTION:**
+This function analyzes STATIC COMPONENT ISSUES only. Do NOT analyze:
+- Multi-step user flows or navigation patterns (handled by separate flow analysis)
+- Complex interaction sequences or state changes
+- Cross-page accessibility consistency
+- Dynamic content updates or live regions (unless clearly evident in static snapshot)
+
+Identify and address barriers in individual components and page structure that prevent screen reader users from accessing content and functionality, based solely on analysis of the provided code and accessibility reports.
 
 **Context:**
 - URL: ${context.url}
@@ -523,7 +538,7 @@ Respond with a JSON object with this exact structure:
   "summary": "Brief overview of accessibility status",
   "components": [
     {
-      "componentName": "Specific component name (e.g., Search Button, Navigation Menu)",
+      "componentName": "Use exact axe-core violation titles when the issue matches a known axe rule (e.g., 'Page must have one main landmark', 'Elements must have sufficient color contrast', 'Form elements must have labels'). For non-axe issues, use specific component names that maintain consistency with similar accessibility issue types.",
       "issue": "Clear description of the accessibility issue - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
       "explanation": "Detailed explanation of why this is a problem - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
       "relevantHtml": "EXACT HTML element(s) with the accessibility issue - show ONLY the specific problematic element, not <html>, <body>, or unrelated parent containers",
@@ -729,7 +744,7 @@ Respond with a JSON object with this exact structure:
   "summary": "Overview of accessibility findings across the interaction flow",
   "components": [
     {
-      "componentName": "Specific component name (e.g., Search Button, Navigation Menu)",      
+      "componentName": "Use exact axe-core violation titles when the issue matches a known axe rule (e.g., 'Page must have one main landmark', 'Elements must have sufficient color contrast', 'Form elements must have labels'). For non-axe issues, use specific component names that maintain consistency with similar accessibility issue types.",      
       "issue": "Clear description of the accessibility issue - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
       "explanation": "Detailed explanation of why this is a problem - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
       "relevantHtml": "EXACT HTML element(s) with the accessibility issue - show ONLY the specific problematic element, not <html>, <body>, or unrelated parent containers",
