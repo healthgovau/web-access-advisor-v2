@@ -287,7 +287,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
                   filteredComponents.map((component, index) => (
                     <div key={index} className="bg-white border border-gray-200 rounded overflow-hidden">
                       {/* Header Section with Subtle Background */}
-                      <div className="bg-gray-100/50 border-b border-gray-200 px-4 py-4">
+                      <div className="bg-gray-100 border-b border-gray-200 px-4 py-4">
                         <div className="flex items-start justify-between mb-2">
                           <h4 className="text-base font-medium text-gray-900">{component.componentName}</h4>
                           <div className="ml-4 text-right">
