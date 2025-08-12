@@ -16,7 +16,7 @@ export class GeminiService {
   "summary": "Brief overview of accessibility status",
   "components": [
     {
-      "componentName": "Use the axe-core naming convention for headings wherever possible. Example headings: ARIA progressbar nodes must have an accessible name; Form elements must have labels; Elements must meet minimum color contrast ratio thresholds; <html> element must have a lang attribute; Heading levels should only increase by one; All page content should be contained by landmarks. This format states both the element and the requirement/problem in one line, making the issue clear and actionable.",
+      "componentName": "⚠️ CRITICAL: Use EXACT axe violation text from the JSON data. Look for 'id' or 'help' field and copy exactly. NEVER use 'Ensure...' phrasing. Examples of CORRECT titles: 'Elements must only use supported ARIA attributes', 'Certain ARIA roles must be contained by particular parents', 'ARIA attributes must conform to valid values', 'Form elements must have labels', 'ARIA input fields must have an accessible name', 'Elements must meet minimum color contrast ratio thresholds', '<html> element must have a lang attribute', 'All page content should be contained by landmarks'. Copy the axe violation text EXACTLY - do not rephrase.",
       "issue": "Clear description of the accessibility issue - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
       "explanation": "Detailed explanation of why this is a problem - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
       "relevantHtml": "EXACT HTML element(s) with the accessibility issue - show ONLY the specific problematic element, not <html>, <body>, or unrelated parent containers",
@@ -71,20 +71,50 @@ This analysis targets compatibility with leading screen reader technologies incl
 **ANALYSIS METHODOLOGY:**
 You are analyzing HTML markup and Axe accessibility test results to assess screen reader compatibility. You do NOT have access to actual screen reader testing, user behavior, or live interaction data. Your analysis must be based ENTIRELY on code structure, semantic markup, ARIA implementation, and static accessibility patterns that can be determined from HTML snapshots and Axe analysis summaries.`;
 
-  private static readonly SHARED_CRITICAL_INSTRUCTIONS = `**Important**: Report ONLY components with identified screen reader accessibility issues. Do not report on components where no accessibility issue was found. Focus on actionable insights and practical ARIA fixes that directly improve screen reader compatibility and assistive technology interaction.
+  private static readonly SHARED_CRITICAL_INSTRUCTIONS = `**CRITICAL INSTRUCTION - MUST FOLLOW EXACTLY:**
 
-**CRITICAL REQUIREMENTS:**
-1. **componentName Field Control**: The componentName field DIRECTLY controls the issue title in the UI. When matching axe violations, use EXACT axe violation descriptions as componentName values. For custom issues, create concise, descriptive titles that clearly communicate the specific accessibility problem.
+**COMPONENT NAME REQUIREMENT**: The componentName field determines the issue title displayed in the UI. 
 
-2. **Title Consistency Priority**: Maintain consistency between screen reader issue titles and axe violation titles when applicable. Use exact axe violation descriptions for the componentName field when the issue corresponds to an axe-core violation.
+**MANDATORY RULE**: When an axe-core violation is present in the provided axe results, you MUST use the EXACT axe violation text as the componentName. DO NOT MODIFY OR REPHRASE IT.
 
-3. **Comprehensive Analysis**: Analyze ALL provided content thoroughly. Do not ignore or skip any sections of HTML, CSS, or accessibility data provided in the input.
+**WRONG vs RIGHT Examples:**
+❌ WRONG: "Ensure an element's role supports its ARIA attributes"
+✅ RIGHT: "Elements must only use supported ARIA attributes"
 
-4. **Evidence-Based Assessment**: Base all conclusions strictly on the provided HTML snapshot and Axe accessibility report data. Do not make assumptions about functionality not evident in the static analysis.
+❌ WRONG: "Ensure elements with an ARIA role that require parent roles are contained by them"  
+✅ RIGHT: "Certain ARIA roles must be contained by particular parents"
 
-5. **Zero False Positives**: Only report issues that can be definitively identified from the provided HTML and Axe data. When uncertain, err on the side of caution and do not report the issue.
+❌ WRONG: "Ensure all ARIA attributes have valid values"
+✅ RIGHT: "ARIA attributes must conform to valid values"
 
-6. **Complete Context Analysis**: Consider the full HTML structure, CSS styling, and page context when evaluating accessibility compliance. Individual elements must be assessed within their complete DOM context.
+❌ WRONG: "Ensure every ARIA input field has an accessible name"
+✅ RIGHT: "ARIA input fields must have an accessible name"
+
+❌ WRONG: "Ensure every ARIA progressbar node has an accessible name"
+✅ RIGHT: "ARIA progressbar nodes must have an accessible name"
+
+❌ WRONG: "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
+✅ RIGHT: "Elements must meet minimum color contrast ratio thresholds"
+
+❌ WRONG: "Ensure the order of headings is semantically correct"
+✅ RIGHT: "Heading levels should only increase by one"
+
+❌ WRONG: "Ensure every HTML document has a lang attribute"
+✅ RIGHT: "<html> element must have a lang attribute"
+
+❌ WRONG: "Ensure every form element has a label"
+✅ RIGHT: "Form elements must have labels"
+
+❌ WRONG: "Ensure all page content is contained by landmarks"
+✅ RIGHT: "All page content should be contained by landmarks"
+
+**IMPLEMENTATION RULE**: Look at the axe results JSON data. Find the violation's "id" or "help" field. Copy that text EXACTLY as the componentName. Never rephrase it.
+
+**Additional Requirements:**
+- Report ONLY components with identified screen reader accessibility issues
+- Base conclusions strictly on provided HTML snapshot and Axe accessibility report data
+- Do not make assumptions about functionality not evident in static analysis
+- Consider full HTML structure, CSS styling, and page context when evaluating accessibility
 `;
 
   private static readonly SHARED_COMPONENT_ANALYSIS_INSTRUCTIONS = `
