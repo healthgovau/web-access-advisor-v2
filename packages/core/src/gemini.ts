@@ -16,7 +16,7 @@ export class GeminiService {
   "summary": "Brief overview of accessibility status",
   "components": [
     {
-      "componentName": "⚠️ CRITICAL: Use EXACT axe violation text from the JSON data. Look for 'id' or 'help' field and copy exactly. NEVER use 'Ensure...' phrasing. Examples of CORRECT titles: 'Elements must only use supported ARIA attributes', 'Certain ARIA roles must be contained by particular parents', 'ARIA attributes must conform to valid values', 'Form elements must have labels', 'ARIA input fields must have an accessible name', 'Elements must meet minimum color contrast ratio thresholds', '<html> element must have a lang attribute', 'All page content should be contained by landmarks'. Copy the axe violation text EXACTLY - do not rephrase.",
+      "componentName": "CRITICAL: NEVER use 'Ensure...' format. MUST use axe-core violation title format. FORBIDDEN: 'Ensure an element's...', 'Ensure every...', 'Ensure all...', 'Ensure that...', 'Ensure the...'. REQUIRED EXAMPLES: 'Elements must only use supported ARIA attributes', 'Form elements must have labels', 'ARIA attributes must conform to valid values', 'ARIA input fields must have an accessible name', 'Elements must meet minimum color contrast ratio thresholds', 'Certain ARIA roles must be contained by particular parents', 'Heading levels should only increase by one', '<html> element must have a lang attribute', 'All page content should be contained by landmarks'. Pattern: [Element Type] + [must/should/must not] + [specific requirement]",
       "issue": "Clear description of the accessibility issue - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
       "explanation": "Detailed explanation of why this is a problem - ALWAYS wrap HTML element names in backticks (e.g., for main element, h1 element, button element)",
       "relevantHtml": "EXACT HTML element(s) with the accessibility issue - show ONLY the specific problematic element, not <html>, <body>, or unrelated parent containers",
@@ -75,46 +75,40 @@ You are analyzing HTML markup and Axe accessibility test results to assess scree
 
 **COMPONENT NAME REQUIREMENT**: The componentName field determines the issue title displayed in the UI. 
 
-**MANDATORY RULE**: When an axe-core violation is present in the provided axe results, you MUST use the EXACT axe violation text as the componentName. DO NOT MODIFY OR REPHRASE IT.
+**MANDATORY RULE**: Use axe-core violation title format. NEVER use "Ensure..." phrasing.
 
-**WRONG vs RIGHT Examples:**
-❌ WRONG: "Ensure an element's role supports its ARIA attributes"
-✅ RIGHT: "Elements must only use supported ARIA attributes"
+**FORBIDDEN FORMATS - DO NOT USE:**
+❌ NEVER start with "Ensure"
+❌ NEVER use "Ensure an element's..."
+❌ NEVER use "Ensure every..."
+❌ NEVER use "Ensure all..."
+❌ NEVER use "Ensure that..."
+❌ NEVER use "Ensure the..."
 
-❌ WRONG: "Ensure elements with an ARIA role that require parent roles are contained by them"  
-✅ RIGHT: "Certain ARIA roles must be contained by particular parents"
+**REQUIRED FORMAT - ALWAYS USE:**
+✅ Start with element type: "Elements must...", "Form elements must...", "ARIA attributes must..."
+✅ Use must/should/must not: "Elements must only use...", "Heading levels should only..."
+✅ State the requirement directly: "...have labels", "...meet minimum contrast..."
 
-❌ WRONG: "Ensure all ARIA attributes have valid values"
-✅ RIGHT: "ARIA attributes must conform to valid values"
+**EXACT PATTERNS TO FOLLOW:**
+✅ "Elements must only use supported ARIA attributes" (NOT "Ensure an element's role supports its ARIA attributes")
+✅ "Certain ARIA roles must be contained by particular parents" (NOT "Ensure elements with an ARIA role that require parent roles are contained by them")
+✅ "ARIA attributes must conform to valid values" (NOT "Ensure all ARIA attributes have valid values")
+✅ "ARIA input fields must have an accessible name" (NOT "Ensure every ARIA input field has an accessible name")
+✅ "ARIA progressbar nodes must have an accessible name" (NOT "Ensure every ARIA progressbar node has an accessible name")
+✅ "Elements must meet minimum color contrast ratio thresholds" (NOT "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds")
+✅ "Heading levels should only increase by one" (NOT "Ensure the order of headings is semantically correct")
+✅ "<html> element must have a lang attribute" (NOT "Ensure every HTML document has a lang attribute")
+✅ "Form elements must have labels" (NOT "Ensure every form element has a label")
+✅ "All page content should be contained by landmarks" (NOT "Ensure all page content is contained by landmarks")
 
-❌ WRONG: "Ensure every ARIA input field has an accessible name"
-✅ RIGHT: "ARIA input fields must have an accessible name"
-
-❌ WRONG: "Ensure every ARIA progressbar node has an accessible name"
-✅ RIGHT: "ARIA progressbar nodes must have an accessible name"
-
-❌ WRONG: "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds"
-✅ RIGHT: "Elements must meet minimum color contrast ratio thresholds"
-
-❌ WRONG: "Ensure the order of headings is semantically correct"
-✅ RIGHT: "Heading levels should only increase by one"
-
-❌ WRONG: "Ensure every HTML document has a lang attribute"
-✅ RIGHT: "<html> element must have a lang attribute"
-
-❌ WRONG: "Ensure every form element has a label"
-✅ RIGHT: "Form elements must have labels"
-
-❌ WRONG: "Ensure all page content is contained by landmarks"
-✅ RIGHT: "All page content should be contained by landmarks"
-
-**IMPLEMENTATION RULE**: Look at the axe results JSON data. Find the violation's "id" or "help" field. Copy that text EXACTLY as the componentName. Never rephrase it.
+**SCHEMA PATTERN**: [Element/Component Type] + [must/should/must not] + [specific requirement]
 
 **Additional Requirements:**
 - Report ONLY components with identified screen reader accessibility issues
-- Base conclusions strictly on provided HTML snapshot and Axe accessibility report data
-- Do not make assumptions about functionality not evident in static analysis
-- Consider full HTML structure, CSS styling, and page context when evaluating accessibility
+- Base conclusions strictly on provided HTML snapshot and static analysis capabilities
+- Do not make assumptions about functionality not evident in markup analysis
+- Consider full HTML structure, semantic patterns, and accessibility best practices
 `;
 
   private static readonly SHARED_COMPONENT_ANALYSIS_INSTRUCTIONS = `
