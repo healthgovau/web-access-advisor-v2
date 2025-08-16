@@ -157,56 +157,104 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest, screenRea
 
   // Create a more precise duplicate detection system
   // Match specific issue types rather than broad WCAG categories
+  // Create a set of screen reader issue fingerprints using WCAG + element selector combinations
   const screenReaderIssueFingerprints = new Set(
-    screenReaderComponents.map(component => {
-      // Create a specific fingerprint based on the exact issue type
-      const componentName = component.componentName.toLowerCase();
-      const issue = component.issue.toLowerCase();
+    screenReaderComponents.flatMap(component => {
+      const selector = component.selector;
+      let wcagRule = component.wcagRule;
       
-      console.log('🔍 Analyzing screen reader component:', { componentName, issue });
-      
-      // Only create fingerprints for very specific, unambiguous matches
-      if (componentName.includes('main landmark') || issue.includes('main landmark')) {
-        console.log('✅ Matched main landmark issue');
-        return 'landmark-one-main-missing';
-      }
-      if (componentName.includes('h1') || issue.includes('h1')) {
-        console.log('✅ Matched H1 heading issue');
-        return 'page-has-heading-one-missing';
+      // Only create fingerprint if we have both WCAG rule and selector
+      if (!wcagRule || !selector) {
+        console.log('⚠️ Skipping component - missing wcagRule or selector:', { wcagRule, selector });
+        return [];
       }
       
-      // Don't try to match broader categories like "content not in landmarks" 
-      // or "color contrast" as these can have multiple instances
-      console.log('❌ No specific match found for this component');
+      // Extract just the WCAG number from the full title (e.g., "4.1.2 Name, Role, Value" -> "4.1.2")
+      const wcagNumber = wcagRule.split(' ')[0];
       
-      return null; // Don't match anything else to avoid false positives
-    }).filter(Boolean)
+      // Create fingerprint combining WCAG number with element selector
+      const fingerprint = `${wcagNumber}::${selector}`;
+      console.log('🔍 Created screen reader fingerprint:', fingerprint);
+      
+      return [fingerprint];
+    })
   );
+
+  console.log('🔍 Total screen reader fingerprints created:', screenReaderIssueFingerprints.size);
 
   // Function to check if an axe violation is a duplicate of a screen reader issue
   const isDuplicateViolation = (violation: AxeViolation): boolean => {
-    // Only match very specific, unambiguous cases to avoid hiding legitimate issues
-    let fingerprint = null;
+    // Extract WCAG rule from violation (try different possible formats)
+    let wcagRule = null;
     
-    if (violation.id === 'landmark-one-main') {
-      fingerprint = 'landmark-one-main-missing';
-    } else if (violation.id === 'page-has-heading-one') {
-      fingerprint = 'page-has-heading-one-missing';
+    if (violation.wcagReference?.guideline) {
+      wcagRule = violation.wcagReference.guideline;
+    } else if (violation.tags) {
+      // Look for WCAG tags in format like "wcag142" or "wcag241" 
+      const wcagTag = violation.tags.find(tag => tag.startsWith('wcag') && tag.match(/wcag\d+/));
+      if (wcagTag) {
+        // Convert "wcag142" to "1.4.2" format
+        const numbers = wcagTag.replace('wcag', '');
+        if (numbers.length >= 3) {
+          wcagRule = `${numbers[0]}.${numbers[1]}.${numbers.slice(2)}`;
+        }
+      }
     }
     
-    const isDupe = fingerprint && screenReaderIssueFingerprints.has(fingerprint as any);
-    
-    if (isDupe) {
-      console.log(`🔍 Found duplicate: ${violation.id} matches specific screen reader analysis`);
+    if (!wcagRule) {
+      console.log('⚠️ No WCAG rule found for violation:', violation.id);
+      return false;
     }
     
-    return isDupe || false;
+    // Check each node's selector against screen reader fingerprints
+    const isDupe = violation.nodes?.some(node => {
+      // node.target is an array of selectors, try the first one
+      const selector = node.target?.[0];
+      if (!selector) return false;
+      
+      const fingerprint = `${wcagRule}::${selector}`;
+      const match = screenReaderIssueFingerprints.has(fingerprint);
+      
+      if (match) {
+        console.log(`🎯 Found exact duplicate: ${violation.id} (${fingerprint}) matches screen reader analysis`);
+      }
+      
+      return match;
+    }) || false;
+    
+    return isDupe;
   };
 
   // Debug logging
   console.log('🔍 Screen reader issue fingerprints:', Array.from(screenReaderIssueFingerprints));
-  console.log('🔍 Available axe violations:', axeResults.map(v => v.id));
+  console.log('🔍 Available axe violations:', axeResults.map(v => ({ id: v.id, wcagRef: v.wcagReference, tags: v.tags })));
   console.log('🔍 showDuplicates state:', showDuplicates);
+
+  // Test: Let's see what fingerprints axe violations would create
+  axeResults.forEach(violation => {
+    let wcagRule = null;
+    
+    if (violation.wcagReference?.guideline) {
+      wcagRule = violation.wcagReference.guideline;
+    } else if (violation.tags) {
+      const wcagTag = violation.tags.find(tag => tag.startsWith('wcag') && tag.match(/wcag\d+/));
+      if (wcagTag) {
+        const numbers = wcagTag.replace('wcag', '');
+        if (numbers.length >= 3) {
+          wcagRule = `${numbers[0]}.${numbers[1]}.${numbers.slice(2)}`;
+        }
+      }
+    }
+    
+    violation.nodes?.forEach(node => {
+      const selector = node.target?.[0];
+      if (wcagRule && selector) {
+        const fingerprint = `${wcagRule}::${selector}`;
+        console.log(`🧪 Axe violation ${violation.id} would create fingerprint:`, fingerprint);
+        console.log(`🧪 Does it match screen reader?`, screenReaderIssueFingerprints.has(fingerprint));
+      }
+    });
+  });
 
   // Filter violations based on duplicate status and user preference
   const getFilteredViolations = () => {
@@ -224,14 +272,16 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest, screenRea
       return baseSeverityFilter;
     } else {
       // Hide duplicates when toggle is off (default)
+      console.log('🔍 Filtering duplicates (toggle OFF) - testing each violation:');
       const withoutDuplicates = baseSeverityFilter.filter(violation => {
         const isDupe = isDuplicateViolation(violation);
+        console.log(`🔍 Violation ${violation.id} - isDuplicate: ${isDupe}`);
         if (isDupe) {
-          console.log('🔍 Filtering out duplicate:', violation.id);
+          console.log('✂️ FILTERING OUT duplicate:', violation.id);
         }
         return !isDupe;
       });
-      console.log('🔍 After filtering duplicates:', withoutDuplicates.length, 'remaining');
+      console.log('🔍 After filtering duplicates:', withoutDuplicates.length, 'remaining out of', baseSeverityFilter.length);
       return withoutDuplicates;
     }
   };
@@ -601,12 +651,39 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest, screenRea
               );
             })
             ) : (
-              <div className="text-center py-8">
-                <span className="text-gray-400 text-4xl">🔍</span>
-                <h5 className="text-gray-600 font-medium mt-2">No Issues Match Current Filter</h5>
-                <p className="text-gray-500 text-sm mt-1">
-                  Try adjusting your severity filter selections above.                </p>
-              </div>
+              // Check if we have issues but they're all hidden as duplicates
+              (() => {
+                const baseSeverityFilter = axeResults.filter(violation => 
+                  severityFilters[violation.impact] && 
+                  !isAuthViolation(violation)
+                );
+                
+                const allAreDuplicates = baseSeverityFilter.length > 0 && 
+                  !showDuplicates && 
+                  baseSeverityFilter.every(violation => isDuplicateViolation(violation));
+                
+                if (allAreDuplicates) {
+                  return (
+                    <div className="text-center py-8">
+                      <span className="text-gray-400 text-4xl">✨</span>
+                      <h5 className="text-gray-600 font-medium mt-2">All Issues Hidden as Duplicates</h5>
+                      <p className="text-gray-500 text-sm mt-1">
+                        These issues were also found in the screen reader analysis. Toggle "Show" above to see them.
+                      </p>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div className="text-center py-8">
+                      <span className="text-gray-400 text-4xl">🔍</span>
+                      <h5 className="text-gray-600 font-medium mt-2">No Issues Match Current Filter</h5>
+                      <p className="text-gray-500 text-sm mt-1">
+                        Try adjusting your severity filter selections above.
+                      </p>
+                    </div>
+                  );
+                }
+              })()
             )}
           </div>
           
