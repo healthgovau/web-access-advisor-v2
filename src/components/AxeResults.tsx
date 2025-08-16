@@ -4,13 +4,14 @@
 
 import React, { useState } from 'react';
 import { html as beautifyHtml } from 'js-beautify';
-import type { AxeViolation, SessionManifest } from '../types';
+import type { AxeViolation, SessionManifest, ComponentAccessibilityIssue } from '../types';
 import BackToTopButton from './BackToTopButton';
 import { isAuthUrl } from '../utils/authDetection';
 
 interface AxeResultsProps {
   axeResults: AxeViolation[];
   manifest?: SessionManifest;
+  screenReaderComponents?: ComponentAccessibilityIssue[];
 }
 
 /**
@@ -143,15 +144,97 @@ interface AxeResultsProps {
 
 
 
-const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
+const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest, screenReaderComponents = [] }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+  const [showDuplicates, setShowDuplicates] = useState(false); // Default to hiding duplicates
   const [severityFilters, setSeverityFilters] = useState<Record<string, boolean>>({
     critical: true,
     serious: true,
     moderate: true,
     minor: true
   });
+
+  // Create a more precise duplicate detection system
+  // Match specific issue types rather than broad WCAG categories
+  const screenReaderIssueFingerprints = new Set(
+    screenReaderComponents.map(component => {
+      // Create a specific fingerprint based on the exact issue type
+      const componentName = component.componentName.toLowerCase();
+      const issue = component.issue.toLowerCase();
+      
+      console.log('🔍 Analyzing screen reader component:', { componentName, issue });
+      
+      // Only create fingerprints for very specific, unambiguous matches
+      if (componentName.includes('main landmark') || issue.includes('main landmark')) {
+        console.log('✅ Matched main landmark issue');
+        return 'landmark-one-main-missing';
+      }
+      if (componentName.includes('h1') || issue.includes('h1')) {
+        console.log('✅ Matched H1 heading issue');
+        return 'page-has-heading-one-missing';
+      }
+      
+      // Don't try to match broader categories like "content not in landmarks" 
+      // or "color contrast" as these can have multiple instances
+      console.log('❌ No specific match found for this component');
+      
+      return null; // Don't match anything else to avoid false positives
+    }).filter(Boolean)
+  );
+
+  // Function to check if an axe violation is a duplicate of a screen reader issue
+  const isDuplicateViolation = (violation: AxeViolation): boolean => {
+    // Only match very specific, unambiguous cases to avoid hiding legitimate issues
+    let fingerprint = null;
+    
+    if (violation.id === 'landmark-one-main') {
+      fingerprint = 'landmark-one-main-missing';
+    } else if (violation.id === 'page-has-heading-one') {
+      fingerprint = 'page-has-heading-one-missing';
+    }
+    
+    const isDupe = fingerprint && screenReaderIssueFingerprints.has(fingerprint as any);
+    
+    if (isDupe) {
+      console.log(`🔍 Found duplicate: ${violation.id} matches specific screen reader analysis`);
+    }
+    
+    return isDupe || false;
+  };
+
+  // Debug logging
+  console.log('🔍 Screen reader issue fingerprints:', Array.from(screenReaderIssueFingerprints));
+  console.log('🔍 Available axe violations:', axeResults.map(v => v.id));
+  console.log('🔍 showDuplicates state:', showDuplicates);
+
+  // Filter violations based on duplicate status and user preference
+  const getFilteredViolations = () => {
+    const baseSeverityFilter = axeResults.filter(violation => 
+      severityFilters[violation.impact] && 
+      !isAuthViolation(violation)
+    );
+
+    console.log('🔍 Base filtered violations (after severity):', baseSeverityFilter.length);
+    console.log('🔍 showDuplicates state:', showDuplicates);
+
+    if (showDuplicates) {
+      // Show all violations when toggle is on
+      console.log('🔍 Showing all violations (toggle ON)');
+      return baseSeverityFilter;
+    } else {
+      // Hide duplicates when toggle is off (default)
+      const withoutDuplicates = baseSeverityFilter.filter(violation => {
+        const isDupe = isDuplicateViolation(violation);
+        if (isDupe) {
+          console.log('🔍 Filtering out duplicate:', violation.id);
+        }
+        return !isDupe;
+      });
+      console.log('🔍 After filtering duplicates:', withoutDuplicates.length, 'remaining');
+      return withoutDuplicates;
+    }
+  };
 
   // Toggle individual item expansion
   const toggleItemExpanded = (itemId: string) => {
@@ -179,9 +262,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
   };
 
   // Filter violations by severity and exclude auth steps, then sort by step (capture order)
-  const filteredViolations = axeResults.filter(violation => 
-    severityFilters[violation.impact] && !isAuthViolation(violation)
-  ).sort((a, b) => {
+  const filteredViolations = getFilteredViolations().sort((a, b) => {
     // Sort by step in ascending order (capture order), fallback to 0 if missing
     const stepA = typeof a.step === 'number' ? a.step : 0;
     const stepB = typeof b.step === 'number' ? b.step : 0;
@@ -265,9 +346,8 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
         <div className="p-3 space-y-3">
           {/* Issue Count Summary - matching main analysis section styling */}
           {(() => {
-            // Calculate counts from filtered violations only (excluding auth steps)
-            const nonAuthViolations = axeResults.filter(violation => !isAuthViolation(violation));
-            const counts = nonAuthViolations.reduce((acc, violation) => {
+            // Calculate counts from filtered violations (includes deduplication and severity filters)
+            const counts = filteredViolations.reduce((acc, violation) => {
               acc[violation.impact] = (acc[violation.impact] || 0) + 1;
               return acc;
             }, {} as Record<string, number>);
@@ -306,7 +386,29 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
                     ))}
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 text-center mb-6">Click boxes above to toggle filter</p>
+                <p className="text-xs text-gray-500 text-center mb-8">Click boxes above to toggle filter</p>
+
+                {/* Duplicate Issues Toggle */}
+                {screenReaderIssueFingerprints.size > 0 && (
+                  <div className="flex justify-center mb-8 mt-4">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showDuplicates}
+                        onChange={(e) => setShowDuplicates(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <div className="w-11 h-6 bg-blue-600 rounded-full transition-all">
+                        <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${
+                          showDuplicates ? 'translate-x-full' : 'translate-x-0'
+                        }`}></div>
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-700">
+                        {showDuplicates ? 'Hide' : 'Show'} duplicates from screen reader analysis
+                      </span>
+                    </label>
+                  </div>
+                )}
               </>
             );
           })()}          {/* Violations List - matching main analysis section styling */}
@@ -334,6 +436,13 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
                           }`}>
                             {violation.impact.toUpperCase()} IMPACT
                           </span>
+                          
+                          {/* Duplicate Badge */}
+                          {isDuplicateViolation(violation) && (
+                            <span className="ml-2 text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-300">
+                              DUPLICATE
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center justify-between text-sm text-gray-500">

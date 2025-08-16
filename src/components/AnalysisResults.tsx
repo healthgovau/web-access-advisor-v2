@@ -502,7 +502,11 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
       
       {/* Automated Accessibility Scan Results */}
       {analysisData.axeResults && (
-        <AxeResults axeResults={analysisData.axeResults} manifest={analysisData.manifest} />
+        <AxeResults 
+          axeResults={analysisData.axeResults} 
+          manifest={analysisData.manifest}
+          screenReaderComponents={analysisData.analysis?.components || []}
+        />
       )}
 
       {/* DEBUG: Log screen reader issues and manifest stepDetails */}
