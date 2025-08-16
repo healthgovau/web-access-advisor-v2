@@ -409,7 +409,7 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
                             className="text-base text-info hover:text-matte-blue underline"
                             style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}
                           >
-                            WCAG {violation.wcagReference.guideline} {violation.wcagReference.level} - {violation.wcagReference.title}
+                            {violation.wcagReference.guideline} {violation.wcagReference.level} - {violation.wcagReference.title}
                           </a>
                         </div>
                       ) : null}

@@ -732,7 +732,20 @@ export class AccessibilityAnalyzer {
         
         // Add WCAG data if present
         if (enhanced.wcag) {
-          violation.wcagReference = enhanced.wcag;
+          console.log(`🔍 WCAG Debug - Original guideline: "${enhanced.wcag.guideline}"`);
+          
+          // Clean up guideline format - remove "WCAG" prefix if LLM added it despite instructions
+          const cleanedWcag = { ...enhanced.wcag };
+          if (cleanedWcag.guideline && typeof cleanedWcag.guideline === 'string') {
+            const originalGuideline = cleanedWcag.guideline;
+            cleanedWcag.guideline = cleanedWcag.guideline.replace(/^WCAG\s+/, '');
+            
+            if (originalGuideline !== cleanedWcag.guideline) {
+              console.log(`🔧 WCAG Fixed - Changed "${originalGuideline}" to "${cleanedWcag.guideline}"`);
+            }
+          }
+          
+          violation.wcagReference = cleanedWcag;
         }
       } else {
         console.log(`⚠️ No enhanced content found for ${violation.id} (${enhancedAxeViolations.length} enhanced violations available)`);

@@ -34,7 +34,7 @@ export class GeminiService {
       "explanation": "User-impact focused explanation of how this affects people with disabilities - focus on the actual barriers created",
       "recommendation": "Clear, actionable guidance on how to fix this specific axe violation - end with 'Reference: [helpUrl]'",
       "wcag": {
-        "guideline": "Guideline number only (e.g., 2.4.1, 4.1.2) - do NOT include 'WCAG' prefix",
+        "guideline": "Guideline number only (e.g., 2.4.1, 4.1.2) - do NOT include 'WCAG' prefix - WRONG: 'WCAG 2.4.6', CORRECT: '2.4.6'",
         "level": "Conformance level (A, AA, or AAA)",
         "title": "Official WCAG guideline title (e.g., Bypass Blocks, Name Role Value)",
         "url": "Complete WCAG Understanding URL (e.g., https://www.w3.org/WAI/WCAG21/Understanding/bypass-blocks.html)"
@@ -182,6 +182,14 @@ The "enhancedAxeViolations" field is MANDATORY and must contain enhanced explana
 - color-contrast (insufficient contrast)
 - label (missing form labels)
 - And any other axe violations you identify
+
+**CRITICAL: WCAG GUIDELINE FORMAT**
+In the wcag.guideline field, use ONLY the number without "WCAG" prefix:
+- WRONG: "WCAG 2.4.6" 
+- CORRECT: "2.4.6"
+- WRONG: "WCAG 1.4.3"
+- CORRECT: "1.4.3"
+The UI will add the "WCAG" prefix automatically.
 
 **Output Format:**
 Respond with a JSON object with this exact structure:
