@@ -638,6 +638,19 @@ Examine ALL ARIA attributes for proper value validation:
 - **Boolean ARIA Values**: Verify true/false values are properly formatted
   - WRONG: aria-expanded="expanded" (should be aria-expanded="true")
   - WRONG: aria-hidden="false" on focusable elements (should be removed entirely)
+- **CRITICAL: aria-current Value Validation**: Only specific values are allowed
+  - WRONG: aria-current="yes" (should be aria-current="page" for current page)
+  - WRONG: aria-current="active" (should be aria-current="page" or omit attribute)
+  - WRONG: aria-current="true" in navigation (should be aria-current="page")
+  - VALID VALUES ONLY: "page", "step", "location", "date", "time", "true", "false"
+- **CRITICAL: aria-selected Single-Select Validation**: Check for multiple selections in single-select contexts
+  - WRONG: Multiple options with aria-selected="true" within same listbox/combobox
+  - CHECK: Count aria-selected="true" instances within same parent container
+  - RULE: Only ONE option should have aria-selected="true" in single-select listbox
+- **CRITICAL: Hidden Element References**: Check aria-describedby pointing to hidden elements
+  - WRONG: aria-describedby="help-text" where help-text has style="display: none"
+  - WRONG: aria-describedby pointing to elements with visibility: hidden or hidden attribute
+  - CHECK: Verify referenced elements are visible and accessible to screen readers
 - **ID Reference Validation**: Check aria-labelledby, aria-describedby, aria-controls point to valid IDs
   - WRONG: aria-labelledby="non-existent-id"
   - WRONG: aria-controls="menu" when no element has id="menu"
@@ -795,12 +808,17 @@ Based on the above comprehensive framework, identify ALL accessibility issues th
 **ENHANCED STATIC DETECTION PRIORITIES:**
 Pay special attention to these commonly missed static accessibility issues:
 1. **ARIA Value Validation**: Scrutinize all aria-valuenow, aria-valuemin, aria-valuemax for numeric correctness and logical relationships
-2. **Semantic Element Misuse**: Check for address elements containing non-contact content, headings used for styling
-3. **Redundant Role Assignments**: Identify button elements with role="button" and other semantic conflicts
-4. **Inappropriate State Attributes**: Find aria-expanded on non-collapsible content, aria-selected on non-selectable elements
-5. **Incomplete Widget Patterns**: Verify progressbar, combobox, tab patterns have all required ARIA attributes
-6. **Missing Accessible Names**: Ensure all interactive elements and form controls have proper labels or aria-label
-7. **Form Association Issues**: Check proper label-input relationships, fieldset-legend groupings, error message associations
+2. **CRITICAL aria-current Validation**: Check for invalid values like "yes", "active", "true" (should be "page", "step", "location", "date", "time")
+3. **CRITICAL Multiple aria-selected Detection**: Find multiple aria-selected="true" in single-select listbox/combobox containers
+4. **CRITICAL Hidden Element References**: Detect aria-describedby pointing to display:none elements
+5. **Semantic Element Misuse**: Check for address elements containing non-contact content, headings used for styling
+6. **Redundant Role Assignments**: Identify button elements with role="button" and other semantic conflicts
+7. **Inappropriate State Attributes**: Find aria-expanded on non-collapsible content, aria-selected on non-selectable elements
+8. **Incomplete Widget Patterns**: Verify progressbar, combobox, tab patterns have all required ARIA attributes
+9. **Missing Accessible Names**: Ensure all interactive elements and form controls have proper labels or aria-label
+10. **Form Association Issues**: Check proper label-input relationships, fieldset-legend groupings, error message associations
+11. **Document Structure Issues**: Multiple h1 elements, duplicate IDs that break screen reader navigation
+12. **Form Accessibility Patterns**: Placeholder-only labels, missing required indicators, unassociated validation errors
 
 **ANALYSIS PRIORITY:**
 1. **Critical Issues** (Block task completion): Missing form labels, keyboard traps, missing focus management, broken ARIA relationships, missing required landmarks
@@ -847,6 +865,16 @@ Apply these targeted checks to catch commonly missed static issues:
 - Check aria-expanded, aria-selected, aria-pressed use "true"/"false" not "expanded"/"selected"
 - Verify aria-autocomplete uses valid values ("inline", "list", "both", "none")
 - Validate aria-hidden="false" isn't used (should be omitted instead)
+
+**8. DUPLICATE ID DETECTION**:
+- Scan for multiple elements with identical IDs (especially form controls and headings)
+- Identify h1 elements that appear multiple times (should be single h1 per page)
+- Check for conflicting ID references in labels, aria-labelledby, aria-describedby
+
+**9. FORM ACCESSIBILITY PATTERNS**:
+- Find inputs using placeholder as the only label (placeholder isn't consistently announced)
+- Check for missing required field indicators (no required attribute or aria-required)
+- Identify form validation that doesn't associate errors with fields via aria-describedby
 
 **CRITICAL: AXE VIOLATION ENHANCEMENT REQUIREMENT**
 In addition to the "components" array, you MUST populate the "enhancedAxeViolations" array with enhanced explanations for axe-core violations. For each axe violation you identify (like landmark-one-main, page-has-heading-one, region, etc.), provide:
