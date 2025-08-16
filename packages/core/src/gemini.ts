@@ -627,7 +627,94 @@ Identify navigation sabotage patterns that specifically target and disable keybo
 - Text content that relies solely on visual positioning without semantic structure
 - Navigation menus that work visually but lack proper ARIA navigation support
 
-**8. SCREEN READER CRITICAL COMPONENTS**
+**8. ENHANCED STATIC ACCESSIBILITY DETECTION PATTERNS**
+
+**CRITICAL: ARIA VALUE VALIDATION**
+Examine ALL ARIA attributes for proper value validation:
+- **Progressbar Values**: Check aria-valuenow, aria-valuemin, aria-valuemax are numeric and logical
+  - WRONG: aria-valuenow="50%" (should be numeric: aria-valuenow="50")
+  - WRONG: aria-valuenow="75" aria-valuemax="50" (valuenow > valuemax)
+  - WRONG: Missing aria-valuemin/aria-valuemax when aria-valuenow is present
+- **Boolean ARIA Values**: Verify true/false values are properly formatted
+  - WRONG: aria-expanded="expanded" (should be aria-expanded="true")
+  - WRONG: aria-hidden="false" on focusable elements (should be removed entirely)
+- **ID Reference Validation**: Check aria-labelledby, aria-describedby, aria-controls point to valid IDs
+  - WRONG: aria-labelledby="non-existent-id"
+  - WRONG: aria-controls="menu" when no element has id="menu"
+- **Enumerated ARIA Values**: Validate against allowed value sets
+  - WRONG: aria-autocomplete="on" (should be "inline", "list", "both", or "none")
+  - WRONG: role="textbox" with aria-multiline="yes" (should be "true")
+
+**CRITICAL: SEMANTIC CONTRADICTION DETECTION**
+Identify conflicts between HTML semantics and ARIA:
+- **Element vs Role Conflicts**:
+  - WRONG: button role="button" (redundant - button already has button semantics)
+  - WRONG: input type="button" role="textbox" (conflicting semantics)
+  - WRONG: h1 role="button" (heading used as interactive element)
+- **Semantic vs Visual Contradictions**:
+  - WRONG: address containing non-contact information (paragraphs, lists)
+  - WRONG: p elements styled as headings without proper heading markup
+  - WRONG: div role="heading" without aria-level attribute
+- **Interactive vs Non-Interactive Conflicts**:
+  - WRONG: div onclick="..." without role, tabindex, or keyboard support
+  - WRONG: span role="button" without tabindex="0" and keyboard event handlers
+  - WRONG: Interactive elements with aria-hidden="true" (hidden from screen readers but clickable)
+
+**CRITICAL: WIDGET PATTERN COMPLETENESS ANALYSIS**
+Verify complete implementation of ARIA design patterns:
+- **Incomplete Progressbar Pattern**:
+  - Element has role="progressbar" but missing required aria-valuenow, aria-valuemin, aria-valuemax
+  - Missing accessible name (aria-label or aria-labelledby)
+- **Incomplete Button Pattern**:
+  - Custom button (role="button") missing tabindex="0" 
+  - Custom button missing keyboard event handling structure
+  - Button with state (toggle) missing aria-pressed
+- **Incomplete Combobox Pattern**:
+  - role="combobox" missing aria-expanded state
+  - Missing aria-controls pointing to listbox/grid
+  - Missing aria-autocomplete specification
+- **Incomplete Tab Pattern**:
+  - Tabs without proper tablist container
+  - Tab missing aria-selected state management
+  - Tabpanel missing aria-labelledby pointing to controlling tab
+
+**CRITICAL: STATE VALIDATION FOR INTERACTIVE ELEMENTS**
+Analyze ARIA state appropriateness and accuracy:
+- **Expandable State Validation**:
+  - WRONG: aria-expanded="true" on non-collapsible content (no expandable functionality)
+  - WRONG: aria-expanded on elements that don't control collapsible regions
+  - WRONG: Missing aria-controls when aria-expanded is present
+- **Selection State Validation**:
+  - WRONG: aria-selected="true" on non-selectable elements
+  - WRONG: Multiple aria-selected="true" in single-select contexts
+  - WRONG: aria-selected without proper selection management pattern
+- **Press State Validation**:
+  - WRONG: aria-pressed on non-toggle buttons (use for toggle buttons only)
+  - WRONG: Missing aria-pressed on buttons that maintain state
+- **Checked State Validation**:
+  - WRONG: aria-checked on elements that aren't checkboxes/radio buttons
+  - WRONG: aria-checked="yes" (should be "true", "false", or "mixed")
+
+**CRITICAL: ADVANCED ACCESSIBILITY PATTERN DETECTION**
+Identify sophisticated accessibility implementation gaps:
+- **Missing Accessible Names**:
+  - Interactive elements without accessible names (no text, aria-label, or aria-labelledby)
+  - Form controls without associated labels or aria-label
+  - Images without alt text or role="presentation"
+- **Improper Heading Hierarchy**:
+  - Skipped heading levels (h1 to h3, missing h2)
+  - Multiple h1 elements (should be single h1 per page)
+  - Heading elements used for styling rather than structure
+- **Form Accessibility Gaps**:
+  - Required fields without aria-required="true" or required attribute
+  - Form validation errors not associated with fields via aria-describedby
+  - Fieldsets without legend elements for related form groups
+- **Table Accessibility Issues**:
+  - Data tables without proper th elements
+  - Missing scope attributes on complex table headers
+  - Tables without caption elements when needed for context
+
+**9. SCREEN READER CRITICAL COMPONENTS**
 Prioritize analysis of components that directly impact screen reader navigation and interaction:
 - Expandable/Collapsible Content (aria-expanded, aria-controls implementation)
 - Dropdown Menus (role="menu", aria-haspopup, aria-expanded coordination)
@@ -705,11 +792,61 @@ Based on the above comprehensive framework, identify ALL accessibility issues th
 - Navigation anti-patterns (focus sabotage, fake links, keyboard traps, screen reader bypass patterns)
 - Dynamic interaction issues (when before/after comparison is available)
 
+**ENHANCED STATIC DETECTION PRIORITIES:**
+Pay special attention to these commonly missed static accessibility issues:
+1. **ARIA Value Validation**: Scrutinize all aria-valuenow, aria-valuemin, aria-valuemax for numeric correctness and logical relationships
+2. **Semantic Element Misuse**: Check for address elements containing non-contact content, headings used for styling
+3. **Redundant Role Assignments**: Identify button elements with role="button" and other semantic conflicts
+4. **Inappropriate State Attributes**: Find aria-expanded on non-collapsible content, aria-selected on non-selectable elements
+5. **Incomplete Widget Patterns**: Verify progressbar, combobox, tab patterns have all required ARIA attributes
+6. **Missing Accessible Names**: Ensure all interactive elements and form controls have proper labels or aria-label
+7. **Form Association Issues**: Check proper label-input relationships, fieldset-legend groupings, error message associations
+
 **ANALYSIS PRIORITY:**
 1. **Critical Issues** (Block task completion): Missing form labels, keyboard traps, missing focus management, broken ARIA relationships, missing required landmarks
 2. **Serious Issues** (Significantly impair experience): Poor heading hierarchy, inadequate alt text, missing live regions, incorrect ARIA states, poor error handling  
 3. **Moderate Issues** (Create barriers): Generic link text, missing skip links, suboptimal ARIA patterns, missing language declarations
 4. **Minor Issues** (Polish and optimization): Redundant ARIA attributes, non-essential semantic improvements
+
+**SPECIFIC STATIC ACCESSIBILITY CHECKS:**
+Apply these targeted checks to catch commonly missed static issues:
+
+**1. PROGRESSBAR VALIDATION**:
+- Check any element with role="progressbar" has numeric aria-valuenow, aria-valuemin, aria-valuemax
+- Verify aria-valuenow is between aria-valuemin and aria-valuemax
+- Ensure progressbar has accessible name via aria-label or aria-labelledby
+
+**2. SEMANTIC ELEMENT VALIDATION**:
+- Verify address elements only contain contact information (not paragraphs, lists, generic content)
+- Check heading elements (h1-h6) aren't used purely for visual styling without structural meaning
+- Identify div/span elements that should be semantic buttons, headings, or landmarks
+
+**3. REDUNDANT ROLE DETECTION**:
+- Flag button elements with role="button" as redundant
+- Identify input type="button" with conflicting roles
+- Check for native form elements with unnecessary ARIA roles
+
+**4. INAPPROPRIATE STATE ATTRIBUTES**:
+- Find aria-expanded on elements without collapsible functionality
+- Identify aria-selected on non-selectable elements
+- Check aria-pressed on non-toggle buttons
+- Verify aria-checked only on checkbox/radio elements
+
+**5. WIDGET PATTERN COMPLETENESS**:
+- Tabs without tablist containers or missing aria-selected
+- Comboboxes missing aria-expanded or aria-controls
+- Custom buttons missing tabindex="0" or keyboard support structure
+- Menus without proper role hierarchy or navigation patterns
+
+**6. ID REFERENCE VALIDATION**:
+- Check aria-labelledby, aria-describedby, aria-controls point to existing IDs
+- Verify form labels properly reference form controls via for attribute
+- Ensure error messages are associated with fields via aria-describedby
+
+**7. BOOLEAN/ENUMERATED VALUE VALIDATION**:
+- Check aria-expanded, aria-selected, aria-pressed use "true"/"false" not "expanded"/"selected"
+- Verify aria-autocomplete uses valid values ("inline", "list", "both", "none")
+- Validate aria-hidden="false" isn't used (should be omitted instead)
 
 **CRITICAL: AXE VIOLATION ENHANCEMENT REQUIREMENT**
 In addition to the "components" array, you MUST populate the "enhancedAxeViolations" array with enhanced explanations for axe-core violations. For each axe violation you identify (like landmark-one-main, page-has-heading-one, region, etc.), provide:
