@@ -258,7 +258,14 @@ export class AccessibilityAnalyzer {
       onProgress?.('generating-report', 'Generating final accessibility report...', undefined, undefined, snapshots.length);
       
       // Aggregate axe results from all snapshots
-      const consolidatedAxeResults = await this.consolidateAxeResults(snapshots, { llmComponentTimeout });
+      const enhancedViolations = geminiAnalysis?.enhancedAxeViolations || [];
+      console.log(`🔍 DEBUG: Enhanced violations from geminiAnalysis:`, {
+        hasGeminiAnalysis: !!geminiAnalysis,
+        hasEnhancedAxeViolations: !!(geminiAnalysis?.enhancedAxeViolations),
+        enhancedViolationsLength: enhancedViolations.length,
+        enhancedViolationsPreview: enhancedViolations.slice(0, 2)
+      });
+      const consolidatedAxeResults = await this.consolidateAxeResults(snapshots, enhancedViolations, { llmComponentTimeout });
       
       // Generate metadata manifest
       const manifest = await this.generateManifest(sessionId, actions, snapshots);
@@ -675,7 +682,7 @@ export class AccessibilityAnalyzer {
   /**
    * Consolidate axe results from all snapshots, removing duplicates and adding LLM recommendations
    */
-  private async consolidateAxeResults(snapshots: SnapshotData[], timeoutOptions?: { llmComponentTimeout?: number }): Promise<any[]> {
+  private async consolidateAxeResults(snapshots: SnapshotData[], enhancedAxeViolations: any[], timeoutOptions?: { llmComponentTimeout?: number }): Promise<any[]> {
     // Collect violations with deduplication by rule ID + target selector combination
     const violationMap = new Map<string, any>();
     
@@ -709,36 +716,31 @@ export class AccessibilityAnalyzer {
     const violations = Array.from(violationMap.values());
     console.log(`🔍 Consolidated ${violations.length} unique violations from ${snapshots.reduce((sum, s) => sum + (s.axeResults?.length || 0), 0)} total violations across ${snapshots.length} snapshots`);
 
-    // Generate LLM recommendations if Gemini is available
-    if (this.geminiService && violations.length > 0) {
-      try {
-        console.log(`🤖 Generating LLM recommendations for ${violations.length} axe violations...`);
-        console.log(`🔍 Sample violation:`, violations[0]?.id, violations[0]?.help);
-        const recommendations = await this.geminiService.generateAxeRecommendations(violations, timeoutOptions?.llmComponentTimeout);
-        console.log(`📊 Received ${recommendations.size} recommendations from LLM`);
-        
-        // Add recommendations to violations
-        violations.forEach(violation => {
-          const result = recommendations.get(violation.id);
-          if (result) {
-            console.log(`✅ Adding LLM content for ${violation.id}:`, {
-              hasExplanation: !!result.explanation,
-              hasRecommendation: !!result.recommendation
-            });
-            violation.explanation = result.explanation;
-            violation.recommendation = result.recommendation;
-          } else {
-            console.log(`❌ No LLM content found for ${violation.id}`);
-          }
+    // Apply enhanced axe violations from batch analysis to matching violations
+    console.log(`🔄 Processing ${enhancedAxeViolations.length} enhanced axe violations from batches`);
+    
+    violations.forEach(violation => {
+      const enhanced = enhancedAxeViolations.find((eav: any) => eav.id === violation.id);
+      if (enhanced) {
+        console.log(`✅ Adding enhanced content for ${violation.id}:`, {
+          hasExplanation: !!enhanced.explanation,
+          hasRecommendation: !!enhanced.recommendation,
+          hasWcag: !!enhanced.wcag
         });
+        violation.explanation = enhanced.explanation;
+        violation.recommendation = enhanced.recommendation;
         
-        console.log(`✅ Generated recommendations for ${recommendations.size}/${violations.length} violations`);
-      } catch (error) {
-        console.warn('Failed to generate LLM recommendations for axe violations:', error);
+        // Add WCAG data if present
+        if (enhanced.wcag) {
+          violation.wcagReference = enhanced.wcag;
+        }
+      } else {
+        console.log(`⚠️ No enhanced content found for ${violation.id} (${enhancedAxeViolations.length} enhanced violations available)`);
       }
-    } else {
-      console.log(`⚠️ Skipping LLM recommendations: geminiService=${!!this.geminiService}, violations=${violations.length}`);
-    }
+    });
+    
+    const enhancedCount = violations.filter(v => v.explanation).length;
+    console.log(`✅ Enhanced ${enhancedCount}/${violations.length} violations using batch analysis`);
 
     // Return consolidated violations sorted by impact
     const impactOrder = { critical: 0, serious: 1, moderate: 2, minor: 3 };
@@ -1182,6 +1184,7 @@ export class AccessibilityAnalyzer {
     let progressiveSummary = '';
     const batchResults: GeminiAnalysis[] = [];
     const allComponents: any[] = [];
+    const allEnhancedAxeViolations: any[] = [];
     const debugLogs: string[] = [];
 
     // Process each batch with progressive context
@@ -1253,6 +1256,9 @@ export class AccessibilityAnalyzer {
         batchResults.push(batchResult);
         if (batchResult.components) {
           allComponents.push(...batchResult.components);
+        }
+        if (batchResult.enhancedAxeViolations) {
+          allEnhancedAxeViolations.push(...batchResult.enhancedAxeViolations);
         }
         
         // Update progressive summary for next batch (use the main summary)
@@ -1367,6 +1373,7 @@ export class AccessibilityAnalyzer {
       finalAnalysis = await this.consolidateBatchResults(
         batchResults,
         allComponents,
+        allEnhancedAxeViolations,
         progressiveSummary,
         manifest,
         sessionContext
@@ -1374,7 +1381,7 @@ export class AccessibilityAnalyzer {
     } catch (error) {
       console.warn(`⚠️ Final consolidation failed, using batch results:`, error);
       // Fallback to combined batch results
-      finalAnalysis = this.createFallbackAnalysis(batchResults, allComponents, debugLogs);
+      finalAnalysis = this.createFallbackAnalysis(batchResults, allComponents, allEnhancedAxeViolations, debugLogs);
     }
 
     console.log(`✅ Hierarchical analysis completed:`, {
@@ -1520,6 +1527,7 @@ export class AccessibilityAnalyzer {
   private async consolidateBatchResults(
     batchResults: GeminiAnalysis[],
     allComponents: any[],
+    allEnhancedAxeViolations: any[],
     progressiveSummary: string,
     manifest: SessionManifest,
     sessionContext: { url: string; sessionId: string; totalSteps: number }
@@ -1575,6 +1583,7 @@ export class AccessibilityAnalyzer {
     const finalAnalysis: GeminiAnalysis = {
       summary: consolidatedSummary,
       components: deduplicatedComponents,
+      enhancedAxeViolations: allEnhancedAxeViolations,
       recommendations: uniqueRecommendations,
       score: overallScore,
       debug: {
@@ -1600,11 +1609,13 @@ export class AccessibilityAnalyzer {
   private createFallbackAnalysis(
     batchResults: GeminiAnalysis[],
     allComponents: any[],
+    allEnhancedAxeViolations: any[],
     debugLogs: string[]
   ): GeminiAnalysis {
     return {
       summary: `Hierarchical analysis completed across ${batchResults.length} batches. Some batch results may be incomplete due to processing errors.`,
       components: allComponents,
+      enhancedAxeViolations: allEnhancedAxeViolations,
       recommendations: batchResults.flatMap(r => r.recommendations || []),
       score: Math.min(...batchResults.map(r => r.score).filter(s => typeof s === 'number')) || 50,
       debug: {

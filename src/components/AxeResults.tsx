@@ -105,7 +105,7 @@ const renderRecommendationContent = (recommendation: string): React.ReactElement
           {formatTextWithLinks(mainText.trim())}
         </div>
         <div className="mt-4">
-          <span className="text-base font-medium text-gray-700">Reference: </span>
+          <span className="text-base font-medium text-gray-700">Deque reference: </span>
           <a
             href={url}
             target="_blank"
@@ -113,7 +113,15 @@ const renderRecommendationContent = (recommendation: string): React.ReactElement
             className="text-base text-info hover:text-matte-blue underline"
             style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}
           >
-            {url.includes('dequeuniversity.com') ? 'Deque University Rule Documentation' : 'WCAG Guideline'}
+            {url.includes('dequeuniversity.com') ? 
+              // Extract rule name from deque URL (e.g., "landmark-one-main" from the URL)
+              (() => {
+                const match = url.match(/\/rules\/axe\/[^/]+\/([^?]+)/);
+                const ruleName = match ? match[1].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Axe Rule';
+                return ruleName;
+              })() 
+              : 'WCAG Guideline'
+            }
           </a>
         </div>
       </div>
@@ -388,20 +396,25 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest }) => {
                             {formatTextWithLinks(violation.explanation)}
                           </div>
                         </div>
-                      )}{violation.helpUrl && (
+                      )}
+
+                      {/* WCAG Guideline - use LLM-resolved reference if available, otherwise show fallback */}
+                      {violation.wcagReference ? (
                         <div>
                           <span className="text-base font-medium text-gray-700">WCAG Guideline: </span>
                           <a
-                            href={violation.helpUrl}
+                            href={violation.wcagReference.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-base text-info hover:text-matte-blue underline"
                             style={{ fontFamily: 'system-ui, -apple-system, sans-serif', fontWeight: 'normal' }}
                           >
-                            {violation.id}
+                            WCAG {violation.wcagReference.guideline} {violation.wcagReference.level} - {violation.wcagReference.title}
                           </a>
                         </div>
-                      )}                      {violation.nodes && violation.nodes.length > 0 && (
+                      ) : null}
+
+                      {/* Only show helpUrl if no WCAG reference was resolved - this keeps the deque reference as fallback */}                      {violation.nodes && violation.nodes.length > 0 && (
                         <div>
                           <span className="text-base font-medium text-gray-700 mb-3">Offending Code ({violation.nodes.length}): </span>                          <div className="mt-3 space-y-4">
                             {violation.nodes.map((node, nodeIndex) => (

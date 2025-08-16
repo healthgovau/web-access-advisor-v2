@@ -47,6 +47,12 @@ export interface AxeViolation {
   tags: string[];
   explanation?: string; // LLM-generated detailed explanation of why this is a problem
   recommendation?: string; // LLM-generated actionable fix recommendation
+  wcagReference?: { // LLM-generated WCAG reference
+    guideline: string; // "1.4.3"
+    level: string; // "AA"
+    title: string; // "Contrast (Minimum)"
+    url: string; // Full WCAG Understanding URL
+  };
   step?: number; // Step index in the session (for per-issue URL)
   url?: string;  // URL at which the issue was found
 }

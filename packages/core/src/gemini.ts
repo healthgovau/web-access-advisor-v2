@@ -4,7 +4,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { GeminiAnalysis, ComponentAccessibilityIssue, LLMDebugLog } from './types.js';
+import type { GeminiAnalysis, ComponentAccessibilityIssue, EnhancedAxeViolation, LLMDebugLog } from './types.js';
 import { isAuthUrl, isAuthAction, type SessionAction } from './authDetection.js';
 
 export class GeminiService {
@@ -26,6 +26,19 @@ export class GeminiService {
       "wcagRule": "WCAG 2.1 guideline reference (e.g., 4.1.2 Name, Role, Value)",
       "wcagUrl": "Complete URL to the specific WCAG Understanding document (e.g., 'https://www.w3.org/WAI/WCAG21/Understanding/name-role-value.html')",
       "selector": "CSS selector to identify the problematic element (e.g., '.nav-menu button', '#search-input', 'main .content h1')"
+    }
+  ],
+  "enhancedAxeViolations": [
+    {
+      "id": "axe-rule-id (e.g., landmark-one-main, page-has-heading-one, region)",
+      "explanation": "User-impact focused explanation of how this affects people with disabilities - focus on the actual barriers created",
+      "recommendation": "Clear, actionable guidance on how to fix this specific axe violation - end with 'Reference: [helpUrl]'",
+      "wcag": {
+        "guideline": "Guideline number only (e.g., 2.4.1, 4.1.2) - do NOT include 'WCAG' prefix",
+        "level": "Conformance level (A, AA, or AAA)",
+        "title": "Official WCAG guideline title (e.g., Bypass Blocks, Name Role Value)",
+        "url": "Complete WCAG Understanding URL (e.g., https://www.w3.org/WAI/WCAG21/Understanding/bypass-blocks.html)"
+      }
     }
   ],
   "recommendations": ["actionable recommendations"],
@@ -157,6 +170,19 @@ Focus on analyzing multi-step interaction sequences to identify:
 - Start your response with { and end with }
 - Do not include any markdown formatting, code blocks, or explanatory text
 
+**CRITICAL: DUAL OUTPUT REQUIREMENT**
+Your JSON response MUST include BOTH of these arrays:
+1. "components" array - for general accessibility components/issues
+2. "enhancedAxeViolations" array - for detailed axe-core rule explanations
+
+The "enhancedAxeViolations" field is MANDATORY and must contain enhanced explanations for common axe violations like:
+- landmark-one-main (missing main landmark)
+- page-has-heading-one (missing h1 heading)  
+- region (content not in landmarks)
+- color-contrast (insufficient contrast)
+- label (missing form labels)
+- And any other axe violations you identify
+
 **Output Format:**
 Respond with a JSON object with this exact structure:
 ${GeminiService.SHARED_JSON_SCHEMA}
@@ -167,7 +193,7 @@ ${GeminiService.SHARED_REQUIREMENTS}
 
 **SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
 
-**CRITICAL: Return ONLY the JSON object - no other text.**`;
+**CRITICAL: Return ONLY the JSON object with BOTH components AND enhancedAxeViolations arrays - no other text.**`;
 
   constructor(apiKey: string) {
     this.genAI = new GoogleGenerativeAI(apiKey);
@@ -406,6 +432,16 @@ ${this.truncateHtml(previousHtml, filterStaticSections)}` : ''}
 
 **Axe-core Accessibility Report (Violations Only):**
 ${JSON.stringify(this.filterAxeResultsForAnalysis(axeResults), null, 2)}
+
+**AXE VIOLATION ENHANCEMENT REQUIREMENTS:**
+For each axe violation listed above, you MUST provide enhanced user-friendly content in the enhancedAxeViolations section:
+
+- **explanation**: Focus on user impact - how this affects people using screen readers or other assistive technologies
+- **recommendation**: Provide clear, actionable guidance ending with "Reference: [helpUrl from violation]"  
+- **wcag**: MANDATORY - include complete WCAG 2.1 reference with guideline, level, title, and URL
+- Use the violation's existing id, helpUrl, and technical details as reference
+- Make explanations user-impact focused, not technical descriptions
+- Keep recommendations actionable but general enough to apply to the violation type
 
 **COMPREHENSIVE SCREEN READER CODE ANALYSIS INSTRUCTIONS:**
 
@@ -666,6 +702,14 @@ Based on the above comprehensive framework, identify ALL accessibility issues th
 2. **Serious Issues** (Significantly impair experience): Poor heading hierarchy, inadequate alt text, missing live regions, incorrect ARIA states, poor error handling  
 3. **Moderate Issues** (Create barriers): Generic link text, missing skip links, suboptimal ARIA patterns, missing language declarations
 4. **Minor Issues** (Polish and optimization): Redundant ARIA attributes, non-essential semantic improvements
+
+**CRITICAL: AXE VIOLATION ENHANCEMENT REQUIREMENT**
+In addition to the "components" array, you MUST populate the "enhancedAxeViolations" array with enhanced explanations for axe-core violations. For each axe violation you identify (like landmark-one-main, page-has-heading-one, region, etc.), provide:
+- User-impact focused explanation of how this affects people with disabilities
+- Clear, actionable guidance on how to fix the violation  
+- Complete WCAG reference with guideline number, level, title, and URL
+
+This enhancedAxeViolations field is MANDATORY and must not be empty if you identify accessibility issues.
 
 ${GeminiService.SHARED_OUTPUT_FORMAT}
 `;
@@ -1101,10 +1145,19 @@ ${bodyMatch[1]}
       console.log('🔍 DEBUG: Parsed JSON response:', JSON.stringify(parsed, null, 2));
 
       const validComponents = this.parseComponents(parsed.components || []);
+      
+      // Debug: Check what we got for enhanced axe violations
+      console.log(`🔍 DEBUG: Raw enhanced axe violations from LLM:`, parsed.enhancedAxeViolations);
+      console.log(`🔍 DEBUG: Enhanced axe violations type:`, typeof parsed.enhancedAxeViolations);
+      console.log(`🔍 DEBUG: Enhanced axe violations length:`, Array.isArray(parsed.enhancedAxeViolations) ? parsed.enhancedAxeViolations.length : 'not array');
+      
+      const enhancedAxeViolations = this.parseEnhancedAxeViolations(parsed.enhancedAxeViolations || []);
+      console.log(`🔍 DEBUG: Parsed enhanced axe violations:`, enhancedAxeViolations.length, 'items');
 
       return {
         summary: parsed.summary || 'Screen reader accessibility analysis completed',
         components: validComponents,
+        enhancedAxeViolations: enhancedAxeViolations,
         recommendations: parsed.recommendations || [],
         score: Math.max(0, Math.min(100, parsed.score || 0))
       };
@@ -1178,10 +1231,51 @@ ${bodyMatch[1]}
           selector: component.selector?.trim() || undefined
         };
       });
-  }  /**
+  }
+
+  /**
+   * Validates and formats enhanced axe violations
+   */
+  private parseEnhancedAxeViolations(enhancedViolations: any[]): EnhancedAxeViolation[] {
+    if (!Array.isArray(enhancedViolations) || enhancedViolations.length === 0) {
+      console.warn('⚠️ No enhanced axe violations returned from LLM');
+      return [];
+    }
+
+    return enhancedViolations
+      .filter(violation => {
+        const hasValidId = violation.id && violation.id.trim().length > 0;
+        const hasValidExplanation = violation.explanation && violation.explanation.trim().length > 0;
+        const hasValidRecommendation = violation.recommendation && violation.recommendation.trim().length > 0;
+
+        if (!hasValidId || !hasValidExplanation || !hasValidRecommendation) {
+          console.warn('🗑️ Filtering out invalid enhanced axe violation:', {
+            id: violation.id,
+            hasExplanation: hasValidExplanation,
+            hasRecommendation: hasValidRecommendation
+          });
+          return false;
+        }
+
+        return true;
+      })
+      .map(violation => ({
+        id: violation.id.trim(),
+        explanation: violation.explanation.trim(),
+        recommendation: violation.recommendation.trim(),
+        wcag: violation.wcag ? {
+          guideline: violation.wcag.guideline || '',
+          level: violation.wcag.level || 'A',
+          title: violation.wcag.title || '',
+          url: violation.wcag.url || ''
+        } : undefined
+      }));
+  }
+
+  /**
    * Generate explanations and actionable recommendations for specific axe violations
    */
-  async generateAxeRecommendations(violations: any[], timeoutMs?: number): Promise<Map<string, { explanation: string; recommendation: string }>> {
+  async generateAxeRecommendations(violations: any[], timeoutMs?: number): Promise<Map<string, { explanation: string; recommendation: string; wcag?: { guideline: string; level: string; title: string; url: string } }>> {
     console.log(`🤖 generateAxeRecommendations called with ${violations?.length || 0} violations`);
 
     if (!violations || violations.length === 0) {
@@ -1263,21 +1357,52 @@ Reference: ${violation.helpUrl || 'https://dequeuniversity.com/rules/axe/'}`
   /**
    * Build prompt for axe violation recommendations
    */  private buildAxeRecommendationPrompt(violations: any[]): string {
-    return `You are an accessibility expert. For each axe-core violation, provide both an explanation and a clear, general recommendation statement.
+    return `You are an accessibility expert. For each axe-core violation, provide an explanation, recommendation, AND the correct WCAG 2.1 guideline reference.
 
 CRITICAL: You MUST respond with content for EVERY violation provided. Do not skip any violations.
 
-Return your response as a valid JSON object with this exact structure:
+Return your response as a valid JSON object with this exact structure. 
 
+⚠️ CRITICAL: EVERY violation object MUST contain exactly these 4 fields:
+1. "id" - the violation ID  
+2. "explanation" - user impact explanation
+3. "recommendation" - how to fix it
+4. "wcag" - WCAG reference object (REQUIRED - do not omit)
+
+**REQUIRED JSON STRUCTURE - COPY THIS EXACTLY:**
 {
   "violations": [
     {
-      "id": "violation.id",
-      "explanation": "Clear explanation of why this is an accessibility problem and how it affects users with disabilities - focus on user impact",
-      "recommendation": "A clear, general statement of what needs to be done to fix this type of issue. Keep it concise and actionable but avoid detailed step-by-step instructions."
+      "id": "PUT_VIOLATION_ID_HERE",
+      "explanation": "PUT_EXPLANATION_HERE", 
+      "recommendation": "PUT_RECOMMENDATION_HERE",
+      "wcag": {
+        "guideline": "PUT_WCAG_NUMBER_HERE",
+        "level": "PUT_LEVEL_HERE",
+        "title": "PUT_TITLE_HERE",
+        "url": "PUT_URL_HERE"
+      }
     }
   ]
 }
+
+❌ INVALID RESPONSE EXAMPLES (do not do this):
+- Missing wcag field: {"id": "...", "explanation": "...", "recommendation": "..."} 
+- Null wcag field: {"wcag": null}
+- Empty wcag field: {"wcag": {}}
+
+✅ EVERY response must include complete wcag object as shown above.
+
+${GeminiService.SHARED_WCAG_URLS}
+
+WCAG REFERENCE REQUIREMENTS (MANDATORY):
+- Every violation MUST include a wcag object with complete WCAG 2.1 reference data
+- Determine the primary WCAG 2.1 guideline that this axe rule validates
+- Provide the guideline number (e.g., "1.4.3", "4.1.2")
+- Include the conformance level ("A", "AA", or "AAA")
+- Provide the official WCAG guideline title
+- Generate the correct WCAG Understanding URL using format: https://www.w3.org/WAI/WCAG21/Understanding/[title-kebab-case].html
+- If NO applicable WCAG guideline exists, set wcag to null
 
 CRITICAL GUIDELINES:
 - ALWAYS examine ALL HTML elements provided for each violation (not just the first one)
@@ -1291,8 +1416,9 @@ CRITICAL GUIDELINES:
 - Prioritize user impact and practical guidance
 - Each recommendation should be a clear statement that developers can understand and implement
 - Avoid detailed step-by-step instructions - focus on the core fix needed
-- ALWAYS end recommendations with a reference to the relevant dequeuniversity guideline"
-- Use the specific WCAG documentation URL that corresponds to the axe violation being addressed
+- ALWAYS end each recommendation with "Reference: [violation helpUrl]"
+
+🚨 BEFORE RESPONDING: Verify each violation object has these 4 fields: id, explanation, recommendation, wcag
 
 Violations to analyze:
 ${violations.map((v, i) => `
@@ -1311,20 +1437,21 @@ ${v.nodes?.map((node: any, nodeIndex: number) => `  Element ${nodeIndex + 1}:
 `).join('\n')}
 
 Remember: 
-- MANDATORY: Provide both explanation and recommendation for EVERY violation listed
+- 🚨 MANDATORY: Every violation MUST have ALL FOUR fields: id, explanation, recommendation, AND wcag
+- 🚨 DO NOT omit the wcag object - include it for EVERY single violation
 - Use the actual HTML context to understand the violation type
 - Make recommendations general and actionable 
 - Focus on what needs to be done, not detailed implementation steps
 - Make explanations user-impact focused (how this affects people with disabilities)
 - Provide clear guidance that applies to the violation type
-- ALWAYS end each recommendation with "Reference: [Dequeuniversity Guideline URL]" using the URL provided above
 - NEVER skip a violation or leave sections empty
+- ALWAYS end each recommendation with "Reference: [violation helpUrl]"
 - Return ONLY valid JSON, no additional text or formatting`;
   }  /**
    * Parse axe recommendations from LLM JSON response
    */
-  private parseAxeRecommendations(text: string, violations: any[]): Map<string, { explanation: string; recommendation: string }> {
-    const results = new Map<string, { explanation: string; recommendation: string }>();
+  private parseAxeRecommendations(text: string, violations: any[]): Map<string, { explanation: string; recommendation: string; wcag?: { guideline: string; level: string; title: string; url: string } }> {
+    const results = new Map<string, { explanation: string; recommendation: string; wcag?: { guideline: string; level: string; title: string; url: string } }>();
 
     console.log(`🔍 DEBUG: Original LLM response length: ${text.length}`);
     console.log(`🔍 DEBUG: Full LLM response:`, text);
@@ -1348,18 +1475,45 @@ Remember:
       console.log(`🔍 DEBUG: Cleaned JSON text:`, cleanText);
 
       const jsonResponse = JSON.parse(cleanText);
-      console.log(`🔍 DEBUG: Parsed JSON response:`, jsonResponse); if (jsonResponse.violations && Array.isArray(jsonResponse.violations)) {
+      console.log(`🔍 DEBUG: Parsed JSON response:`, jsonResponse);
+      console.log(`🔍 DEBUG: jsonResponse.violations type:`, typeof jsonResponse.violations);
+      console.log(`🔍 DEBUG: jsonResponse.violations isArray:`, Array.isArray(jsonResponse.violations));
+      console.log(`🔍 DEBUG: jsonResponse.violations length:`, jsonResponse.violations?.length);
+
+      if (jsonResponse.violations && Array.isArray(jsonResponse.violations)) {
+        console.log(`🔍 DEBUG: Processing ${jsonResponse.violations.length} violations from LLM`);
         jsonResponse.violations.forEach((violationData: any, index: number) => {
+          console.log(`🔍 DEBUG: Processing violation ${index + 1}/${jsonResponse.violations.length}`);
           const violationId = violationData.id;
+          console.log(`🔍 DEBUG: Processing LLM violation data for ${violationId}:`, {
+            hasExplanation: !!violationData.explanation,
+            hasRecommendation: !!violationData.recommendation,
+            hasWcag: !!violationData.wcag,
+            wcagData: violationData.wcag
+          });
+
           const explanation = violationData.explanation || '';
           const recommendation = violationData.recommendation || '';
+          const wcag = violationData.wcag || null;
 
           if (explanation && recommendation) {
-            results.set(violationId, {
+            const result: { explanation: string; recommendation: string; wcag?: { guideline: string; level: string; title: string; url: string } } = {
               explanation: explanation.trim(),
               recommendation: recommendation.trim()
-            });
-            console.log(`✅ DEBUG: Successfully parsed violation ${violationId}`);
+            };
+
+            // Add WCAG data if present and valid
+            if (wcag && wcag.guideline && wcag.level && wcag.title && wcag.url) {
+              result.wcag = {
+                guideline: wcag.guideline,
+                level: wcag.level,
+                title: wcag.title,
+                url: wcag.url
+              };
+            }
+
+            results.set(violationId, result);
+            console.log(`✅ DEBUG: Successfully parsed violation ${violationId}`, wcag ? 'with WCAG data' : 'without WCAG data');
           } else {
             console.log(`⚠️ DEBUG: Missing content for violation ${violationId}:`, { explanation, recommendation });
           }

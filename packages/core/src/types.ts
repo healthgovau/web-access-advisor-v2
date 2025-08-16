@@ -181,9 +181,22 @@ export interface LLMDebugLog {
 export interface GeminiAnalysis {
   summary: string;
   components: ComponentAccessibilityIssue[];
+  enhancedAxeViolations?: EnhancedAxeViolation[];
   recommendations: string[];
   score: number;
   debug?: LLMDebugLog;
+}
+
+export interface EnhancedAxeViolation {
+  id: string;
+  explanation: string;
+  recommendation: string;
+  wcag?: {
+    guideline: string;
+    level: string;
+    title: string;
+    url: string;
+  };
 }
 
 export interface ComponentAccessibilityIssue {
