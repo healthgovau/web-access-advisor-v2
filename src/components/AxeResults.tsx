@@ -386,27 +386,31 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest, screenRea
                     ))}
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 text-center mb-8">Click boxes above to toggle filter</p>
+                <p className="text-xs text-gray-500 text-center mb-12">Click boxes above to toggle filter</p>
 
                 {/* Duplicate Issues Toggle */}
                 {screenReaderIssueFingerprints.size > 0 && (
-                  <div className="flex justify-center mb-8 mt-4">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={showDuplicates}
-                        onChange={(e) => setShowDuplicates(e.target.checked)}
-                        className="sr-only"
-                      />
-                      <div className="w-11 h-6 bg-blue-600 rounded-full transition-all">
-                        <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${
-                          showDuplicates ? 'translate-x-full' : 'translate-x-0'
-                        }`}></div>
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-gray-700">
-                        {showDuplicates ? 'Hide' : 'Show'} duplicates from screen reader analysis
-                      </span>
-                    </label>
+                  <div className="flex flex-col items-center mb-12 mt-8 pt-4 pb-4">
+                    <div className="flex items-center mb-2">
+                      <span className="mr-3 text-sm font-medium text-gray-700">Hide</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={showDuplicates}
+                          onChange={(e) => setShowDuplicates(e.target.checked)}
+                          className="sr-only"
+                        />
+                        <div className="w-11 h-6 bg-blue-600 rounded-full transition-all">
+                          <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${
+                            showDuplicates ? 'translate-x-full' : 'translate-x-0'
+                          }`}></div>
+                        </div>
+                      </label>
+                      <span className="ml-3 text-sm font-medium text-gray-700">Show</span>
+                    </div>
+                    <p className="text-xs text-gray-500 text-center">
+                      <span className="font-bold">{showDuplicates ? 'Showing' : 'Hiding'}</span> duplicates of screen reader issues
+                    </p>
                   </div>
                 )}
               </>
