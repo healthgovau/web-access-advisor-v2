@@ -419,6 +419,44 @@ ${GeminiService.SHARED_REQUIREMENTS}
     return `
 Analyze the provided DOM snapshot(s) and Axe Accessibility Report(s) with a primary focus on screen reader (ARIA) accessibility and compatibility with assistive technologies. Your objective is to identify deficiencies in the code that hinder optimal support for screen readers and related tools, and to recommend precise, actionable code fixes to address these issues.
 
+**CRITICAL: SEMANTIC RELATIONSHIP ANALYSIS PRIORITY**
+When analyzing for accessibility issues, prioritize examining semantic relationships between elements, attributes, and their intended function. Look beyond individual attribute validity to understand:
+- How ARIA attributes work together as complete patterns
+- Whether element semantics match their actual purpose
+- How referenced elements relate to their referencing attributes
+- Whether state attributes make semantic sense for the element type
+- How parent-child role relationships create meaningful widget structures
+
+**EXPLICIT LLM ANALYSIS STRENGTHS - LEVERAGE THESE:**
+Your semantic understanding capabilities provide significant advantages over rule-based tools:
+
+**1. CONTEXTUAL INTENT UNDERSTANDING:**
+- Recognize developer intent from invalid attribute values (e.g., aria-current="yes" means they want current page indication)
+- Understand purpose from surrounding context even when implementation is incorrect
+- Identify semantic contradictions that automated tools miss (e.g., address elements containing non-contact content)
+
+**2. CROSS-REFERENCE VALIDATION:**
+- Validate that referenced IDs actually exist and are accessible (aria-describedby pointing to hidden elements)
+- Check logical relationships between related attributes (aria-valuenow vs aria-valuemax consistency)
+- Identify broken widget patterns where components are missing required companion attributes
+
+**3. SEMANTIC CONTRADICTION DETECTION:**
+- Spot conflicts between HTML semantics and ARIA roles that create confusion
+- Identify elements that look interactive but lack programmatic accessibility
+- Recognize when developers use presentation elements for structural purposes
+
+**4. PATTERN COMPLETENESS ANALYSIS:**
+- Assess whether chosen ARIA patterns are fully implemented with all required attributes
+- Identify incomplete widget implementations that will confuse screen reader users
+- Validate state management logic across related elements (multiple aria-selected in single-select contexts)
+
+**5. CONTEXTUAL ERROR INTERPRETATION:**
+- Understand why certain attribute values are problematic in specific contexts
+- Provide semantic alternatives that match developer intent
+- Explain accessibility impact in terms of actual user experience barriers
+
+Use these semantic analysis capabilities to identify issues that automated rule-checking cannot detect.
+
 ${GeminiService.SHARED_SCREEN_READER_CONTEXT}
 
 **ANALYSIS METHODOLOGY:**
