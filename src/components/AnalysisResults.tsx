@@ -162,7 +162,11 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
     
     // If it has a class or ID, use that as the normalized selector
     if (mostSpecific.includes('.') || mostSpecific.includes('#')) {
-      return mostSpecific;
+      const normalized = mostSpecific;
+      if (selector !== normalized) {
+        console.log(`🔄 Normalized selector: "${selector}" → "${normalized}"`);
+      }
+      return normalized;
     }
     
     // Otherwise use the original selector
@@ -173,17 +177,21 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
   const filteredComponents = (analysisData?.analysis?.components.filter(component =>
     severityFilters[component.impact] && !isAuthComponent(component.step)
   ) || [])
-    // Deduplicate based on normalized selector + WCAG rule + step combination
+    // Deduplicate based on URL + normalized selector + WCAG rule combination
     .reduce((unique, component) => {
       const normalizedSelector = normalizeSelector(component.selector || '');
-      const key = `${component.step || 0}::${normalizedSelector}::${component.wcagRule || 'no-wcag'}`;
+      const key = `${component.url || 'no-url'}::${normalizedSelector}::${component.wcagRule || 'no-wcag'}`;
       const existingKey = unique.find(item => {
         const itemNormalizedSelector = normalizeSelector(item.selector || '');
-        return `${item.step || 0}::${itemNormalizedSelector}::${item.wcagRule || 'no-wcag'}` === key;
+        const itemKey = `${item.url || 'no-url'}::${itemNormalizedSelector}::${item.wcagRule || 'no-wcag'}`;
+        return itemKey === key;
       });
       
       if (!existingKey) {
+        console.log(`✅ Adding unique component with key: ${key}`);
         unique.push(component);
+      } else {
+        console.log(`❌ Filtering duplicate with key: ${key}`);
       }
       return unique;
     }, [] as any[])
