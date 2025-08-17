@@ -149,17 +149,26 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
     return isAuthUrl(url).isAuthStep;
   }
 
-  // Filter components based on selected severities, exclude auth steps, and sort by step (capture order) and within step by severity (critical first)
+  // Filter components based on selected severities, exclude auth steps, deduplicate, and sort by step (capture order) and within step by severity (critical first)
   const filteredComponents = (analysisData?.analysis?.components.filter(component =>
     severityFilters[component.impact] && !isAuthComponent(component.step)
-  ) || []).slice().sort((a, b) => {
-    // Primary sort: by step in ascending order (capture order), fallback to 0 if missing
-    const stepA = typeof a.step === 'number' ? a.step : 0;
-    const stepB = typeof b.step === 'number' ? b.step : 0;
-    
-    if (stepA !== stepB) {
-      return stepA - stepB; // Ascending order: step 1, step 2, step 3, etc.
-    }
+  ) || [])
+    // Deduplicate based on selector + WCAG rule + step combination
+    .reduce((unique, component) => {
+      const key = `${component.step || 0}::${component.selector || 'no-selector'}::${component.wcagRule || 'no-wcag'}`;
+      if (!unique.some(item => `${item.step || 0}::${item.selector || 'no-selector'}::${item.wcagRule || 'no-wcag'}` === key)) {
+        unique.push(component);
+      }
+      return unique;
+    }, [] as any[])
+    .sort((a, b) => {
+      // Primary sort: by step in ascending order (capture order), fallback to 0 if missing
+      const stepA = typeof a.step === 'number' ? a.step : 0;
+      const stepB = typeof b.step === 'number' ? b.step : 0;
+      
+      if (stepA !== stepB) {
+        return stepA - stepB; // Ascending order: step 1, step 2, step 3, etc.
+      }
     
     // Secondary sort: within same step, sort by severity (critical = 0, serious = 1, moderate = 2, minor = 3)
     const severityOrder = { critical: 0, serious: 1, moderate: 2, minor: 3 };

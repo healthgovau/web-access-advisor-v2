@@ -311,22 +311,35 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest, screenRea
     return isAuthUrl(url).isAuthStep;
   };
 
-  // Filter violations by severity and exclude auth steps, then sort by step (capture order) and within step by severity (critical first)
-  const filteredViolations = getFilteredViolations().sort((a, b) => {
-    // Primary sort: by step in ascending order (capture order), fallback to 0 if missing
-    const stepA = typeof a.step === 'number' ? a.step : 0;
-    const stepB = typeof b.step === 'number' ? b.step : 0;
-    
-    if (stepA !== stepB) {
-      return stepA - stepB; // Ascending order: step 1, step 2, step 3, etc.
-    }
-    
-    // Secondary sort: within same step, sort by severity (critical = 0, serious = 1, moderate = 2, minor = 3)
-    const severityOrder = { critical: 0, serious: 1, moderate: 2, minor: 3 };
-    const severityA = severityOrder[a.impact as keyof typeof severityOrder] ?? 4;
-    const severityB = severityOrder[b.impact as keyof typeof severityOrder] ?? 4;
-    return severityA - severityB; // Critical first within each step
-  });
+  // Filter violations by severity and exclude auth steps, deduplicate, then sort by step (capture order) and within step by severity (critical first)
+  const filteredViolations = getFilteredViolations()
+    // Deduplicate based on rule ID + first node selector + step combination
+    .reduce((unique, violation) => {
+      const firstNodeSelector = violation.nodes?.[0]?.target?.[0] || 'no-selector';
+      const key = `${violation.step || 0}::${violation.id}::${firstNodeSelector}`;
+      if (!unique.some(item => {
+        const itemFirstNodeSelector = item.nodes?.[0]?.target?.[0] || 'no-selector';
+        return `${item.step || 0}::${item.id}::${itemFirstNodeSelector}` === key;
+      })) {
+        unique.push(violation);
+      }
+      return unique;
+    }, [] as typeof axeResults)
+    .sort((a, b) => {
+      // Primary sort: by step in ascending order (capture order), fallback to 0 if missing
+      const stepA = typeof a.step === 'number' ? a.step : 0;
+      const stepB = typeof b.step === 'number' ? b.step : 0;
+      
+      if (stepA !== stepB) {
+        return stepA - stepB; // Ascending order: step 1, step 2, step 3, etc.
+      }
+      
+      // Secondary sort: within same step, sort by severity (critical = 0, serious = 1, moderate = 2, minor = 3)
+      const severityOrder = { critical: 0, serious: 1, moderate: 2, minor: 3 };
+      const severityA = severityOrder[a.impact as keyof typeof severityOrder] ?? 4;
+      const severityB = severityOrder[b.impact as keyof typeof severityOrder] ?? 4;
+      return severityA - severityB; // Critical first within each step
+    });
 
   const handleSeverityFilterChange = (severity: string, checked: boolean) => {
     setSeverityFilters(prev => ({
