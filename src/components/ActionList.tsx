@@ -65,6 +65,33 @@ const ActionList: React.FC<ActionListProps> = ({ actions, isRecording, sessionId
   }; const formatActionDescription = (action: any) => {
     switch (action.type) {
       case 'click':
+        if (action.selector) {
+          // Clean up selector for display - remove complex nth-child patterns and show the most relevant part
+          let displaySelector = action.selector;
+          
+          // Extract the most meaningful part of the selector
+          if (displaySelector.includes('#')) {
+            // Prefer ID selectors
+            const idMatch = displaySelector.match(/#[^.\s\[\>]+/);
+            if (idMatch) displaySelector = idMatch[0];
+          } else if (displaySelector.includes('.')) {
+            // Use class selectors, take the first one
+            const classMatch = displaySelector.match(/\.[^.\s\[\>]+/);
+            if (classMatch) displaySelector = classMatch[0];
+          } else if (displaySelector.includes('[')) {
+            // Use attribute selectors
+            const attrMatch = displaySelector.match(/\[[^\]]+\]/);
+            if (attrMatch) displaySelector = attrMatch[0];
+          } else {
+            // Clean up complex selectors - take the rightmost meaningful part
+            const parts = displaySelector.split(/\s*>\s*/);
+            displaySelector = parts[parts.length - 1] || displaySelector;
+            // Remove nth-child for readability
+            displaySelector = displaySelector.replace(/:nth-child\(\d+\)/, '');
+          }
+          
+          return `Clicked ${displaySelector}`;
+        }
         return 'Clicked element';
       case 'fill':
         const truncatedValue = action.value && action.value.length > 30
