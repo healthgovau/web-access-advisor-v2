@@ -117,7 +117,7 @@ const InfoModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onC
                 <li>
                   <span className="font-semibold text-gray-900">Run Multiple Times:</span>
                   <span className="block text-gray-600 leading-relaxed">
-                    Run the analysis several times, especially for dynamic content. LLM analysis can vary between runs, and different user flows may reveal different issues. Test various scenarios and user paths.
+                    Run the analysis several times, especially for dynamic content. LLM analysis can vary between runs.
                   </span>
                 </li>
                 <li>
