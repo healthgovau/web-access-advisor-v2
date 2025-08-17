@@ -479,11 +479,10 @@ ${this.truncateHtml(previousHtml, filterStaticSections)}` : ''}
 **Axe-core Accessibility Report (Violations Only):**
 ${JSON.stringify(this.filterAxeResultsForAnalysis(axeResults), null, 2)}
 
-**CRITICAL: AXE VIOLATION ENHANCEMENT REQUIREMENTS:**
+**PHASE 1: MANDATORY AXE VIOLATION ENHANCEMENT**
 You MUST enhance EVERY SINGLE axe violation listed in the Axe-core Accessibility Report above. Do not skip any violations.
 
-For each axe violation (including label-title-only, color-contrast, landmark-one-main, page-has-heading-one, region, etc.), you MUST provide enhanced content in the enhancedAxeViolations array:
-
+For each axe violation, you MUST provide enhanced content in the enhancedAxeViolations array:
 - **explanation**: Focus on user impact - how this affects people using screen readers or other assistive technologies
 - **recommendation**: Provide clear, actionable guidance ending with "Reference: [helpUrl from violation]"  
 - **wcag**: MANDATORY - include complete WCAG 2.1 reference with guideline, level, title, and URL
@@ -492,6 +491,18 @@ For each axe violation (including label-title-only, color-contrast, landmark-one
 - Keep recommendations actionable but general enough to apply to the violation type
 
 CRITICAL: If there are 5 axe violations in the input, there must be 5 items in the enhancedAxeViolations array. Do not omit any violations.
+
+**PHASE 2: INDEPENDENT SEMANTIC ANALYSIS WITH DEDUPLICATION**
+Additionally, perform your own independent semantic analysis of the DOM for issues that automated scanning cannot detect.
+
+CRITICAL DEDUPLICATION REQUIREMENT: Before reporting any independent finding in the "components" array, you MUST check:
+1. Did I already enhance this issue as an Axe violation in Phase 1? 
+2. Did I already report this issue independently in my semantic analysis?
+
+If YES to either question → DO NOT create a separate components entry. The issue is already covered.
+If NO to both questions → Create a new entry in the components array.
+
+Focus your independent analysis on areas where automated scanning falls short:
 
 **COMPREHENSIVE SCREEN READER CODE ANALYSIS INSTRUCTIONS:**
 
@@ -925,6 +936,12 @@ In addition to the "components" array, you MUST populate the "enhancedAxeViolati
 - Complete WCAG reference with guideline number, level, title, and URL
 
 This enhancedAxeViolations field is MANDATORY and must not be empty if you identify accessibility issues.
+
+**REMINDER: TWO-PHASE ANALYSIS APPROACH**
+1. **enhancedAxeViolations array**: MANDATORY enhancement of every Axe violation with user-impact explanations and code fixes
+2. **components array**: Independent semantic analysis that does NOT duplicate issues already enhanced in Phase 1
+
+Before adding any item to "components", verify it's not already covered in "enhancedAxeViolations".
 
 ${GeminiService.SHARED_OUTPUT_FORMAT}
 `;
