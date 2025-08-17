@@ -149,14 +149,40 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
     return isAuthUrl(url).isAuthStep;
   }
 
+  /**
+   * Normalize CSS selectors to catch duplicate elements with different selector expressions
+   * e.g. ".Frame-body" and "body > .Frame > .Frame-body" both target the same element
+   */
+  const normalizeSelector = (selector: string): string => {
+    if (!selector) return 'no-selector';
+    
+    // Extract the most specific part (rightmost segment after > or space)
+    const segments = selector.split(/\s*>\s*|\s+/);
+    const mostSpecific = segments[segments.length - 1];
+    
+    // If it has a class or ID, use that as the normalized selector
+    if (mostSpecific.includes('.') || mostSpecific.includes('#')) {
+      return mostSpecific;
+    }
+    
+    // Otherwise use the original selector
+    return selector;
+  };
+
   // Filter components based on selected severities, exclude auth steps, deduplicate, and sort by step (capture order) and within step by severity (critical first)
   const filteredComponents = (analysisData?.analysis?.components.filter(component =>
     severityFilters[component.impact] && !isAuthComponent(component.step)
   ) || [])
-    // Deduplicate based on selector + WCAG rule + step combination
+    // Deduplicate based on normalized selector + WCAG rule + step combination
     .reduce((unique, component) => {
-      const key = `${component.step || 0}::${component.selector || 'no-selector'}::${component.wcagRule || 'no-wcag'}`;
-      if (!unique.some(item => `${item.step || 0}::${item.selector || 'no-selector'}::${item.wcagRule || 'no-wcag'}` === key)) {
+      const normalizedSelector = normalizeSelector(component.selector || '');
+      const key = `${component.step || 0}::${normalizedSelector}::${component.wcagRule || 'no-wcag'}`;
+      const existingKey = unique.find(item => {
+        const itemNormalizedSelector = normalizeSelector(item.selector || '');
+        return `${item.step || 0}::${itemNormalizedSelector}::${item.wcagRule || 'no-wcag'}` === key;
+      });
+      
+      if (!existingKey) {
         unique.push(component);
       }
       return unique;
