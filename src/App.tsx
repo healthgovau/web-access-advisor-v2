@@ -466,7 +466,6 @@ function App() {
             if (pollRetryCount <= maxRetries) {
               // Retry with exponential backoff
               const retryDelay = Math.min(2000 * Math.pow(2, pollRetryCount - 1), 10000);
-              console.log(`Retrying analysis polling in ${retryDelay}ms...`);
               
               // Show temporary warning message for polling issues (not a fatal error)
               updateProgress('processing-with-ai', 
@@ -674,7 +673,6 @@ function App() {
   // Helper to dismiss a toast
   const dismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-    console.log(`Toast dismissed: ${id}`);
   };
 
   // Show toast on error (including LLM failures)

@@ -165,7 +165,6 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest, screenRea
       
       // Only create fingerprint if we have both WCAG rule and selector
       if (!wcagRule || !selector) {
-        console.log('⚠️ Skipping component - missing wcagRule or selector:', { wcagRule, selector });
         return [];
       }
       
@@ -174,13 +173,10 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest, screenRea
       
       // Create fingerprint combining WCAG number with element selector
       const fingerprint = `${wcagNumber}::${selector}`;
-      console.log('🔍 Created screen reader fingerprint:', fingerprint);
       
       return [fingerprint];
     })
   );
-
-  console.log('🔍 Total screen reader fingerprints created:', screenReaderIssueFingerprints.size);
 
   // Function to check if an axe violation is a duplicate of a screen reader issue
   const isDuplicateViolation = (violation: AxeViolation): boolean => {
@@ -202,7 +198,6 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest, screenRea
     }
     
     if (!wcagRule) {
-      console.log('⚠️ No WCAG rule found for violation:', violation.id);
       return false;
     }
     
@@ -215,10 +210,6 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest, screenRea
       const fingerprint = `${wcagRule}::${selector}`;
       const match = screenReaderIssueFingerprints.has(fingerprint);
       
-      if (match) {
-        console.log(`🎯 Found exact duplicate: ${violation.id} (${fingerprint}) matches screen reader analysis`);
-      }
-      
       return match;
     }) || false;
     
@@ -226,36 +217,6 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest, screenRea
   };
 
   // Debug logging
-  console.log('🔍 Screen reader issue fingerprints:', Array.from(screenReaderIssueFingerprints));
-  console.log('🔍 Available axe violations:', axeResults.map(v => ({ id: v.id, wcagRef: v.wcagReference, tags: v.tags })));
-  console.log('🔍 showDuplicates state:', showDuplicates);
-
-  // Test: Let's see what fingerprints axe violations would create
-  axeResults.forEach(violation => {
-    let wcagRule = null;
-    
-    if (violation.wcagReference?.guideline) {
-      wcagRule = violation.wcagReference.guideline;
-    } else if (violation.tags) {
-      const wcagTag = violation.tags.find(tag => tag.startsWith('wcag') && tag.match(/wcag\d+/));
-      if (wcagTag) {
-        const numbers = wcagTag.replace('wcag', '');
-        if (numbers.length >= 3) {
-          wcagRule = `${numbers[0]}.${numbers[1]}.${numbers.slice(2)}`;
-        }
-      }
-    }
-    
-    violation.nodes?.forEach(node => {
-      const selector = node.target?.[0];
-      if (wcagRule && selector) {
-        const fingerprint = `${wcagRule}::${selector}`;
-        console.log(`🧪 Axe violation ${violation.id} would create fingerprint:`, fingerprint);
-        console.log(`🧪 Does it match screen reader?`, screenReaderIssueFingerprints.has(fingerprint));
-      }
-    });
-  });
-
   // Filter violations based on duplicate status and user preference
   const getFilteredViolations = () => {
     const baseSeverityFilter = axeResults.filter(violation => 
@@ -263,25 +224,15 @@ const AxeResults: React.FC<AxeResultsProps> = ({ axeResults, manifest, screenRea
       !isAuthViolation(violation)
     );
 
-    console.log('🔍 Base filtered violations (after severity):', baseSeverityFilter.length);
-    console.log('🔍 showDuplicates state:', showDuplicates);
-
     if (showDuplicates) {
       // Show all violations when toggle is on
-      console.log('🔍 Showing all violations (toggle ON)');
       return baseSeverityFilter;
     } else {
       // Hide duplicates when toggle is off (default)
-      console.log('🔍 Filtering duplicates (toggle OFF) - testing each violation:');
       const withoutDuplicates = baseSeverityFilter.filter(violation => {
         const isDupe = isDuplicateViolation(violation);
-        console.log(`🔍 Violation ${violation.id} - isDuplicate: ${isDupe}`);
-        if (isDupe) {
-          console.log('✂️ FILTERING OUT duplicate:', violation.id);
-        }
         return !isDupe;
       });
-      console.log('🔍 After filtering duplicates:', withoutDuplicates.length, 'remaining out of', baseSeverityFilter.length);
       return withoutDuplicates;
     }
   };

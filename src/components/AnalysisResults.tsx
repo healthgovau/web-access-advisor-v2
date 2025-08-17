@@ -163,9 +163,6 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
     // If it has a class or ID, use that as the normalized selector
     if (mostSpecific.includes('.') || mostSpecific.includes('#')) {
       const normalized = mostSpecific;
-      if (selector !== normalized) {
-        console.log(`🔄 Normalized selector: "${selector}" → "${normalized}"`);
-      }
       return normalized;
     }
     
@@ -188,10 +185,9 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
       });
       
       if (!existingKey) {
-        console.log(`✅ Adding unique component with key: ${key}`);
         unique.push(component);
       } else {
-        console.log(`❌ Filtering duplicate with key: ${key}`);
+        // Duplicate filtered out
       }
       return unique;
     }, [] as any[])
