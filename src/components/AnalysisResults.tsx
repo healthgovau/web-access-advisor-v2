@@ -149,14 +149,23 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
     return isAuthUrl(url).isAuthStep;
   }
 
-  // Filter components based on selected severities, exclude auth steps, and sort by step (capture order)
+  // Filter components based on selected severities, exclude auth steps, and sort by step (capture order) and within step by severity (critical first)
   const filteredComponents = (analysisData?.analysis?.components.filter(component =>
     severityFilters[component.impact] && !isAuthComponent(component.step)
   ) || []).slice().sort((a, b) => {
-    // Sort by step in ascending order (capture order), fallback to 0 if missing
+    // Primary sort: by step in ascending order (capture order), fallback to 0 if missing
     const stepA = typeof a.step === 'number' ? a.step : 0;
     const stepB = typeof b.step === 'number' ? b.step : 0;
-    return stepA - stepB; // Ascending order: step 1, step 2, step 3, etc.
+    
+    if (stepA !== stepB) {
+      return stepA - stepB; // Ascending order: step 1, step 2, step 3, etc.
+    }
+    
+    // Secondary sort: within same step, sort by severity (critical = 0, serious = 1, moderate = 2, minor = 3)
+    const severityOrder = { critical: 0, serious: 1, moderate: 2, minor: 3 };
+    const severityA = severityOrder[a.impact as keyof typeof severityOrder] ?? 4;
+    const severityB = severityOrder[b.impact as keyof typeof severityOrder] ?? 4;
+    return severityA - severityB; // Critical first within each step
   });
 
   if (isLoading) {
