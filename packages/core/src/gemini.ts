@@ -479,8 +479,10 @@ ${this.truncateHtml(previousHtml, filterStaticSections)}` : ''}
 **Axe-core Accessibility Report (Violations Only):**
 ${JSON.stringify(this.filterAxeResultsForAnalysis(axeResults), null, 2)}
 
-**AXE VIOLATION ENHANCEMENT REQUIREMENTS:**
-For each axe violation listed above, you MUST provide enhanced user-friendly content in the enhancedAxeViolations section:
+**CRITICAL: AXE VIOLATION ENHANCEMENT REQUIREMENTS:**
+You MUST enhance EVERY SINGLE axe violation listed in the Axe-core Accessibility Report above. Do not skip any violations.
+
+For each axe violation (including label-title-only, color-contrast, landmark-one-main, page-has-heading-one, region, etc.), you MUST provide enhanced content in the enhancedAxeViolations array:
 
 - **explanation**: Focus on user impact - how this affects people using screen readers or other assistive technologies
 - **recommendation**: Provide clear, actionable guidance ending with "Reference: [helpUrl from violation]"  
@@ -488,6 +490,8 @@ For each axe violation listed above, you MUST provide enhanced user-friendly con
 - Use the violation's existing id, helpUrl, and technical details as reference
 - Make explanations user-impact focused, not technical descriptions
 - Keep recommendations actionable but general enough to apply to the violation type
+
+CRITICAL: If there are 5 axe violations in the input, there must be 5 items in the enhancedAxeViolations array. Do not omit any violations.
 
 **COMPREHENSIVE SCREEN READER CODE ANALYSIS INSTRUCTIONS:**
 
