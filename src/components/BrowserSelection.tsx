@@ -176,29 +176,25 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
       {/* Profile Sharing Toggle - moved to top */}
       {canUseProfile && (
         <div className="mb-6">
-          <div className="flex items-start justify-between p-4 bg-white border rounded-lg">
-            <div className="flex-1 pr-4">
-              <div className="text-base font-medium text-gray-700 mb-2">
-                Use existing browser session
-              </div>
-              <p className="text-sm text-gray-600">
-                Share logins and settings from your main browser. This will use your actual browser profile 
-                with saved passwords, cookies, and extensions.
-              </p>
-              {useProfile && (
-                <div className="mt-3 text-sm text-blue-600 bg-blue-50 p-2 rounded">
-                  ✅ Will use your existing login sessions and browser settings
-                </div>
-              )}
+          <div className="p-4 bg-white border rounded-lg">
+            <div 
+              className={`flex items-center justify-center text-sm p-2 rounded transition-colors cursor-pointer hover:shadow-sm ${
+                useProfile 
+                  ? 'text-blue-600 bg-blue-50' 
+                  : 'text-gray-400 bg-gray-50'
+              }`}
+              onClick={() => handleProfileToggle(!useProfile)}
+            >
+              <span>Will use your existing login sessions and browser settings</span>
+              <input
+                type="checkbox"
+                id="use-profile"
+                checked={useProfile}
+                onChange={(e) => handleProfileToggle(e.target.checked)}
+                disabled={disabled}
+                className="ml-3 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
+              />
             </div>
-            <input
-              type="checkbox"
-              id="use-profile"
-              checked={useProfile}
-              onChange={(e) => handleProfileToggle(e.target.checked)}
-              disabled={disabled}
-              className="mt-1 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
           </div>
         </div>
       )}
