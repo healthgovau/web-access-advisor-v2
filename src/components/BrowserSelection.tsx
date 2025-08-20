@@ -111,10 +111,13 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
       url: url.trim(),
       loginStatusKeys: Object.keys(loginStatus),
       loginStatus,
-      hasLoginValue: loginStatus[browserName]
+      hasLoginValue: loginStatus[browserName],
+      useProfile: useProfile
     });
     
-    if (!url.trim()) return 'Profile sharing available';
+    if (!url.trim()) {
+      return useProfile ? 'Profile sharing available' : 'Clean browser session (no profile)';
+    }
     
     // If no login status data, it means URL validation failed or error occurred
     if (Object.keys(loginStatus).length === 0) {

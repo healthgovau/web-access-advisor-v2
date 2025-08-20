@@ -1,5 +1,102 @@
 # Web Access Advisor - Current Tasks
 
+## ✅ Recently Completed (2025-08-21)
+
+### Browser Selection UX Overhaul & Authentication State Management
+- ✅ **Progressive Disclosure Implementation** - Restructured workflow with Session Mode Toggle → Browser Selection → URL Input/Session Selector for logical user flow
+- ✅ **Session-Aware Browser Behavior** - New Recording mode enables all browsers; Load Session mode disables browsers until session is loaded with metadata
+- ✅ **Browser Selection Persistence** - Switching between session modes preserves appropriate browser selection state with mode-specific storage
+- ✅ **Auto-Scroll Enhancement** - Added smooth scrolling behavior when switching session modes or selecting browsers for better UX
+- ✅ **Session Metadata Integration** - Browser settings (`browserType`, `useProfile`) now saved with recordings and auto-populated when loading sessions
+- ✅ **Authentication State Detection** - Comprehensive pre-replay authentication checking with confidence levels and user-friendly error messaging
+- ✅ **Profile Status Messaging Fix** - Fixed "Profile sharing available" to only show when profile checkbox is enabled; shows "Clean browser session (no profile)" when disabled
+
+### Technical Implementation Details
+
+#### Backend Changes
+```typescript
+// Enhanced SavedRecording interface with browser metadata
+export interface SavedRecording {
+  sessionId: string;
+  sessionName: string;
+  url: string;
+  // ... existing fields
+  browserType?: string;    // 'chromium' | 'firefox' | 'webkit'  
+  useProfile?: boolean;    // Profile usage setting
+}
+
+// Authentication detection in AccessibilityAnalyzer
+async detectAuthenticationState(page: Page, initialUrl: string): Promise<{
+  isLoggedIn: boolean;
+  confidence: 'high' | 'medium' | 'low';
+  indicators: string[];
+  requiresAuth: boolean;
+}>
+```
+
+#### Frontend Changes
+```typescript
+// Enhanced session loading with browser metadata auto-population
+const handleLoadSession = async (sessionId: string) => {
+  const sessionData = await recordingApi.loadSavedSession(sessionId);
+  const { browserType, useProfile } = sessionData;
+  
+  if (browserType) {
+    // Auto-populate browser selection from saved session
+    setSelectedBrowser(browserNameMap[browserType]);
+    setSelectedBrowserType(browserType);
+    setUseProfile(useProfile ?? true);
+  }
+};
+
+// Session mode switching with browser state persistence
+const handleSessionModeChange = (mode: 'new' | 'load') => {
+  if (mode === 'load') {
+    // Save current selection, clear for session loading
+    setNewRecordingBrowser(selectedBrowser);
+    setSelectedBrowser('');
+    // Auto-scroll to browser selection
+    setTimeout(() => browserSelectionRef.current?.scrollIntoView({
+      behavior: 'smooth', block: 'start'
+    }), 100);
+  }
+};
+```
+
+#### Authentication Protection Workflow
+```
+Start Analysis → Pre-Flight Auth Check → 
+├─ Auth Required + Not Logged In (High Confidence) → Abort with error:
+│  "Authentication required but user not logged in.
+│   Please log into the test site on [Browser Name] and try again."
+├─ Auth OK or Uncertain → Proceed with replay  
+└─ Auth Detection Failed → Proceed with warning
+```
+
+#### User Experience Flow
+```
+New Recording:
+Session Mode → Browser Selection → URL Input → Recording
+
+Load Session: 
+Session Mode → Browser Selection (disabled) → Session Selector → 
+Auto-populate Browser (enabled with session settings) → Ready for Analysis
+```
+
+### Key Benefits Delivered
+- ✅ **Eliminates authentication replay failures** - Detects and prevents analysis when user needs to log in first
+- ✅ **Ensures browser consistency** - Recordings replay using the same browser/profile combination originally used
+- ✅ **Improves user guidance** - Clear error messages with specific browser names and actionable instructions
+- ✅ **Streamlines workflow** - Progressive disclosure reduces cognitive load and guides user through logical steps
+- ✅ **Preserves user state** - Browser selection persistence across mode switches prevents lost work
+
+### Files Modified
+- `packages/core/src/analyzer.ts` - Authentication detection and pre-replay validation
+- `server/recordingService.ts` - Enhanced SavedRecording interface and metadata persistence
+- `src/App.tsx` - Session mode switching, browser state management, session loading with metadata
+- `src/components/BrowserSelection.tsx` - Session-aware behavior, profile status messaging fix
+- `src/services/recordingApi.ts` - Enhanced API types to include browser metadata
+
 ## ✅ Recently Completed (2025-06-27)
 
 ### Session Persistence and Server Restart Fix

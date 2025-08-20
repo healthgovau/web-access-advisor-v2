@@ -149,7 +149,15 @@ export class AccessibilityAnalyzer {
           
           // Check for authentication mismatch
           if (authState.requiresAuth && !authState.isLoggedIn && authState.confidence === 'high') {
-            const errorMsg = `Authentication required but user not logged in. Replay may fail.\nIndicators: ${authState.indicators.join(', ')}\n\nPlease log in to the application before running analysis.`;
+            // Map browserType to user-friendly names
+            const browserNameMap: { [key: string]: string } = {
+              'chromium': 'Chrome',
+              'firefox': 'Firefox',
+              'webkit': 'Safari'
+            };
+            const browserName = browserNameMap[browserType] || 'Chrome';
+            
+            const errorMsg = `Authentication required but user not logged in.\n\nPlease log into the test site on ${browserName} and try again.\n\nIndicators: ${authState.indicators.join(', ')}`;
             console.warn(`⚠️ ${errorMsg}`);
             
             // Create minimal manifest for authentication failure
