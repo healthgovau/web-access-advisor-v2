@@ -46,6 +46,8 @@ export interface SavedRecording {
   duration: number;
   actionCount: number;
   actions: UserAction[];
+  browserType?: string;
+  useProfile?: boolean;
   metadata: {
     version: string;
     createdBy: string;
@@ -552,6 +554,8 @@ export class BrowserRecordingService {
         duration: endTime.getTime() - session.startTime.getTime(),
         actionCount: session.actions.length,
         actions: session.actions,
+        browserType: session.browserType,
+        useProfile: session.useProfile,
         metadata: {
           version: '2.0.0',
           createdBy: 'Web Access Advisor',
@@ -592,6 +596,8 @@ export class BrowserRecordingService {
         startTime: new Date(savedRecording.startTime),
         status: 'stopped', // Saved recordings are always stopped
         actions: savedRecording.actions,
+        browserType: savedRecording.browserType,
+        useProfile: savedRecording.useProfile,
         // Browser, context, page are undefined since this is a saved session
       };
 

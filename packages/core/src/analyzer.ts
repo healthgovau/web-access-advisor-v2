@@ -131,6 +131,64 @@ export class AccessibilityAnalyzer {
       this.domChangeDetector.reset();
       this.previousHtmlState = null;
 
+      // AUTHENTICATION CHECK: Detect authentication state before replay
+      console.log(`🔐 PHASE 1.5: Checking authentication state...`);
+      onProgress?.('replaying-actions', 'Checking authentication requirements...', 0, actions.length, 0);
+      
+      // Find the initial navigation URL from actions
+      const initialNavigationAction = actions.find(action => action.type === 'navigate');
+      if (initialNavigationAction && initialNavigationAction.url) {
+        try {
+          const authState = await this.detectAuthenticationState(this.page, initialNavigationAction.url);
+          
+          console.log(`🔐 Authentication analysis:`);
+          console.log(`   - Requires authentication: ${authState.requiresAuth}`);
+          console.log(`   - Currently logged in: ${authState.isLoggedIn}`);
+          console.log(`   - Confidence level: ${authState.confidence}`);
+          console.log(`   - Indicators: ${authState.indicators.join(', ')}`);
+          
+          // Check for authentication mismatch
+          if (authState.requiresAuth && !authState.isLoggedIn && authState.confidence === 'high') {
+            const errorMsg = `Authentication required but user not logged in. Replay may fail.\nIndicators: ${authState.indicators.join(', ')}\n\nPlease log in to the application before running analysis.`;
+            console.warn(`⚠️ ${errorMsg}`);
+            
+            // Create minimal manifest for authentication failure
+            const failureManifest = await this.generateManifest(sessionId, actions, []);
+            
+            // Return early with authentication warning
+            return {
+              success: false,
+              sessionId,
+              snapshotCount: 0,
+              snapshots: [],
+              manifest: failureManifest,
+              axeResults: [],
+              error: errorMsg,
+              warnings: [
+                'Authentication state mismatch detected',
+                'Session requires authentication but user appears to be logged out',
+                'Replay may fail or produce incomplete results'
+              ]
+            };
+          }
+          
+          // Log authentication status for successful cases
+          if (authState.isLoggedIn) {
+            console.log(`✅ User appears to be authenticated - proceeding with replay`);
+          } else if (!authState.requiresAuth) {
+            console.log(`✅ No authentication required - proceeding with replay`);
+          } else {
+            console.log(`⚠️ Authentication state uncertain (confidence: ${authState.confidence}) - proceeding with replay`);
+          }
+          
+        } catch (error) {
+          console.warn(`⚠️ Authentication detection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          console.log(`Proceeding with replay despite authentication check failure`);
+        }
+      } else {
+        console.log(`⚠️ No navigation action found - skipping authentication check`);
+      }
+
       console.log(`🔄 PHASE 2: Replaying actions and capturing snapshots...`);
       onProgress?.('replaying-actions', 'Replaying user actions in browser...', 0, actions.length, 0);
 
@@ -682,7 +740,139 @@ export class AccessibilityAnalyzer {
    */
   private generateSessionId(): string {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }  /**
+  }
+
+  /**
+   * Detect authentication state by checking common authentication indicators
+   */
+  private async detectAuthenticationState(page: Page, initialUrl: string): Promise<{
+    isLoggedIn: boolean;
+    confidence: 'high' | 'medium' | 'low';
+    indicators: string[];
+    requiresAuth: boolean;
+  }> {
+    const indicators: string[] = [];
+    let isLoggedIn = false;
+    let confidence: 'high' | 'medium' | 'low' = 'low';
+    let requiresAuth = false;
+
+    try {
+      // Navigate to the initial URL to check current auth state
+      await page.goto(initialUrl, { waitUntil: 'domcontentloaded', timeout: 10000 });
+      
+      const currentUrl = page.url();
+      const content = await page.content();
+      const title = await page.title();
+
+      // Check for authentication redirects
+      if (currentUrl !== initialUrl && (
+        currentUrl.includes('/login') || 
+        currentUrl.includes('/signin') || 
+        currentUrl.includes('/auth') ||
+        currentUrl.includes('/unauthorized')
+      )) {
+        requiresAuth = true;
+        indicators.push(`Redirected to authentication page: ${currentUrl}`);
+        confidence = 'high';
+      }
+
+      // Check for login-related content in page
+      const loginIndicators = [
+        /login|sign in|log in/i,
+        /username|email.*password/i,
+        /please.*log.*in|authentication.*required/i,
+        /unauthorized|access.*denied/i
+      ];
+
+      const loggedInIndicators = [
+        /logout|sign out|log out/i,
+        /welcome.*back|dashboard|account|profile/i,
+        /logged.*in.*as|signed.*in.*as/i
+      ];
+
+      // Check content for login indicators
+      for (const pattern of loginIndicators) {
+        if (pattern.test(content) || pattern.test(title)) {
+          requiresAuth = true;
+          indicators.push(`Login content detected: ${pattern.source}`);
+          if (confidence === 'low') confidence = 'medium';
+        }
+      }
+
+      // Check for logged-in indicators
+      for (const pattern of loggedInIndicators) {
+        if (pattern.test(content) || pattern.test(title)) {
+          isLoggedIn = true;
+          indicators.push(`Logged-in content detected: ${pattern.source}`);
+          confidence = 'high';
+        }
+      }
+
+      // Check for common authentication elements
+      const authElements = await page.$$eval('*', (elements) => {
+        const results: string[] = [];
+        elements.forEach(el => {
+          const text = el.textContent?.toLowerCase() || '';
+          const className = el.className?.toLowerCase() || '';
+          const id = el.id?.toLowerCase() || '';
+          
+          // Login form indicators
+          if ((el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'password') ||
+              text.includes('password') || className.includes('password')) {
+            results.push('Password field found');
+          }
+          
+          // Logout indicators
+          if (text.includes('logout') || text.includes('sign out') || 
+              className.includes('logout') || id.includes('logout')) {
+            results.push('Logout element found');
+          }
+          
+          // User profile indicators
+          if (className.includes('user') || className.includes('profile') ||
+              id.includes('user') || id.includes('profile')) {
+            results.push('User profile element found');
+          }
+        });
+        return results;
+      });
+
+      // Process element-based indicators
+      if (authElements.includes('Password field found')) {
+        requiresAuth = true;
+        indicators.push('Password input field detected');
+        if (confidence === 'low') confidence = 'medium';
+      }
+
+      if (authElements.includes('Logout element found') || 
+          authElements.includes('User profile element found')) {
+        isLoggedIn = true;
+        indicators.push('User session elements detected');
+        confidence = 'high';
+      }
+
+      // Final logic: if we need auth but don't see login indicators, user might be logged in
+      if (requiresAuth && !isLoggedIn && authElements.length === 0) {
+        // Could be a protected page that would redirect if not authenticated
+        // but we're seeing content, so likely authenticated
+        isLoggedIn = true;
+        indicators.push('Protected content accessible (likely authenticated)');
+        confidence = 'medium';
+      }
+
+    } catch (error) {
+      indicators.push(`Error during authentication detection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    return {
+      isLoggedIn,
+      confidence,
+      indicators,
+      requiresAuth
+    };
+  }
+
+  /**
    * Clean up resources
    */
   async cleanup(): Promise<void> {

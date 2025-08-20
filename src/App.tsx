@@ -692,6 +692,36 @@ function App() {
       updateState({ loading: true, error: undefined });
       updateProgress('preparing-analysis', 'Loading saved session'); const sessionData = await recordingApi.loadSavedSession(sessionId);
 
+      // Extract browser metadata from saved session
+      const { browserType, useProfile } = sessionData;
+      
+      if (browserType) {
+        // Auto-populate browser selection from saved session
+        console.log(`🔄 Auto-populating browser selection from saved session:`);
+        console.log(`   - Browser Type: ${browserType}`);
+        console.log(`   - Use Profile: ${useProfile ? 'Yes' : 'No'}`);
+        
+        // Map browserType to browser name for display
+        const browserNameMap: { [key: string]: string } = {
+          'chromium': 'Chrome',
+          'firefox': 'Firefox', 
+          'webkit': 'Safari'
+        };
+        
+        const browserName = browserNameMap[browserType] || 'Chrome';
+        
+        // Apply browser settings from saved session
+        setSelectedBrowser(browserName);
+        setSelectedBrowserType(browserType as 'chromium' | 'firefox' | 'webkit');
+        setUseProfile(useProfile ?? true);
+        
+        updateProgress('preparing-analysis', `Loaded session settings: ${browserName}${useProfile ? ' with profile' : ''}`);
+      } else {
+        // Fallback for sessions without browser metadata
+        console.log(`⚠️ No browser metadata found in saved session - using default settings`);
+        updateProgress('preparing-analysis', 'Session loaded (no browser settings found)');
+      }
+
       updateProgress('recording-complete', `Session loaded: ${sessionData.actionCount} actions`, undefined, 'Ready for accessibility analysis');
 
       updateState({
