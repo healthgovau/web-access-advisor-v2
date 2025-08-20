@@ -9,6 +9,21 @@ const API_BASE = 'http://localhost:3002/api';
 
 export interface StartSessionRequest {
   url: string;
+  browserType?: 'chromium' | 'firefox' | 'webkit';
+  useProfile?: boolean;
+  name?: string;
+}
+
+export interface BrowserOption {
+  type: 'chromium' | 'firefox' | 'webkit';
+  name: string;
+  available: boolean;
+  profilePath?: string;
+}
+
+export interface GetBrowsersResponse {
+  browsers: BrowserOption[];
+  message: string;
 }
 
 export interface StartSessionResponse {
@@ -41,6 +56,24 @@ export interface AnalyzeSessionResponse {
 }
 
 /**
+ * Get available browsers
+ */
+export async function getAvailableBrowsers(): Promise<GetBrowsersResponse> {
+  try {
+    const response = await fetch(`${API_BASE}/browsers`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to get browsers: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error getting available browsers:', error);
+    throw error;
+  }
+}
+
+/**
  * Start a new recording session
  */
 export async function startRecordingSession(request: StartSessionRequest): Promise<StartSessionResponse> {
@@ -51,7 +84,12 @@ export async function startRecordingSession(request: StartSessionRequest): Promi
     const response = await fetch(`${API_BASE}/record/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: request.url })
+      body: JSON.stringify({ 
+        url: request.url,
+        browserType: request.browserType,
+        useProfile: request.useProfile,
+        name: request.name
+      })
     });
 
     console.log('Response status:', response.status, response.statusText);
