@@ -10,6 +10,7 @@ const API_BASE = 'http://localhost:3002/api';
 export interface StartSessionRequest {
   url: string;
   browserType?: 'chromium' | 'firefox' | 'webkit';
+  browserName?: string;
   useProfile?: boolean;
   name?: string;
 }

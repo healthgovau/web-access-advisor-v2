@@ -314,6 +314,7 @@ function App() {
       const response = await recordingApi.startRecordingSession({
         url: state.url,
         browserType: selectedBrowserType,
+        browserName: selectedBrowser,
         useProfile: useProfile,
         name: `Recording ${new Date().toLocaleString()}`
       });

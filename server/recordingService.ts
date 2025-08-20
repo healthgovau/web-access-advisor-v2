@@ -32,6 +32,7 @@ export interface BrowserOption {
 
 export interface RecordingOptions {
   browserType?: 'chromium' | 'firefox' | 'webkit';
+  browserName?: string;
   useProfile?: boolean;
   name?: string;
 }
@@ -227,7 +228,7 @@ export class BrowserRecordingService {
    * Start a new recording session with browser and profile options
    */
   async startRecording(url: string, options: RecordingOptions = {}): Promise<RecordingSession> {
-    const { browserType = 'chromium', useProfile = false, name } = options;
+    const { browserType = 'chromium', browserName, useProfile = false, name } = options;
     
     // Generate session ID consistent with analyzer format
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -238,10 +239,10 @@ export class BrowserRecordingService {
     try {
       if (useProfile) {
         // Use persistent context with user profile
-        context = await this.launchWithProfile(browserType);
+        context = await this.launchWithProfile(browserType, browserName);
       } else {
         // Use clean browser context
-        const browserInstance = await this.launchCleanBrowser(browserType);
+        const browserInstance = await this.launchCleanBrowser(browserType, browserName);
         browser = browserInstance;
         context = await browser.newContext();
       }
@@ -281,21 +282,39 @@ export class BrowserRecordingService {
   /**
    * Launch browser with persistent context (profile sharing)
    */
-  private async launchWithProfile(browserType: 'chromium' | 'firefox' | 'webkit'): Promise<BrowserContext> {
+  private async launchWithProfile(browserType: 'chromium' | 'firefox' | 'webkit', browserName?: string): Promise<BrowserContext> {
     const browsers = await this.detectAvailableBrowsers();
-    const browserOption = browsers.find(b => b.type === browserType && b.available);
+    const browserOption = browsers.find(b => 
+      b.type === browserType && 
+      b.available &&
+      (browserName ? b.name === browserName : true)
+    );
     
     if (!browserOption?.profilePath) {
-      throw new Error(`No profile found for ${browserType}`);
+      throw new Error(`No profile found for ${browserName || browserType}`);
     }
 
-    const launchOptions = {
+    const launchOptions: any = {
       headless: false,
       slowMo: 50
     };
 
     switch (browserType) {
       case 'chromium':
+        // If browser name is specified and it's Edge, use Edge executable
+        if (browserName === 'Microsoft Edge') {
+          const possibleEdgePaths = [
+            'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+            'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
+          ];
+          
+          for (const edgePath of possibleEdgePaths) {
+            if (await this.checkPathExists(edgePath)) {
+              launchOptions.executablePath = edgePath;
+              break;
+            }
+          }
+        }
         return await chromium.launchPersistentContext(browserOption.profilePath, launchOptions);
       case 'firefox':
         return await firefox.launchPersistentContext(browserOption.profilePath, launchOptions);
@@ -311,14 +330,29 @@ export class BrowserRecordingService {
   /**
    * Launch clean browser without profile
    */
-  private async launchCleanBrowser(browserType: 'chromium' | 'firefox' | 'webkit'): Promise<Browser> {
-    const launchOptions = {
+  private async launchCleanBrowser(browserType: 'chromium' | 'firefox' | 'webkit', browserName?: string): Promise<Browser> {
+    const launchOptions: any = {
       headless: false,
       slowMo: 50
     };
 
     switch (browserType) {
       case 'chromium':
+        // If browser name is specified and it's Edge, use Edge executable
+        if (browserName === 'Microsoft Edge') {
+          // Try to find Edge executable path
+          const possibleEdgePaths = [
+            'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+            'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
+          ];
+          
+          for (const edgePath of possibleEdgePaths) {
+            if (await this.checkPathExists(edgePath)) {
+              launchOptions.executablePath = edgePath;
+              break;
+            }
+          }
+        }
         return await chromium.launch(launchOptions);
       case 'firefox':
         return await firefox.launch(launchOptions);
