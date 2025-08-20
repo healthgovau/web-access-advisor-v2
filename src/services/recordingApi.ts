@@ -26,6 +26,12 @@ export interface GetBrowsersResponse {
   message: string;
 }
 
+export interface CheckDomainLoginResponse {
+  domain: string;
+  loginStatus: { [browserName: string]: boolean };
+  message: string;
+}
+
 export interface StartSessionResponse {
   sessionId: string;
   status: 'recording';
@@ -53,6 +59,28 @@ export interface AnalyzeSessionResponse {
   snapshotCount?: number;
   batchCurrent?: number;
   batchTotal?: number;
+}
+
+/**
+ * Check domain login status across browsers
+ */
+export async function checkDomainLogin(url: string): Promise<CheckDomainLoginResponse> {
+  try {
+    const response = await fetch(`${API_BASE}/browsers/check-domain`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to check domain login: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error checking domain login:', error);
+    throw error;
+  }
 }
 
 /**

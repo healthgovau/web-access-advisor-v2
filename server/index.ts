@@ -296,6 +296,85 @@ app.get('/api/sessions/:id/progress', (req: any, res: any) => {
 });
 
 /**
+ * Check domain login status across browsers
+ */
+app.post('/api/browsers/check-domain', async (req: any, res: any) => {
+  try {
+    console.log('🔍 DEBUG: Raw request body:', JSON.stringify(req.body, null, 2));
+    const { url }: { url: string } = req.body;
+    console.log('🔍 DEBUG: Extracted URL:', JSON.stringify(url));
+    console.log('🔍 DEBUG: URL type:', typeof url);
+    console.log('🔍 DEBUG: URL length:', url ? url.length : 'undefined');
+    
+    if (!url) {
+      // Return "no login detected" for missing URL instead of error
+      console.log(`❌ No URL provided`);
+      return res.json({
+        domain: null,
+        loginStatus: {
+          edge: false,
+          chrome: false,
+          firefox: false
+        },
+        message: 'No login detected - URL required'
+      });
+    }
+
+    // Validate URL format before processing
+    let domain: string;
+    try {
+      const urlObj = new URL(url);
+      domain = urlObj.hostname;
+      
+      // Check for valid protocol
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+        throw new Error('Invalid protocol');
+      }
+      
+      // Check for valid hostname
+      if (!domain || domain.trim() === '' || domain.includes('!')) {
+        throw new Error('Invalid domain');
+      }
+    } catch (urlError) {
+      // Return "no login detected" for invalid URL instead of error
+      console.log(`❌ Invalid URL: ${url} - ${urlError.message}`);
+      return res.json({
+        domain: null,
+        loginStatus: {
+          edge: false,
+          chrome: false,
+          firefox: false
+        },
+        message: 'No login detected - Invalid URL format'
+      });
+    }
+
+    console.log(`🔍 Checking domain login status for: ${domain}`);
+    
+    const loginStatus = await browserRecordingService.checkDomainLogin(domain);
+    
+    res.json({
+      domain,
+      loginStatus,
+      message: `Checked login status for ${domain}`
+    });
+
+  } catch (error: any) {
+    console.error('Failed to check domain login:', error);
+    // Return "no login detected" for any other errors instead of 500
+    res.json({
+      domain: null,
+      loginStatus: {
+        edge: false,
+        chrome: false,
+        firefox: false
+      },
+      message: 'No login detected - Service error'
+    });
+  }
+});
+
+/**
  * Get available browsers and their profile status
  */
 app.get('/api/browsers', async (req: any, res: any) => {

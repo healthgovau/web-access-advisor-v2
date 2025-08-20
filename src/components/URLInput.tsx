@@ -105,9 +105,10 @@ const URLInput: React.FC<URLInputProps> = ({
         </div>
       </div>
 
-      {/* Browser Selection */}
-      {browserOptions && (
+      {/* Browser Selection - only show when URL is provided */}
+      {browserOptions && url.trim() && (
         <BrowserSelection
+          url={url}
           selectedBrowser={browserOptions.selectedBrowser}
           useProfile={browserOptions.useProfile}
           onBrowserChange={browserOptions.onBrowserChange}

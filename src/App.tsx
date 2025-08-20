@@ -179,6 +179,11 @@ function App() {
   // Static section filtering state
   const [staticSectionMode, setStaticSectionMode] = useState<'include' | 'ignore' | 'separate'>('separate');
 
+  // Browser selection state
+  const [selectedBrowser, setSelectedBrowser] = useState<string>('');
+  const [selectedBrowserType, setSelectedBrowserType] = useState<'chromium' | 'firefox' | 'webkit'>('chromium');
+  const [useProfile, setUseProfile] = useState<boolean>(false);
+
   // Main application state
   const [state, setState] = useState<AppState>({
     mode: 'setup',
@@ -257,6 +262,16 @@ function App() {
     updateState({ url });
   };
 
+  // Browser selection handlers
+  const handleBrowserChange = (browserType: 'chromium' | 'firefox' | 'webkit', browserName: string) => {
+    setSelectedBrowserType(browserType);
+    setSelectedBrowser(browserName);
+  };
+
+  const handleProfileToggle = (useProfileValue: boolean) => {
+    setUseProfile(useProfileValue);
+  };
+
   // Start action polling during recording
   const startActionPolling = (sessionId: string) => {
     if (pollingInterval.current) {
@@ -297,7 +312,10 @@ function App() {
 
       // Start recording session
       const response = await recordingApi.startRecordingSession({
-        url: state.url
+        url: state.url,
+        browserType: selectedBrowserType,
+        useProfile: useProfile,
+        name: `Recording ${new Date().toLocaleString()}`
       });
       
       if (!isMountedRef.current) return; // Check after async operation
@@ -742,6 +760,12 @@ function App() {
                     onUrlChange={handleUrlChange}
                     onNavigate={handleNavigateAndRecord}
                     isLoading={state.loading}
+                    browserOptions={{
+                      selectedBrowser,
+                      useProfile,
+                      onBrowserChange: handleBrowserChange,
+                      onProfileToggle: handleProfileToggle
+                    }}
                   />
                 ) : (
                   <SessionSelector

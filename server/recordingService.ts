@@ -57,6 +57,110 @@ export class BrowserRecordingService {
   private snapshotsDir = './snapshots';
 
   /**
+   * Check if user has cookies/login for a specific domain in browser profiles
+   */
+  async checkDomainLogin(domain: string): Promise<{ [browserName: string]: boolean }> {
+    const browsers = await this.detectAvailableBrowsers();
+    const results: { [browserName: string]: boolean } = {};
+    
+    // Simple timeout-based approach - don't spend more than 500ms total
+    const timeout = 100; // 100ms per browser max
+    
+    const checkPromises = browsers.map(async (browser) => {
+      if (!browser.available || !browser.profilePath) {
+        results[browser.name] = false;
+        return;
+      }
+      
+      try {
+        // Race condition with timeout
+        const hasLogin = await Promise.race([
+          this.checkBrowserDomainCookies(browser, domain),
+          new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('timeout')), timeout))
+        ]);
+        results[browser.name] = hasLogin;
+      } catch (error) {
+        // If timeout or error, assume no login to be safe
+        results[browser.name] = false;
+      }
+    });
+    
+    await Promise.allSettled(checkPromises);
+    return results;
+  }
+
+  /**
+   * Check if browser has cookies for a specific domain
+   */
+  private async checkBrowserDomainCookies(browser: BrowserOption, domain: string): Promise<boolean> {
+    console.log(`🔍 DEBUG: Checking domain cookies for ${browser.name}, domain: ${domain}`);
+    
+    if (!browser.profilePath) {
+      console.log(`🔍 DEBUG: No profile path for ${browser.name}`);
+      return false;
+    }
+    
+    try {
+      if (browser.type === 'chromium') {
+        // Check Chrome/Edge cookies database for the specific domain
+        const cookiesPath = path.join(browser.profilePath, 'Network', 'Cookies');
+        console.log(`🔍 DEBUG: Checking cookies path: ${cookiesPath}`);
+        const cookiesExists = await this.checkPathExists(cookiesPath);
+        console.log(`🔍 DEBUG: Cookies file exists: ${cookiesExists}`);
+        
+        if (!cookiesExists) {
+          console.log(`🔍 DEBUG: Cookies file doesn't exist, returning false`);
+          return false;
+        }
+        
+        // For now, do a simple file content check for the domain
+        // This is a simplified approach - real implementation would parse the SQLite db
+        try {
+          const fs = await import('fs');
+          const cookieData = await fs.promises.readFile(cookiesPath);
+          const containsDomain = cookieData.includes(domain);
+          console.log(`🔍 DEBUG: Cookies contain domain "${domain}": ${containsDomain}`);
+          return containsDomain;
+        } catch (error) {
+          console.log(`🔍 DEBUG: Could not read cookies for ${browser.name}:`, error.message);
+          return false;
+        }
+      }
+      
+      if (browser.type === 'firefox') {
+        // Check Firefox cookies database for the specific domain
+        const cookiesPath = path.join(browser.profilePath, 'cookies.sqlite');
+        console.log(`🔍 DEBUG: Checking Firefox cookies path: ${cookiesPath}`);
+        const cookiesExists = await this.checkPathExists(cookiesPath);
+        console.log(`🔍 DEBUG: Firefox cookies file exists: ${cookiesExists}`);
+        
+        if (!cookiesExists) {
+          console.log(`🔍 DEBUG: Firefox cookies file doesn't exist, returning false`);
+          return false;
+        }
+        
+        // For now, do a simple file content check for the domain
+        try {
+          const fs = await import('fs');
+          const cookieData = await fs.promises.readFile(cookiesPath);
+          const containsDomain = cookieData.includes(domain);
+          console.log(`🔍 DEBUG: Firefox cookies contain domain "${domain}": ${containsDomain}`);
+          return containsDomain;
+        } catch (error) {
+          console.log(`🔍 DEBUG: Could not read Firefox cookies for ${browser.name}:`, error.message);
+          return false;
+        }
+      }
+      
+      console.log(`🔍 DEBUG: Unknown browser type: ${browser.type}`);
+      return false;
+    } catch (error) {
+      console.log(`🔍 DEBUG: Error checking domain cookies for ${browser.name}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
    * Detect available browsers and their profile paths on Windows
    */
   async detectAvailableBrowsers(): Promise<BrowserOption[]> {
