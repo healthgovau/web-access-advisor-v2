@@ -88,13 +88,6 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
   const selectedBrowserOption = browsers.find(b => b.name === selectedBrowser);
   const canUseProfile = selectedBrowserOption?.available && selectedBrowserOption?.profilePath;
 
-  const getBrowserIcon = (browserName: string) => {
-    if (browserName.includes('Edge')) return '🌐';
-    if (browserName.includes('Chrome')) return '🔍';
-    if (browserName.includes('Firefox')) return '🦊';
-    return '🌍';
-  };
-
   const getLoginStatusText = (browserName: string) => {
     console.log('🔍 DEBUG getLoginStatusText:', {
       browserName,
@@ -162,19 +155,49 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
   }
 
   return (
-    <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-      <h4 className="text-sm font-medium text-gray-900">Browser Options</h4>
+    <div className="card rounded-lg p-4">
+      <h3 className="text-xl font-medium text-brand-dark mb-3 text-center">Browser Options</h3>
       
-      {/* Browser Selection */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700">Choose Browser:</label>
-        <div className="grid grid-cols-1 gap-2">
+      {/* Profile Sharing Toggle - moved to top */}
+      {canUseProfile && (
+        <div className="mb-6">
+          <div className="flex items-start justify-between p-4 bg-white border rounded-lg">
+            <div className="flex-1 pr-4">
+              <div className="text-base font-medium text-gray-700 mb-2">
+                Use existing browser session
+              </div>
+              <p className="text-sm text-gray-600">
+                Share logins and settings from your main browser. This will use your actual browser profile 
+                with saved passwords, cookies, and extensions.
+              </p>
+              {useProfile && (
+                <div className="mt-3 text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                  ✅ Will use your existing login sessions and browser settings
+                </div>
+              )}
+            </div>
+            <input
+              type="checkbox"
+              id="use-profile"
+              checked={useProfile}
+              onChange={(e) => !disabled && onProfileToggle(e.target.checked)}
+              disabled={disabled}
+              className="mt-1 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      )}
+      
+      {/* Browser Selection - 2x2 grid */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
           {availableBrowsers.map((browser) => (
-            <label
+            <div
               key={browser.name}
-              className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+              onClick={() => !disabled && onBrowserChange(browser.type, browser.name)}
+              className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                 selectedBrowser === browser.name
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
@@ -187,62 +210,20 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
                 disabled={disabled}
                 className="sr-only"
               />
-              <div className="flex items-center space-x-3 flex-1">
-                <span className="text-2xl">{getBrowserIcon(browser.name)}</span>
-                <div className="flex-1">
-                  <div className="font-medium text-sm">{browser.name}</div>
-                  <div className="text-xs text-gray-500">
-                    {browser.available && browser.profilePath ? getLoginStatusText(browser.name) : 'Clean session only'}
-                  </div>
+              <div className="text-center">
+                <div className="font-medium text-base mb-2">{browser.name}</div>
+                <div className="text-sm text-gray-500">
+                  {browser.available && browser.profilePath ? getLoginStatusText(browser.name) : 'Clean session only'}
                 </div>
-                {selectedBrowser === browser.name && (
-                  <div className="text-blue-500">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
               </div>
-            </label>
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Profile Sharing Toggle */}
-      {canUseProfile && (
-        <div className="space-y-2">
-          <div className="flex items-start space-x-3 p-3 bg-white border rounded-lg">
-            <input
-              type="checkbox"
-              id="use-profile"
-              checked={useProfile}
-              onChange={(e) => !disabled && onProfileToggle(e.target.checked)}
-              disabled={disabled}
-              className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <div className="flex-1">
-              <label 
-                htmlFor="use-profile" 
-                className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-gray-700 cursor-pointer'}`}
-              >
-                Use existing browser session
-              </label>
-              <p className="text-xs text-gray-500 mt-1">
-                Share logins and settings from your main browser. This will use your actual browser profile 
-                with saved passwords, cookies, and extensions.
-              </p>
-              {useProfile && (
-                <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                  ✅ Will use your existing login sessions and browser settings
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Profile sharing not available message */}
       {!canUseProfile && selectedBrowserOption && (
-        <div className="text-sm text-gray-500 bg-gray-100 p-3 rounded-lg">
+        <div className="mt-4 text-sm text-gray-500 bg-gray-100 p-3 rounded-lg">
           ℹ️ Profile sharing not available for {selectedBrowserOption.name}. Will use a clean browser session.
         </div>
       )}
