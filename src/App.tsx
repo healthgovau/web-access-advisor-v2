@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { QueryProvider } from './services/queryClient';
 import URLInput from './components/URLInput';
+import BrowserSelection from './components/BrowserSelection';
 import ActionList from './components/ActionList';
 import ThreePhaseStatus from './components/ThreePhaseStatus';
 import AnalysisResults from './components/AnalysisResults';
@@ -180,7 +181,7 @@ function App() {
   const [staticSectionMode, setStaticSectionMode] = useState<'include' | 'ignore' | 'separate'>('separate');
 
   // Browser selection state
-  const [selectedBrowser, setSelectedBrowser] = useState<string>('');
+  const [selectedBrowser, setSelectedBrowser] = useState<string>(''); // No default selection
   const [selectedBrowserType, setSelectedBrowserType] = useState<'chromium' | 'firefox' | 'webkit'>('chromium');
   const [useProfile, setUseProfile] = useState<boolean>(true);
 
@@ -266,10 +267,22 @@ function App() {
   const handleBrowserChange = (browserType: 'chromium' | 'firefox' | 'webkit', browserName: string) => {
     setSelectedBrowserType(browserType);
     setSelectedBrowser(browserName);
+    
+    // Auto-scroll to browser options on first interaction
+    if (!selectedBrowser) {
+      // Scroll to top of page smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleProfileToggle = (useProfileValue: boolean) => {
     setUseProfile(useProfileValue);
+    
+    // Auto-scroll to browser options on first interaction
+    if (!selectedBrowser) {
+      // Scroll to top of page smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   // Start action polling during recording
@@ -569,6 +582,12 @@ function App() {
     stopActionPolling();
     lastProgressMessageRef.current = ''; // Reset progress message tracking
     setSessionMode('new'); // Reset to new recording mode
+    
+    // Reset browser selection to force re-selection
+    setSelectedBrowser('');
+    setSelectedBrowserType('chromium');
+    setUseProfile(true);
+    
     updateState({
       mode: 'setup',
       url: '',
@@ -590,7 +609,7 @@ function App() {
   // Handle session mode change
   const handleSessionModeChange = (mode: 'new' | 'load') => {
     setSessionMode(mode);
-    // Reset state when switching modes
+    // Reset state when switching modes but keep browser selection
     updateState({
       mode: 'setup',
       url: '',
@@ -749,30 +768,39 @@ function App() {
             {state.mode === 'setup' && (
               // Interactive session mode during setup only
               <>
-                <SessionModeToggle
-                  mode={sessionMode}
-                  onModeChange={handleSessionModeChange}
+                {/* Browser Selection - Global for all modes */}
+                <BrowserSelection
+                  url={state.url}
+                  selectedBrowser={selectedBrowser}
+                  useProfile={useProfile}
+                  onBrowserChange={handleBrowserChange}
+                  onProfileToggle={handleProfileToggle}
                   disabled={state.loading}
                 />
 
-                {sessionMode === 'new' ? (
-                  <URLInput
-                    url={state.url}
-                    onUrlChange={handleUrlChange}
-                    onNavigate={handleNavigateAndRecord}
-                    isLoading={state.loading}
-                    browserOptions={{
-                      selectedBrowser,
-                      useProfile,
-                      onBrowserChange: handleBrowserChange,
-                      onProfileToggle: handleProfileToggle
-                    }}
-                  />
-                ) : (
-                  <SessionSelector
-                    onSessionSelect={handleLoadSession}
-                    isLoading={state.loading}
-                  />
+                {/* Only show session mode and inputs after browser is selected */}
+                {selectedBrowser && (
+                  <>
+                    <SessionModeToggle
+                      mode={sessionMode}
+                      onModeChange={handleSessionModeChange}
+                      disabled={state.loading}
+                    />
+
+                    {sessionMode === 'new' ? (
+                      <URLInput
+                        url={state.url}
+                        onUrlChange={handleUrlChange}
+                        onNavigate={handleNavigateAndRecord}
+                        isLoading={state.loading}
+                      />
+                    ) : (
+                      <SessionSelector
+                        onSessionSelect={handleLoadSession}
+                        isLoading={state.loading}
+                      />
+                    )}
+                  </>
                 )}
               </>
             )}            {/* Error Display */}

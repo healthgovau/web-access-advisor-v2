@@ -3,27 +3,19 @@
  */
 
 import { useState } from 'react';
-import BrowserSelection from './BrowserSelection';
 
 interface URLInputProps {
   url: string;
   onUrlChange: (url: string) => void;
   onNavigate: () => void;
   isLoading: boolean;
-  browserOptions?: {
-    selectedBrowser: string;
-    useProfile: boolean;
-    onBrowserChange: (browserType: 'chromium' | 'firefox' | 'webkit', browserName: string) => void;
-    onProfileToggle: (useProfile: boolean) => void;
-  };
 }
 
 const URLInput: React.FC<URLInputProps> = ({ 
   url, 
   onUrlChange, 
   onNavigate, 
-  isLoading, 
-  browserOptions 
+  isLoading
 }) => {
   const [inputValue, setInputValue] = useState(url || '');
 
@@ -104,18 +96,6 @@ const URLInput: React.FC<URLInputProps> = ({
           </form>
         </div>
       </div>
-
-      {/* Browser Selection - always visible */}
-      {browserOptions && (
-        <BrowserSelection
-          url={url}
-          selectedBrowser={browserOptions.selectedBrowser}
-          useProfile={browserOptions.useProfile}
-          onBrowserChange={browserOptions.onBrowserChange}
-          onProfileToggle={browserOptions.onProfileToggle}
-          disabled={isLoading}
-        />
-      )}
     </div>
   );
 };
