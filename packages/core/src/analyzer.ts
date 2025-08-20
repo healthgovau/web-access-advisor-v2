@@ -2,7 +2,7 @@
  * Core accessibility analysis engine
  */
 
-import { chromium, Page, Browser, BrowserContext } from 'playwright';
+import { chromium, firefox, webkit, Page, Browser, BrowserContext } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
@@ -33,18 +33,27 @@ export class AccessibilityAnalyzer {
   private context: BrowserContext | null = null;
   private page: Page | null = null;
   private geminiService: GeminiService | null = null;
+  private geminiApiKey: string | undefined = undefined;
   private domChangeDetector: DOMChangeDetector = new DOMChangeDetector();
   private previousHtmlState: string | null = null;
 
   /**
    * Initialize the analyzer
    */
-  async initialize(geminiApiKey?: string): Promise<void> {
+  async initialize(geminiApiKey?: string, browserType: 'chromium' | 'firefox' | 'webkit' = 'chromium'): Promise<void> {
     console.log(`🔍 Analyzer init: geminiApiKey provided = ${geminiApiKey ? 'Yes (' + geminiApiKey.substring(0, 10) + '...)' : 'No'}`);
+    console.log(`🔍 Analyzer init: browserType = ${browserType}`);
     
-    this.browser = await chromium.launch({ headless: true });
+    // Store API key for potential reinitializations
+    this.geminiApiKey = geminiApiKey;
+    
+    // Launch the specified browser in headless mode
+    const browserEngine = browserType === 'firefox' ? firefox : browserType === 'webkit' ? webkit : chromium;
+    this.browser = await browserEngine.launch({ headless: true });
     this.context = await this.browser.newContext();
     this.page = await this.context.newPage();
+    
+    console.log(`✅ ${browserType} browser launched in headless mode for analysis`);
     
     // Initialize Gemini if API key provided
     if (geminiApiKey) {
@@ -67,11 +76,18 @@ export class AccessibilityAnalyzer {
       waitForStability = true,
       analyzeWithGemini = true,
       outputDir = './snapshots',
+      browserType = 'chromium',
       onProgress,
       llmComponentTimeout,
       llmFlowTimeout,
       staticSectionMode = 'ignore'
     } = options;
+
+    // Reinitialize with correct browser type if needed
+    if (!this.browser) {
+      console.log(`🔍 Browser not initialized, initializing ${browserType} for analysis`);
+      await this.initialize(this.geminiApiKey, browserType);
+    }
 
     // Use provided sessionId or generate a new one
     const sessionId = providedSessionId || this.generateSessionId();
@@ -87,7 +103,8 @@ export class AccessibilityAnalyzer {
       if (!this.page) {
         throw new Error('Analyzer not initialized');
       }      console.log(`🎬 PHASE 1: Starting analysis session: ${sessionId}`);
-      console.log(`📋 Actions to replay: ${actions.length}`);
+      console.log(`📋 Actions to replay: ${actions.length} using ${browserType} headless browser`);
+      console.log(`🌐 Browser type: ${browserType} (headless mode for consistent analysis)`);
       
       if (actions.length === 0) {
         console.log(`⚠️ No actions to replay - analysis will be limited`);

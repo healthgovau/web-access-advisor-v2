@@ -587,7 +587,10 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
     });
 
     // Process analysis asynchronously
-    processAnalysisAsync(sessionId, recordingSession.actions, dynamicTimeout, { staticSectionMode });
+    processAnalysisAsync(sessionId, recordingSession.actions, dynamicTimeout, { 
+      staticSectionMode,
+      browserType: recordingSession.browserType as 'chromium' | 'firefox' | 'webkit' || 'chromium'
+    });
 
   } catch (error) {
     console.error('Analysis start error:', error);
@@ -601,7 +604,7 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
 /**
  * Process analysis asynchronously with phase tracking
  */
-async function processAnalysisAsync(sessionId: string, actions: UserAction[], dynamicTimeout: number, analysisOptions: { staticSectionMode?: string } = {}) {
+async function processAnalysisAsync(sessionId: string, actions: UserAction[], dynamicTimeout: number, analysisOptions: { staticSectionMode?: string; browserType?: 'chromium' | 'firefox' | 'webkit' } = {}) {
   const analysisState = analysisStates.get(sessionId);
   if (!analysisState) {
     console.error(`Analysis state not found for session ${sessionId}`);
@@ -642,6 +645,7 @@ async function processAnalysisAsync(sessionId: string, actions: UserAction[], dy
       captureScreenshots: true,
       analyzeWithGemini: true,
       waitForStability: true,
+      browserType: analysisOptions.browserType || 'chromium', // Use same browser type as recording
       onProgress,
       // Pass timeout configurations to core analyzer
       llmComponentTimeout: LLM_COMPONENT_TIMEOUT,
