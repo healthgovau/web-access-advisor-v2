@@ -3,8 +3,9 @@
  * Launches a real browser for user interaction and records actions
  */
 
-import { chromium, Browser, BrowserContext, Page } from 'playwright';
-import { writeFile, mkdir, readdir, readFile } from 'fs/promises';
+import { chromium, firefox, webkit, Browser, BrowserContext, Page } from 'playwright';
+import { writeFile, mkdir, readdir, readFile, access } from 'fs/promises';
+import { homedir } from 'os';
 import path from 'path';
 import type { UserAction } from '@web-access-advisor/core';
 
@@ -18,6 +19,21 @@ export interface RecordingSession {
   browser?: Browser;
   context?: BrowserContext;
   page?: Page;
+  browserType?: string;
+  useProfile?: boolean;
+}
+
+export interface BrowserOption {
+  type: 'chromium' | 'firefox' | 'webkit';
+  name: string;
+  available: boolean;
+  profilePath?: string;
+}
+
+export interface RecordingOptions {
+  browserType?: 'chromium' | 'firefox' | 'webkit';
+  useProfile?: boolean;
+  name?: string;
 }
 
 export interface SavedRecording {
@@ -39,52 +55,175 @@ export interface SavedRecording {
 export class BrowserRecordingService {
   private sessions = new Map<string, RecordingSession>();
   private snapshotsDir = './snapshots';
+
   /**
-   * Start a new recording session with a real browser
+   * Detect available browsers and their profile paths on Windows
    */
-  async startRecording(url: string, name?: string): Promise<RecordingSession> {    // Generate session ID consistent with analyzer format
+  async detectAvailableBrowsers(): Promise<BrowserOption[]> {
+    const browsers: BrowserOption[] = [];
+    const userHome = homedir();
+    
+    // Edge (Chromium-based)
+    const edgeProfilePath = path.join(userHome, 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data', 'Default');
+    const edgeAvailable = await this.checkPathExists(edgeProfilePath);
+    browsers.push({
+      type: 'chromium',
+      name: 'Microsoft Edge',
+      available: edgeAvailable,
+      profilePath: edgeAvailable ? edgeProfilePath : undefined
+    });
+
+    // Chrome
+    const chromeProfilePath = path.join(userHome, 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default');
+    const chromeAvailable = await this.checkPathExists(chromeProfilePath);
+    browsers.push({
+      type: 'chromium',
+      name: 'Google Chrome',
+      available: chromeAvailable,
+      profilePath: chromeAvailable ? chromeProfilePath : undefined
+    });
+
+    // Firefox
+    const firefoxProfilesPath = path.join(userHome, 'AppData', 'Roaming', 'Mozilla', 'Firefox', 'Profiles');
+    const firefoxProfilePath = await this.findFirefoxDefaultProfile(firefoxProfilesPath);
+    browsers.push({
+      type: 'firefox',
+      name: 'Mozilla Firefox',
+      available: !!firefoxProfilePath,
+      profilePath: firefoxProfilePath
+    });
+
+    return browsers;
+  }
+
+  /**
+   * Check if a path exists
+   */
+  private async checkPathExists(path: string): Promise<boolean> {
+    try {
+      await access(path);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Find Firefox default profile (usually ends with .default-release)
+   */
+  private async findFirefoxDefaultProfile(profilesPath: string): Promise<string | null> {
+    try {
+      const profiles = await readdir(profilesPath);
+      const defaultProfile = profiles.find(p => p.includes('.default-release')) || profiles[0];
+      return defaultProfile ? path.join(profilesPath, defaultProfile) : null;
+    } catch {
+      return null;
+    }
+  }
+  /**
+   * Start a new recording session with browser and profile options
+   */
+  async startRecording(url: string, options: RecordingOptions = {}): Promise<RecordingSession> {
+    const { browserType = 'chromium', useProfile = false, name } = options;
+    
+    // Generate session ID consistent with analyzer format
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Launch browser with GUI for user interaction
-    const browser = await chromium.launch({ 
-      headless: false,  // User needs to see and interact with browser
-      slowMo: 50        // Slight delay to make interactions more visible
-    });
+    let context: BrowserContext;
+    let browser: Browser | undefined;
     
-    // Create context without video recording
-    const context = await browser.newContext();
+    try {
+      if (useProfile) {
+        // Use persistent context with user profile
+        context = await this.launchWithProfile(browserType);
+      } else {
+        // Use clean browser context
+        const browserInstance = await this.launchCleanBrowser(browserType);
+        browser = browserInstance;
+        context = await browser.newContext();
+      }
+      
+      const page = await context.newPage();
+      
+      const session: RecordingSession = {
+        sessionId,
+        url,
+        name: name || `Recording ${new Date().toLocaleString()}`,
+        startTime: new Date(),
+        status: 'recording',
+        actions: [],
+        browser,
+        context,
+        page,
+        browserType,
+        useProfile
+      };
+
+      // Store session
+      this.sessions.set(sessionId, session);
+
+      // Set up recording listeners
+      await this.setupRecordingListeners(session);
+
+      // Navigate to the URL
+      await page.goto(url);
+
+      return session;
+    } catch (error) {
+      console.error('Failed to start recording session:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Launch browser with persistent context (profile sharing)
+   */
+  private async launchWithProfile(browserType: 'chromium' | 'firefox' | 'webkit'): Promise<BrowserContext> {
+    const browsers = await this.detectAvailableBrowsers();
+    const browserOption = browsers.find(b => b.type === browserType && b.available);
     
-    const page = await context.newPage();
-    
-    const session: RecordingSession = {
-      sessionId,
-      url,
-      name: name || `Recording ${new Date().toLocaleString()}`,
-      startTime: new Date(),
-      status: 'recording',
-      actions: [],
-      browser,
-      context,
-      page
+    if (!browserOption?.profilePath) {
+      throw new Error(`No profile found for ${browserType}`);
+    }
+
+    const launchOptions = {
+      headless: false,
+      slowMo: 50
     };
 
-    // Set up action recording listeners
-    await this.setupRecordingListeners(session);
-    
-    // Navigate to the target URL
-    await page.goto(url);
-    
-    // Record the initial navigation action
-    this.addAction(session, {
-      type: 'navigate',
-      url: url,
-      metadata: { initialLoad: true }
-    });
+    switch (browserType) {
+      case 'chromium':
+        return await chromium.launchPersistentContext(browserOption.profilePath, launchOptions);
+      case 'firefox':
+        return await firefox.launchPersistentContext(browserOption.profilePath, launchOptions);
+      case 'webkit':
+        // WebKit doesn't support persistent contexts, fall back to clean browser
+        const browser = await webkit.launch(launchOptions);
+        return await browser.newContext();
+      default:
+        throw new Error(`Unsupported browser type: ${browserType}`);
+    }
+  }
 
-    this.sessions.set(sessionId, session);
-    
-    console.log(`✓ Recording session ${sessionId} started - Browser launched for ${url}`);
-    return session;
+  /**
+   * Launch clean browser without profile
+   */
+  private async launchCleanBrowser(browserType: 'chromium' | 'firefox' | 'webkit'): Promise<Browser> {
+    const launchOptions = {
+      headless: false,
+      slowMo: 50
+    };
+
+    switch (browserType) {
+      case 'chromium':
+        return await chromium.launch(launchOptions);
+      case 'firefox':
+        return await firefox.launch(launchOptions);
+      case 'webkit':
+        return await webkit.launch(launchOptions);
+      default:
+        throw new Error(`Unsupported browser type: ${browserType}`);
+    }
   }
 
   /**

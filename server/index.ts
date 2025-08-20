@@ -296,11 +296,39 @@ app.get('/api/sessions/:id/progress', (req: any, res: any) => {
 });
 
 /**
+ * Get available browsers and their profile status
+ */
+app.get('/api/browsers', async (req: any, res: any) => {
+  try {
+    console.log('🔍 Detecting available browsers...');
+    
+    const browsers = await browserRecordingService.detectAvailableBrowsers();
+    
+    res.json({
+      browsers,
+      message: `Found ${browsers.filter(b => b.available).length} available browsers`
+    });
+
+  } catch (error: any) {
+    console.error('Failed to detect browsers:', error);
+    res.status(500).json({
+      error: 'Failed to detect available browsers',
+      details: error.message
+    });
+  }
+});
+
+/**
  * Start recording user actions - Phase 1
  */
 app.post('/api/record/start', async (req: any, res: any) => {
   try {
-    const { url }: { url: string } = req.body;
+    const { url, browserType, useProfile, name }: { 
+      url: string;
+      browserType?: 'chromium' | 'firefox' | 'webkit';
+      useProfile?: boolean;
+      name?: string;
+    } = req.body;
     
     if (!url) {
       return res.status(400).json({
@@ -308,10 +336,15 @@ app.post('/api/record/start', async (req: any, res: any) => {
       });
     }
 
-    console.log(`📹 Starting recording session for: ${url}`);
+    const browserInfo = browserType ? ` using ${browserType}${useProfile ? ' with profile' : ''}` : '';
+    console.log(`📹 Starting recording session for: ${url}${browserInfo}`);
     
-    // Use the proper recording service
-    const session = await browserRecordingService.startRecording(url);
+    // Use the proper recording service with options
+    const session = await browserRecordingService.startRecording(url, {
+      browserType,
+      useProfile,
+      name
+    });
     
     res.json({
       sessionId: session.sessionId,

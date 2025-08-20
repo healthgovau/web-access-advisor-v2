@@ -129,16 +129,16 @@ const executeAction = async (page, action) => {
       case 'key':
         // Handle keyboard events with proper key combinations
         if (action.key) {
-          const options = {};
+          const modifiers: Array<'Shift' | 'Control' | 'Alt' | 'Meta'> = [];
           
           // Handle modifier keys
-          if (action.shiftKey) options.shift = true;
-          if (action.ctrlKey) options.control = true;
-          if (action.altKey) options.alt = true;
-          if (action.metaKey) options.meta = true;
+          if (action.shiftKey) modifiers.push('Shift');
+          if (action.ctrlKey) modifiers.push('Control');
+          if (action.altKey) modifiers.push('Alt');
+          if (action.metaKey) modifiers.push('Meta');
           
           // Press the key with any modifiers
-          await page.keyboard.press(action.key, options);
+          await page.keyboard.press(action.key, { modifiers });
         }
         break;
         
