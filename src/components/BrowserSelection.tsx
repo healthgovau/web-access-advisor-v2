@@ -2,7 +2,7 @@
  * Browser selection component for choosing browser and profile options
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, forwardRef } from 'react';
 import { getAvailableBrowsers, checkDomainLogin, type BrowserOption } from '../services/recordingApi';
 
 interface BrowserSelectionProps {
@@ -14,14 +14,14 @@ interface BrowserSelectionProps {
   disabled?: boolean;
 }
 
-const BrowserSelection: React.FC<BrowserSelectionProps> = ({
+const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
   url,
   selectedBrowser,
   useProfile,
   onBrowserChange,
   onProfileToggle,
   disabled = false
-}) => {
+}, ref) => {
   const [browsers, setBrowsers] = useState<BrowserOption[]>([]);
   const [loginStatus, setLoginStatus] = useState<{ [browserName: string]: boolean }>({});
   const [loading, setLoading] = useState(true);
@@ -38,12 +38,8 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
         const browsersResponse = await getAvailableBrowsers();
         setBrowsers(browsersResponse.browsers);
         
-        // Auto-select first available browser if none selected
-        const availableBrowsers = browsersResponse.browsers.filter(b => b.available);
-        if (availableBrowsers.length > 0 && !selectedBrowser) {
-          console.log('🔍 Auto-selecting first available browser:', availableBrowsers[0]);
-          onBrowserChange(availableBrowsers[0].type, availableBrowsers[0].name);
-        }
+        // No auto-selection - let user choose
+        console.log('🔍 Browsers loaded, awaiting user selection');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load browsers');
         console.error('Failed to fetch browsers:', err);
@@ -88,16 +84,6 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
       clearTimeout(debounceTimer);
     };
   }, [url]);
-
-  // Separate useEffect for auto-selecting first browser (only runs once)
-  useEffect(() => {
-    if (!selectedBrowser && browsers.length > 0) {
-      const firstAvailable = browsers.find(b => b.available);
-      if (firstAvailable) {
-        onBrowserChange(firstAvailable.type, firstAvailable.name);
-      }
-    }
-  }, [browsers, selectedBrowser, onBrowserChange]);
 
   const selectedBrowserOption = browsers.find(b => b.name === selectedBrowser);
   const canUseProfile = selectedBrowserOption?.available && selectedBrowserOption?.profilePath;
@@ -182,8 +168,15 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
   }
 
   return (
-    <div className="card rounded-lg p-4">
-      <h3 className="text-xl font-medium text-brand-dark mb-3 text-center">Browser Options</h3>
+    <div ref={ref} className="card rounded-lg p-4">
+      <h3 className="text-xl font-medium text-brand-dark mb-3 text-center">
+        {selectedBrowser ? 'Browser Options' : 'Choose Browser'}
+      </h3>
+      {!selectedBrowser && (
+        <p className="text-sm text-gray-600 mb-4 text-center">
+          Select a browser to get started with accessibility testing
+        </p>
+      )}
       
       {/* Profile Sharing Toggle - moved to top */}
       {canUseProfile && (
@@ -252,6 +245,8 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
       )}
     </div>
   );
-};
+});
+
+BrowserSelection.displayName = 'BrowserSelection';
 
 export default BrowserSelection;

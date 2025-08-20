@@ -200,6 +200,8 @@ function App() {
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   // Analysis results ref for PDF export
   const analysisResultsRef = useRef<HTMLDivElement | null>(null);
+  // Browser selection ref for auto-scrolling
+  const browserSelectionRef = useRef<HTMLDivElement | null>(null);
   // PDF export state
   const [isExporting, setIsExporting] = useState(false);
   // Info modal state
@@ -268,20 +270,28 @@ function App() {
     setSelectedBrowserType(browserType);
     setSelectedBrowser(browserName);
     
-    // Auto-scroll to browser options on first interaction
-    if (!selectedBrowser) {
-      // Scroll to top of page smoothly
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Auto-scroll browser options to top of viewport on first interaction
+    if (!selectedBrowser && browserSelectionRef.current) {
+      setTimeout(() => {
+        browserSelectionRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start'
+        });
+      }, 100); // Small delay to ensure DOM updates
     }
   };
 
   const handleProfileToggle = (useProfileValue: boolean) => {
     setUseProfile(useProfileValue);
     
-    // Auto-scroll to browser options on first interaction
-    if (!selectedBrowser) {
-      // Scroll to top of page smoothly
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Auto-scroll browser options to top of viewport on first interaction
+    if (!selectedBrowser && browserSelectionRef.current) {
+      setTimeout(() => {
+        browserSelectionRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start'
+        });
+      }, 100); // Small delay to ensure DOM updates
     }
   };
 
@@ -770,6 +780,7 @@ function App() {
               <>
                 {/* Browser Selection - Global for all modes */}
                 <BrowserSelection
+                  ref={browserSelectionRef}
                   url={state.url}
                   selectedBrowser={selectedBrowser}
                   useProfile={useProfile}
