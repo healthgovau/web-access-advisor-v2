@@ -57,9 +57,9 @@ export class BrowserRecordingService {
   private snapshotsDir = './snapshots';
 
   /**
-   * Check if user has cookies/login for a specific domain in browser profiles
+   * Check if user has cookies/login for a specific search term in browser profiles
    */
-  async checkDomainLogin(domain: string): Promise<{ [browserName: string]: boolean }> {
+  async checkDomainLogin(searchTerm: string): Promise<{ [browserName: string]: boolean }> {
     const browsers = await this.detectAvailableBrowsers();
     const results: { [browserName: string]: boolean } = {};
     
@@ -75,7 +75,7 @@ export class BrowserRecordingService {
       try {
         // Race condition with timeout
         const hasLogin = await Promise.race([
-          this.checkBrowserDomainCookies(browser, domain),
+          this.checkBrowserDomainCookies(browser, searchTerm),
           new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('timeout')), timeout))
         ]);
         results[browser.name] = hasLogin;
@@ -92,8 +92,8 @@ export class BrowserRecordingService {
   /**
    * Check if browser has cookies for a specific domain
    */
-  private async checkBrowserDomainCookies(browser: BrowserOption, domain: string): Promise<boolean> {
-    console.log(`🔍 DEBUG: Checking domain cookies for ${browser.name}, domain: ${domain}`);
+  private async checkBrowserDomainCookies(browser: BrowserOption, searchTerm: string): Promise<boolean> {
+    console.log(`🔍 DEBUG: Searching cookies for ${browser.name}, term: "${searchTerm}"`);
     
     if (!browser.profilePath) {
       console.log(`🔍 DEBUG: No profile path for ${browser.name}`);
@@ -113,14 +113,13 @@ export class BrowserRecordingService {
           return false;
         }
         
-        // For now, do a simple file content check for the domain
-        // This is a simplified approach - real implementation would parse the SQLite db
+        // Search for the term in cookies (simplified approach)
         try {
           const fs = await import('fs');
           const cookieData = await fs.promises.readFile(cookiesPath);
-          const containsDomain = cookieData.includes(domain);
-          console.log(`🔍 DEBUG: Cookies contain domain "${domain}": ${containsDomain}`);
-          return containsDomain;
+          const containsTerm = cookieData.includes(searchTerm);
+          console.log(`🔍 DEBUG: Cookies contain term "${searchTerm}": ${containsTerm}`);
+          return containsTerm;
         } catch (error) {
           console.log(`🔍 DEBUG: Could not read cookies for ${browser.name}:`, error.message);
           return false;
@@ -139,13 +138,13 @@ export class BrowserRecordingService {
           return false;
         }
         
-        // For now, do a simple file content check for the domain
+        // Search for the term in Firefox cookies
         try {
           const fs = await import('fs');
           const cookieData = await fs.promises.readFile(cookiesPath);
-          const containsDomain = cookieData.includes(domain);
-          console.log(`🔍 DEBUG: Firefox cookies contain domain "${domain}": ${containsDomain}`);
-          return containsDomain;
+          const containsTerm = cookieData.includes(searchTerm);
+          console.log(`🔍 DEBUG: Firefox cookies contain term "${searchTerm}": ${containsTerm}`);
+          return containsTerm;
         } catch (error) {
           console.log(`🔍 DEBUG: Could not read Firefox cookies for ${browser.name}:`, error.message);
           return false;

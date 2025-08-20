@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
 import { existsSync } from 'fs';
+import validator from 'validator';
 
 // Load environment variables from server directory (better for deployment)
 const __filename = fileURLToPath(import.meta.url);
@@ -320,24 +321,25 @@ app.post('/api/browsers/check-domain', async (req: any, res: any) => {
       });
     }
 
-    // Validate URL format before processing
-    let domain: string;
+    // Extract domain using proper validation
+    let domain: string | null = null;
+    
+    // First try to parse as URL to extract hostname
     try {
       const urlObj = new URL(url);
-      domain = urlObj.hostname;
-      
-      // Check for valid protocol
-      if (!['http:', 'https:'].includes(urlObj.protocol)) {
-        throw new Error('Invalid protocol');
+      if (urlObj.hostname && validator.isFQDN(urlObj.hostname)) {
+        domain = urlObj.hostname;
       }
-      
-      // Check for valid hostname
-      if (!domain || domain.trim() === '' || domain.includes('!')) {
-        throw new Error('Invalid domain');
+    } catch {
+      // If URL parsing fails, check if the raw input is a valid domain
+      if (validator.isFQDN(url)) {
+        domain = url;
       }
-    } catch (urlError) {
-      // Return "no login detected" for invalid URL instead of error
-      console.log(`❌ Invalid URL: ${url} - ${urlError.message}`);
+    }
+
+    // If no valid domain found, return no login detected
+    if (!domain) {
+      console.log(`❌ No valid domain found in: "${url}"`);
       return res.json({
         domain: null,
         loginStatus: {
@@ -345,16 +347,16 @@ app.post('/api/browsers/check-domain', async (req: any, res: any) => {
           chrome: false,
           firefox: false
         },
-        message: 'No login detected - Invalid URL format'
+        message: 'No login detected - Invalid domain'
       });
     }
 
-    console.log(`🔍 Checking domain login status for: ${domain}`);
+    console.log(`🔍 Valid domain found: "${domain}"`);
     
     const loginStatus = await browserRecordingService.checkDomainLogin(domain);
     
     res.json({
-      domain,
+      domain: domain,
       loginStatus,
       message: `Checked login status for ${domain}`
     });

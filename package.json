@@ -22,6 +22,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@tanstack/react-query": "^5.80.7",
+    "@types/validator": "^13.15.2",
     "auto-playwright": "^1.16.1",
     "axe-core": "^4.10.3",
     "chalk": "^5.4.1",
@@ -35,7 +36,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.58.0",
-    "react-router-dom": "^7.6.2"
+    "react-router-dom": "^7.6.2",
+    "validator": "^13.15.15"
   },
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.80.7",
