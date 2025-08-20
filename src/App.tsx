@@ -182,7 +182,7 @@ function App() {
   // Browser selection state
   const [selectedBrowser, setSelectedBrowser] = useState<string>('');
   const [selectedBrowserType, setSelectedBrowserType] = useState<'chromium' | 'firefox' | 'webkit'>('chromium');
-  const [useProfile, setUseProfile] = useState<boolean>(false);
+  const [useProfile, setUseProfile] = useState<boolean>(true);
 
   // Main application state
   const [state, setState] = useState<AppState>({

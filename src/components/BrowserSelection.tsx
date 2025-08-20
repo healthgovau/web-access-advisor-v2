@@ -30,51 +30,66 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
   useEffect(() => {
     console.log('🔍 DEBUG useEffect triggered:', { url });
     
-    const fetchBrowsersAndLogin = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Fetch available browsers
-        const browsersResponse = await getAvailableBrowsers();
-        setBrowsers(browsersResponse.browsers);
-        
-        // Check domain login status if URL provided (with timeout)
-        if (url.trim()) {
-          console.log('🔍 URL provided, checking login status for:', url);
-          // Clear previous login status before checking new URL
-          setLoginStatus({});
-          console.log('🔍 Cleared login status');
+    // Debounce timer for API calls
+    const debounceTimer = setTimeout(async () => {
+      const fetchBrowsersAndLogin = async () => {
+        try {
+          setLoading(true);
+          setError(null);
           
-          try {
-            // Add a 2-second timeout for login checking
-            const loginPromise = checkDomainLogin(url);
-            const timeoutPromise = new Promise<never>((_, reject) => 
-              setTimeout(() => reject(new Error('Login check timeout')), 2000)
-            );
+          // Fetch available browsers
+          const browsersResponse = await getAvailableBrowsers();
+          setBrowsers(browsersResponse.browsers);
+          
+          // Auto-select first available browser if none selected
+          const availableBrowsers = browsersResponse.browsers.filter(b => b.available);
+          if (availableBrowsers.length > 0 && !selectedBrowser) {
+            console.log('🔍 Auto-selecting first available browser:', availableBrowsers[0]);
+            onBrowserChange(availableBrowsers[0].type, availableBrowsers[0].name);
+          }
+          
+          // Check domain login status if URL provided (with timeout)
+          if (url.trim()) {
+            console.log('🔍 URL provided, checking login status for:', url);
+            // Clear previous login status before checking new URL
+            setLoginStatus({});
+            console.log('🔍 Cleared login status');
             
-            const loginResponse = await Promise.race([loginPromise, timeoutPromise]);
-            setLoginStatus(loginResponse.loginStatus);
-          } catch (loginError: any) {
-            console.warn('Failed to check domain login:', loginError);
-            
-            // Clear login status on any error to ensure clean state
+            try {
+              // Add a 2-second timeout for login checking
+              const loginPromise = checkDomainLogin(url);
+              const timeoutPromise = new Promise<never>((_, reject) => 
+                setTimeout(() => reject(new Error('Login check timeout')), 2000)
+              );
+              
+              const loginResponse = await Promise.race([loginPromise, timeoutPromise]);
+              setLoginStatus(loginResponse.loginStatus);
+            } catch (loginError: any) {
+              console.warn('Failed to check domain login:', loginError);
+              
+              // Clear login status on any error to ensure clean state
+              setLoginStatus({});
+            }
+          } else {
+            // Clear login status when no URL
+            console.log('🔍 No URL provided, clearing login status');
             setLoginStatus({});
           }
-        } else {
-          // Clear login status when no URL
-          console.log('🔍 No URL provided, clearing login status');
-          setLoginStatus({});
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to load browsers');
+          console.error('Failed to fetch browsers:', err);
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load browsers');
-        console.error('Failed to fetch browsers:', err);
-      } finally {
-        setLoading(false);
-      }
+      };
+      
+      fetchBrowsersAndLogin();
+    }, 500); // Wait 500ms before making API call
+    
+    // Cleanup function to clear timeout on component unmount or URL change
+    return () => {
+      clearTimeout(debounceTimer);
     };
-
-    fetchBrowsersAndLogin();
   }, [url]); // Removed selectedBrowser from dependencies
 
   // Separate useEffect for auto-selecting first browser (only runs once)
