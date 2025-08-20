@@ -2,7 +2,7 @@
  * Browser selection component for choosing browser and profile options
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getAvailableBrowsers, checkDomainLogin, type BrowserOption } from '../services/recordingApi';
 
 interface BrowserSelectionProps {
@@ -28,7 +28,7 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('🔍 DEBUG useEffect triggered:', { url, selectedBrowser });
+    console.log('🔍 DEBUG useEffect triggered:', { url });
     
     const fetchBrowsersAndLogin = async () => {
       try {
@@ -66,14 +66,6 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
           console.log('🔍 No URL provided, clearing login status');
           setLoginStatus({});
         }
-        
-        // Auto-select first available browser if none selected
-        if (!selectedBrowser && browsersResponse.browsers.length > 0) {
-          const firstAvailable = browsersResponse.browsers.find(b => b.available);
-          if (firstAvailable) {
-            onBrowserChange(firstAvailable.type, firstAvailable.name);
-          }
-        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load browsers');
         console.error('Failed to fetch browsers:', err);
@@ -83,10 +75,33 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
     };
 
     fetchBrowsersAndLogin();
-  }, [url, selectedBrowser, onBrowserChange]);
+  }, [url]); // Removed selectedBrowser from dependencies
+
+  // Separate useEffect for auto-selecting first browser (only runs once)
+  useEffect(() => {
+    if (!selectedBrowser && browsers.length > 0) {
+      const firstAvailable = browsers.find(b => b.available);
+      if (firstAvailable) {
+        onBrowserChange(firstAvailable.type, firstAvailable.name);
+      }
+    }
+  }, [browsers, selectedBrowser, onBrowserChange]);
 
   const selectedBrowserOption = browsers.find(b => b.name === selectedBrowser);
   const canUseProfile = selectedBrowserOption?.available && selectedBrowserOption?.profilePath;
+
+  // Memoized handlers to prevent unnecessary re-renders
+  const handleBrowserClick = useCallback((browserType: 'chromium' | 'firefox' | 'webkit', browserName: string) => {
+    if (!disabled) {
+      onBrowserChange(browserType, browserName);
+    }
+  }, [disabled, onBrowserChange]);
+
+  const handleProfileToggle = useCallback((checked: boolean) => {
+    if (!disabled) {
+      onProfileToggle(checked);
+    }
+  }, [disabled, onProfileToggle]);
 
   const getLoginStatusText = (browserName: string) => {
     console.log('🔍 DEBUG getLoginStatusText:', {
@@ -180,7 +195,7 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
               type="checkbox"
               id="use-profile"
               checked={useProfile}
-              onChange={(e) => !disabled && onProfileToggle(e.target.checked)}
+              onChange={(e) => handleProfileToggle(e.target.checked)}
               disabled={disabled}
               className="mt-1 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
@@ -194,7 +209,7 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
           {availableBrowsers.map((browser) => (
             <div
               key={browser.name}
-              onClick={() => !disabled && onBrowserChange(browser.type, browser.name)}
+              onClick={() => handleBrowserClick(browser.type, browser.name)}
               className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                 selectedBrowser === browser.name
                   ? 'border-blue-500 bg-blue-50'
@@ -206,7 +221,7 @@ const BrowserSelection: React.FC<BrowserSelectionProps> = ({
                 name="browser"
                 value={browser.name}
                 checked={selectedBrowser === browser.name}
-                onChange={() => !disabled && onBrowserChange(browser.type, browser.name)}
+                onChange={() => handleBrowserClick(browser.type, browser.name)}
                 disabled={disabled}
                 className="sr-only"
               />
