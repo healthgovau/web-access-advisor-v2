@@ -184,6 +184,11 @@ function App() {
   const [selectedBrowser, setSelectedBrowser] = useState<string>(''); // No default selection
   const [selectedBrowserType, setSelectedBrowserType] = useState<'chromium' | 'firefox' | 'webkit'>('chromium');
   const [useProfile, setUseProfile] = useState<boolean>(true);
+  
+  // Store "New Recording" browser selection separately to persist across mode switches
+  const [newRecordingBrowser, setNewRecordingBrowser] = useState<string>('');
+  const [newRecordingBrowserType, setNewRecordingBrowserType] = useState<'chromium' | 'firefox' | 'webkit'>('chromium');
+  const [newRecordingUseProfile, setNewRecordingUseProfile] = useState<boolean>(true);
 
   // Main application state
   const [state, setState] = useState<AppState>({
@@ -270,6 +275,12 @@ function App() {
     setSelectedBrowserType(browserType);
     setSelectedBrowser(browserName);
     
+    // Also update the stored "New Recording" values when in new recording mode
+    if (sessionMode === 'new') {
+      setNewRecordingBrowserType(browserType);
+      setNewRecordingBrowser(browserName);
+    }
+    
     // Auto-scroll browser options to top of viewport on first interaction
     if (!selectedBrowser && browserSelectionRef.current) {
       setTimeout(() => {
@@ -283,6 +294,11 @@ function App() {
 
   const handleProfileToggle = (useProfileValue: boolean) => {
     setUseProfile(useProfileValue);
+    
+    // Also update the stored "New Recording" value when in new recording mode
+    if (sessionMode === 'new') {
+      setNewRecordingUseProfile(useProfileValue);
+    }
     
     // Auto-scroll browser options to top of viewport on first interaction
     if (!selectedBrowser && browserSelectionRef.current) {
@@ -618,8 +634,44 @@ function App() {
 
   // Handle session mode change
   const handleSessionModeChange = (mode: 'new' | 'load') => {
+    const previousMode = sessionMode;
+    
+    if (previousMode === 'new' && mode === 'load') {
+      // Save current "New Recording" selection before switching
+      setNewRecordingBrowser(selectedBrowser);
+      setNewRecordingBrowserType(selectedBrowserType);
+      setNewRecordingUseProfile(useProfile);
+      
+      // Clear current selection for "Load Session" mode (will be populated from session)
+      setSelectedBrowser('');
+      setSelectedBrowserType('chromium');
+      setUseProfile(true);
+      
+      // Auto-scroll to browser selection section for Load Session mode
+      setTimeout(() => {
+        browserSelectionRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
+    } else if (previousMode === 'load' && mode === 'new') {
+      // Restore "New Recording" selection
+      setSelectedBrowser(newRecordingBrowser);
+      setSelectedBrowserType(newRecordingBrowserType);
+      setUseProfile(newRecordingUseProfile);
+      
+      // Auto-scroll to browser selection section for New Recording mode
+      setTimeout(() => {
+        browserSelectionRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
+    }
+    
     setSessionMode(mode);
-    // Reset state when switching modes but keep browser selection
+    
+    // Reset state when switching modes
     updateState({
       mode: 'setup',
       url: '',
@@ -778,7 +830,14 @@ function App() {
             {state.mode === 'setup' && (
               // Interactive session mode during setup only
               <>
-                {/* Browser Selection - Global for all modes */}
+                {/* Session Mode Toggle - First choice */}
+                <SessionModeToggle
+                  mode={sessionMode}
+                  onModeChange={handleSessionModeChange}
+                  disabled={state.loading}
+                />
+
+                {/* Browser Selection - Below session mode, always visible */}
                 <BrowserSelection
                   ref={browserSelectionRef}
                   url={state.url}
@@ -787,31 +846,26 @@ function App() {
                   onBrowserChange={handleBrowserChange}
                   onProfileToggle={handleProfileToggle}
                   disabled={state.loading}
+                  sessionMode={sessionMode}
                 />
 
-                {/* Only show session mode and inputs after browser is selected */}
-                {selectedBrowser && (
-                  <>
-                    <SessionModeToggle
-                      mode={sessionMode}
-                      onModeChange={handleSessionModeChange}
-                      disabled={state.loading}
+                {/* Show URL input/session selector based on mode */}
+                {sessionMode === 'new' ? (
+                  // New Recording: Only show URL input after browser is selected
+                  selectedBrowser && (
+                    <URLInput
+                      url={state.url}
+                      onUrlChange={handleUrlChange}
+                      onNavigate={handleNavigateAndRecord}
+                      isLoading={state.loading}
                     />
-
-                    {sessionMode === 'new' ? (
-                      <URLInput
-                        url={state.url}
-                        onUrlChange={handleUrlChange}
-                        onNavigate={handleNavigateAndRecord}
-                        isLoading={state.loading}
-                      />
-                    ) : (
-                      <SessionSelector
-                        onSessionSelect={handleLoadSession}
-                        isLoading={state.loading}
-                      />
-                    )}
-                  </>
+                  )
+                ) : (
+                  // Load Session: Always show session selector (browser comes from session)
+                  <SessionSelector
+                    onSessionSelect={handleLoadSession}
+                    isLoading={state.loading}
+                  />
                 )}
               </>
             )}            {/* Error Display */}

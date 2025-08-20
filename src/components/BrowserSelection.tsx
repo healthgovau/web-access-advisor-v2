@@ -12,6 +12,7 @@ interface BrowserSelectionProps {
   onBrowserChange: (browserType: 'chromium' | 'firefox' | 'webkit', browserName: string) => void;
   onProfileToggle: (useProfile: boolean) => void;
   disabled?: boolean;
+  sessionMode: 'new' | 'load'; // Current session mode
 }
 
 const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
@@ -20,7 +21,8 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
   useProfile,
   onBrowserChange,
   onProfileToggle,
-  disabled = false
+  disabled = false,
+  sessionMode
 }, ref) => {
   const [browsers, setBrowsers] = useState<BrowserOption[]>([]);
   const [loginStatus, setLoginStatus] = useState<{ [browserName: string]: boolean }>({});
@@ -90,16 +92,18 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
 
   // Memoized handlers to prevent unnecessary re-renders
   const handleBrowserClick = useCallback((browserType: 'chromium' | 'firefox' | 'webkit', browserName: string) => {
-    if (!disabled) {
+    // In load mode, browsers are disabled until session is selected
+    if (!disabled && sessionMode === 'new') {
       onBrowserChange(browserType, browserName);
     }
-  }, [disabled, onBrowserChange]);
+  }, [disabled, sessionMode, onBrowserChange]);
 
   const handleProfileToggle = useCallback((checked: boolean) => {
-    if (!disabled) {
+    // In load mode, profile toggle is disabled until session is selected  
+    if (!disabled && sessionMode === 'new') {
       onProfileToggle(checked);
     }
-  }, [disabled, onProfileToggle]);
+  }, [disabled, sessionMode, onProfileToggle]);
 
   const getLoginStatusText = (browserName: string) => {
     console.log('🔍 DEBUG getLoginStatusText:', {
@@ -170,11 +174,18 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
   return (
     <div ref={ref} className="card rounded-lg p-4">
       <h3 className="text-xl font-medium text-brand-dark mb-3 text-center">
-        {selectedBrowser ? 'Browser Options' : 'Choose Browser'}
+        {sessionMode === 'new' 
+          ? (selectedBrowser ? 'Browser Options' : 'Choose Browser')
+          : 'Browser for Analysis'}
       </h3>
-      {!selectedBrowser && (
+      {sessionMode === 'new' && !selectedBrowser && (
         <p className="text-sm text-gray-600 mb-4 text-center">
           Select a browser to get started with accessibility testing
+        </p>
+      )}
+      {sessionMode === 'load' && !selectedBrowser && (
+        <p className="text-sm text-gray-600 mb-4 text-center">
+          Browser settings will be automatically configured based on the selected recording
         </p>
       )}
       
@@ -183,20 +194,27 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
         <div className="mb-6">
           <div className="p-4 bg-white border rounded-lg">
             <div 
-              className={`flex items-center justify-center text-sm p-2 rounded transition-colors cursor-pointer hover:shadow-sm ${
-                useProfile 
-                  ? 'text-blue-600 bg-blue-50' 
-                  : 'text-gray-400 bg-gray-50'
+              className={`flex items-center justify-center text-sm p-2 rounded transition-colors ${
+                sessionMode === 'load'
+                  ? 'text-gray-400 bg-gray-50 cursor-not-allowed'
+                  : useProfile 
+                    ? 'text-blue-600 bg-blue-50 cursor-pointer hover:shadow-sm' 
+                    : 'text-gray-400 bg-gray-50 cursor-pointer hover:shadow-sm'
               }`}
-              onClick={() => handleProfileToggle(!useProfile)}
+              onClick={() => sessionMode === 'new' && handleProfileToggle(!useProfile)}
             >
-              <span>Will use your existing login sessions and browser settings</span>
+              <span>
+                {sessionMode === 'load' 
+                  ? 'Profile setting will be determined by selected session'
+                  : 'Will use your existing login sessions and browser settings'
+                }
+              </span>
               <input
                 type="checkbox"
                 id="use-profile"
-                checked={useProfile}
+                checked={useProfile && sessionMode === 'new'}
                 onChange={(e) => handleProfileToggle(e.target.checked)}
-                disabled={disabled}
+                disabled={disabled || sessionMode === 'load'}
                 className="ml-3 w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
               />
             </div>
@@ -207,33 +225,42 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
       {/* Browser Selection - 2x2 grid */}
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          {availableBrowsers.map((browser) => (
-            <div
-              key={browser.name}
-              onClick={() => handleBrowserClick(browser.type, browser.name)}
-              className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                selectedBrowser === browser.name
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-              } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <input
-                type="radio"
-                name="browser"
-                value={browser.name}
-                checked={selectedBrowser === browser.name}
-                onChange={() => handleBrowserClick(browser.type, browser.name)}
-                disabled={disabled}
-                className="sr-only"
-              />
-              <div className="text-center">
-                <div className="font-medium text-base mb-2">{browser.name}</div>
-                <div className="text-sm text-gray-500">
-                  {browser.available && browser.profilePath ? getLoginStatusText(browser.name) : 'Clean session only'}
+          {availableBrowsers.map((browser) => {
+            const isBrowserDisabled = disabled || (sessionMode === 'load');
+            const isSelected = selectedBrowser === browser.name;
+            const showSelection = isSelected && sessionMode === 'new';
+            
+            return (
+              <div
+                key={browser.name}
+                onClick={() => handleBrowserClick(browser.type, browser.name)}
+                className={`p-4 border-2 rounded-lg transition-colors ${
+                  showSelection
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                } ${isBrowserDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <input
+                  type="radio"
+                  name="browser"
+                  value={browser.name}
+                  checked={showSelection}
+                  onChange={() => handleBrowserClick(browser.type, browser.name)}
+                  disabled={isBrowserDisabled}
+                  className="sr-only"
+                />
+                <div className="text-center">
+                  <div className="font-medium text-base mb-2">{browser.name}</div>
+                  <div className="text-sm text-gray-500">
+                    {sessionMode === 'load' 
+                      ? 'Awaiting session selection'
+                      : (browser.available && browser.profilePath ? getLoginStatusText(browser.name) : 'Clean session only')
+                    }
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
