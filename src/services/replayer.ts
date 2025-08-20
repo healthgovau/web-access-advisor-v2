@@ -126,6 +126,22 @@ const executeAction = async (page, action) => {
         await page.hover(action.selector);
         break;
         
+      case 'key':
+        // Handle keyboard events with proper key combinations
+        if (action.key) {
+          const options = {};
+          
+          // Handle modifier keys
+          if (action.shiftKey) options.shift = true;
+          if (action.ctrlKey) options.control = true;
+          if (action.altKey) options.alt = true;
+          if (action.metaKey) options.meta = true;
+          
+          // Press the key with any modifiers
+          await page.keyboard.press(action.key, options);
+        }
+        break;
+        
       default:
         console.warn(`Unknown action type: ${action.type}`);
     }

@@ -124,6 +124,16 @@ export class BrowserRecordingService {
       });
     });
 
+    // Record keyboard interactions
+    await page.exposeFunction('recordKey', (key: string, selector: string) => {
+      this.addAction(session, {
+        type: 'key',
+        selector,
+        value: key,
+        metadata: { actionType: 'keyboard_navigation' }
+      });
+    });
+
     // Record navigation
     page.on('framenavigated', (frame) => {
       if (frame === page.mainFrame()) {
@@ -157,6 +167,35 @@ export class BrowserRecordingService {
         if (e.target.tagName === 'SELECT') {
           const selector = getSelector(e.target);
           window.recordSelect(selector, e.target.value);
+        }
+      });
+
+      // Record keyboard navigation (accessibility-critical keys)
+      document.addEventListener('keydown', (e) => {
+        const importantKeys = [
+          'Tab',           // Focus navigation (most critical)
+          'Enter',         // Activate buttons, submit forms  
+          ' ',             // Space bar - activate buttons/checkboxes
+          'Escape',        // Close modals, cancel operations
+          'ArrowUp',       // Navigate menus, lists, custom controls
+          'ArrowDown', 
+          'ArrowLeft', 
+          'ArrowRight',
+          'Home',          // Jump to start of lists/content
+          'End',           // Jump to end of lists/content
+          'PageUp',        // Scroll through long content
+          'PageDown'
+        ];
+        
+        if (importantKeys.includes(e.key)) {
+          const activeElement = document.activeElement || document.body;
+          const selector = getSelector(activeElement);
+          
+          // Handle Shift+Tab specially
+          const keyValue = e.shiftKey && e.key === 'Tab' ? 'Shift+Tab' : 
+                          e.key === ' ' ? 'Space' : e.key;
+          
+          window.recordKey(keyValue, selector);
         }
       });
 
