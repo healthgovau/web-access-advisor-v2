@@ -149,7 +149,7 @@ const Toast: React.FC<{
   type?: 'error' | 'info';
 }> = ({ message, id, onDismiss, type = 'error' }) => (
   <div
-    className={`mb-4 ml-4 px-4 py-3 rounded shadow-lg flex items-start max-w-xs w-full ${type === 'error' ? 'bg-red-700' : 'bg-blue-700'} text-white animate-fade-in`}
+    className={`mb-4 ml-4 px-4 py-3 rounded shadow-lg flex items-start min-w-xs max-w-2xl ${type === 'error' ? 'bg-red-700' : 'bg-blue-700'} text-white animate-fade-in`}
     role="alert"
     tabIndex={0}
     aria-live="assertive"

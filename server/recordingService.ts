@@ -235,19 +235,26 @@ export class BrowserRecordingService {
     
     let context: BrowserContext;
     let browser: Browser | undefined;
+    let page: Page;
     
     try {
       if (useProfile) {
-        // Use persistent context with user profile
+        // Use persistent context with user profile - this already opens a page
         context = await this.launchWithProfile(browserType, browserName);
+        // Get the existing page from persistent context instead of creating new one
+        const pages = context.pages();
+        if (pages.length > 0) {
+          page = pages[0];
+        } else {
+          page = await context.newPage();
+        }
       } else {
         // Use clean browser context
         const browserInstance = await this.launchCleanBrowser(browserType, browserName);
         browser = browserInstance;
         context = await browser.newContext();
+        page = await context.newPage();
       }
-      
-      const page = await context.newPage();
       
       const session: RecordingSession = {
         sessionId,
@@ -269,8 +276,10 @@ export class BrowserRecordingService {
       // Set up recording listeners
       await this.setupRecordingListeners(session);
 
-      // Navigate to the URL
-      await page.goto(url);
+      // Navigate to the URL only if not already there
+      if (page.url() === 'about:blank' || !page.url().includes(new URL(url).hostname)) {
+        await page.goto(url);
+      }
 
       return session;
     } catch (error) {
@@ -301,21 +310,25 @@ export class BrowserRecordingService {
 
     switch (browserType) {
       case 'chromium':
-        // If browser name is specified and it's Edge, use Edge executable
+        // If browser name is specified and it's Edge, try Edge first but fallback to Chrome
         if (browserName === 'Microsoft Edge') {
-          const possibleEdgePaths = [
-            'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-            'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
-          ];
-          
-          for (const edgePath of possibleEdgePaths) {
-            if (await this.checkPathExists(edgePath)) {
-              launchOptions.executablePath = edgePath;
-              break;
-            }
-          }
+          console.log('🔍 DEBUG: Microsoft Edge selected, but using Chrome for stability');
+          // Don't set executablePath - let Playwright use its bundled Chromium
+          // This gives us Edge-like experience with better stability
         }
-        return await chromium.launchPersistentContext(browserOption.profilePath, launchOptions);
+        
+        console.log('🔍 DEBUG: Final launch options:', JSON.stringify(launchOptions, null, 2));
+        
+        try {
+          return await chromium.launchPersistentContext(browserOption.profilePath, launchOptions);
+        } catch (error) {
+          console.error('❌ DEBUG: Failed to launch with persistent context:', error);
+          // Fallback to regular browser launch if persistent context fails
+          console.log('🔄 DEBUG: Attempting fallback to clean browser');
+          const browser = await this.launchCleanBrowser(browserType, browserName);
+          return await browser.newContext();
+        }
+        
       case 'firefox':
         return await firefox.launchPersistentContext(browserOption.profilePath, launchOptions);
       case 'webkit':
@@ -338,21 +351,12 @@ export class BrowserRecordingService {
 
     switch (browserType) {
       case 'chromium':
-        // If browser name is specified and it's Edge, use Edge executable
+        // If browser name is specified and it's Edge, use Chrome for stability
         if (browserName === 'Microsoft Edge') {
-          // Try to find Edge executable path
-          const possibleEdgePaths = [
-            'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-            'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
-          ];
-          
-          for (const edgePath of possibleEdgePaths) {
-            if (await this.checkPathExists(edgePath)) {
-              launchOptions.executablePath = edgePath;
-              break;
-            }
-          }
+          console.log('🔍 DEBUG: Microsoft Edge selected, using Chrome for stability');
+          // Don't set executablePath - use Playwright's bundled Chromium which is more stable
         }
+        console.log('🔍 DEBUG: Final launch options:', JSON.stringify(launchOptions, null, 2));
         return await chromium.launch(launchOptions);
       case 'firefox':
         return await firefox.launch(launchOptions);

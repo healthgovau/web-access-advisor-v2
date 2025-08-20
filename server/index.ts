@@ -404,9 +404,10 @@ app.get('/api/browsers', async (req: any, res: any) => {
  */
 app.post('/api/record/start', async (req: any, res: any) => {
   try {
-    const { url, browserType, useProfile, name }: { 
+    const { url, browserType, browserName, useProfile, name }: { 
       url: string;
       browserType?: 'chromium' | 'firefox' | 'webkit';
+      browserName?: string;
       useProfile?: boolean;
       name?: string;
     } = req.body;
@@ -417,12 +418,13 @@ app.post('/api/record/start', async (req: any, res: any) => {
       });
     }
 
-    const browserInfo = browserType ? ` using ${browserType}${useProfile ? ' with profile' : ''}` : '';
+    const browserInfo = browserType ? ` using ${browserType}${browserName ? ` (${browserName})` : ''}${useProfile ? ' with profile' : ''}` : '';
     console.log(`📹 Starting recording session for: ${url}${browserInfo}`);
     
     // Use the proper recording service with options
     const session = await browserRecordingService.startRecording(url, {
       browserType,
+      browserName,
       useProfile,
       name
     });

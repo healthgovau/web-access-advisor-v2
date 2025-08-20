@@ -116,6 +116,7 @@ export async function startRecordingSession(request: StartSessionRequest): Promi
       body: JSON.stringify({ 
         url: request.url,
         browserType: request.browserType,
+        browserName: request.browserName,
         useProfile: request.useProfile,
         name: request.name
       })
