@@ -589,7 +589,8 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
     // Process analysis asynchronously
     processAnalysisAsync(sessionId, recordingSession.actions, dynamicTimeout, { 
       staticSectionMode,
-      browserType: recordingSession.browserType as 'chromium' | 'firefox' | 'webkit' || 'chromium'
+      browserType: recordingSession.browserType as 'chromium' | 'firefox' | 'webkit' || 'chromium',
+      useProfile: recordingSession.useProfile
     });
 
   } catch (error) {
@@ -604,7 +605,7 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
 /**
  * Process analysis asynchronously with phase tracking
  */
-async function processAnalysisAsync(sessionId: string, actions: UserAction[], dynamicTimeout: number, analysisOptions: { staticSectionMode?: string; browserType?: 'chromium' | 'firefox' | 'webkit' } = {}) {
+async function processAnalysisAsync(sessionId: string, actions: UserAction[], dynamicTimeout: number, analysisOptions: { staticSectionMode?: string; browserType?: 'chromium' | 'firefox' | 'webkit'; useProfile?: boolean } = {}) {
   const analysisState = analysisStates.get(sessionId);
   if (!analysisState) {
     console.error(`Analysis state not found for session ${sessionId}`);
@@ -646,6 +647,7 @@ async function processAnalysisAsync(sessionId: string, actions: UserAction[], dy
       analyzeWithGemini: true,
       waitForStability: true,
       browserType: analysisOptions.browserType || 'chromium', // Use same browser type as recording
+      useProfile: analysisOptions.useProfile, // Use same profile setting as recording
       onProgress,
       // Pass timeout configurations to core analyzer
       llmComponentTimeout: LLM_COMPONENT_TIMEOUT,

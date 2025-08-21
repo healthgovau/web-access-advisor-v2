@@ -145,6 +145,7 @@ export interface AnalysisOptions {
   analyzeWithGemini?: boolean;
   outputDir?: string;
   browserType?: 'chromium' | 'firefox' | 'webkit'; // Browser to use for headless replay
+  useProfile?: boolean; // Whether to use existing browser profile for authenticated replay
   onProgress?: (phase: 'replaying-actions' | 'capturing-snapshots' | 'running-accessibility-checks' | 'processing-with-ai' | 'generating-report', message: string, step?: number, total?: number, snapshotCount?: number) => void;
   // Timeout configurations (in milliseconds)
   llmComponentTimeout?: number; // Timeout for individual LLM component analysis requests

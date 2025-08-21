@@ -40,20 +40,80 @@ export class AccessibilityAnalyzer {
   /**
    * Initialize the analyzer
    */
-  async initialize(geminiApiKey?: string, browserType: 'chromium' | 'firefox' | 'webkit' = 'chromium'): Promise<void> {
+  async initialize(geminiApiKey?: string, browserType: 'chromium' | 'firefox' | 'webkit' = 'chromium', useProfile?: boolean): Promise<void> {
     console.log(`🔍 Analyzer init: geminiApiKey provided = ${geminiApiKey ? 'Yes (' + geminiApiKey.substring(0, 10) + '...)' : 'No'}`);
     console.log(`🔍 Analyzer init: browserType = ${browserType}`);
+    console.log(`🔍 Analyzer init: useProfile = ${useProfile ? 'Yes' : 'No'}`);
     
     // Store API key for potential reinitializations
     this.geminiApiKey = geminiApiKey;
     
     // Launch the specified browser in headless mode
     const browserEngine = browserType === 'firefox' ? firefox : browserType === 'webkit' ? webkit : chromium;
-    this.browser = await browserEngine.launch({ headless: true });
-    this.context = await this.browser.newContext();
-    this.page = await this.context.newPage();
     
-    console.log(`✅ ${browserType} browser launched in headless mode for analysis`);
+    if (useProfile && browserType === 'chromium') {
+      // Try to use persistent context with profile for Chrome/Edge
+      try {
+        const { homedir } = await import('os');
+        const { access } = await import('fs/promises');
+        
+        // Try Edge profile first, then Chrome
+        const edgeProfilePath = path.join(homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data', 'Default');
+        const chromeProfilePath = path.join(homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default');
+        
+        let profilePath: string;
+        
+        try {
+          await access(edgeProfilePath);
+          profilePath = edgeProfilePath;
+          console.log(`🔍 Using Edge profile: ${profilePath}`);
+        } catch {
+          try {
+            await access(chromeProfilePath);
+            profilePath = chromeProfilePath;
+            console.log(`🔍 Using Chrome profile: ${profilePath}`);
+          } catch {
+            throw new Error('No Chrome or Edge profile found');
+          }
+        }
+        
+        this.context = await chromium.launchPersistentContext(profilePath, { 
+          headless: true,
+          slowMo: 50
+        });
+        this.browser = this.context.browser()!;
+        console.log(`✅ ${browserType} browser launched with persistent profile context`);
+      } catch (error) {
+        console.log(`⚠️ Failed to launch with profile, falling back to clean browser:`, error instanceof Error ? error.message : 'Unknown error');
+        // Fallback to clean browser
+        this.browser = await browserEngine.launch({ headless: true });
+        this.context = await this.browser.newContext();
+        console.log(`✅ ${browserType} browser launched in clean headless mode (profile fallback)`);
+      }
+    } else if (useProfile && browserType === 'firefox') {
+      // Try to use persistent context with Firefox profile
+      try {
+        const { homedir } = await import('os');
+        const profilesPath = path.join(homedir(), 'AppData', 'Roaming', 'Mozilla', 'Firefox', 'Profiles');
+        // For now, we'll fallback to clean browser for Firefox since profile detection is complex
+        console.log(`⚠️ Firefox profile support not fully implemented, using clean browser`);
+        this.browser = await browserEngine.launch({ headless: true });
+        this.context = await this.browser.newContext();
+        console.log(`✅ ${browserType} browser launched in clean headless mode (Firefox profile not implemented)`);
+      } catch (error) {
+        console.log(`⚠️ Failed to launch Firefox with profile, falling back to clean browser:`, error instanceof Error ? error.message : 'Unknown error');
+        this.browser = await browserEngine.launch({ headless: true });
+        this.context = await this.browser.newContext();
+        console.log(`✅ ${browserType} browser launched in clean headless mode (profile fallback)`);
+      }
+    } else {
+      // Standard clean browser launch
+      this.browser = await browserEngine.launch({ headless: true });
+      this.context = await this.browser.newContext();
+      console.log(`✅ ${browserType} browser launched in headless mode for analysis`);
+    }
+    
+    this.page = await this.context.newPage();
     
     // Initialize Gemini if API key provided
     if (geminiApiKey) {
@@ -77,6 +137,7 @@ export class AccessibilityAnalyzer {
       analyzeWithGemini = true,
       outputDir = './snapshots',
       browserType = 'chromium',
+      useProfile = false,
       onProgress,
       llmComponentTimeout,
       llmFlowTimeout,
@@ -86,7 +147,7 @@ export class AccessibilityAnalyzer {
     // Reinitialize with correct browser type if needed
     if (!this.browser) {
       console.log(`🔍 Browser not initialized, initializing ${browserType} for analysis`);
-      await this.initialize(this.geminiApiKey, browserType);
+      await this.initialize(this.geminiApiKey, browserType, useProfile);
     }
 
     // Use provided sessionId or generate a new one
