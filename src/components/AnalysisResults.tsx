@@ -265,7 +265,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
       {analysisData.analysis && analysisData.analysis.components && analysisData.analysis.components.length > 0 && (        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-card -mx-6">
           <div className="flex items-center justify-center py-5 px-4 relative">
             <h2 className="font-medium text-gray-900 text-center" style={{ fontSize: '20px' }}>
-              Screen Reader Accessibility Issues ({filteredComponents.length})
+              Screen Reader Accessibility Issues ({(analysisData.analysis?.components || []).length})
             </h2>            <button
               onClick={() => setIsScreenReaderExpanded(!isScreenReaderExpanded)}
               className="text-base text-slate hover:text-neutral-black underline absolute right-4"
@@ -277,7 +277,7 @@ const AnalysisResults: React.FC<AnalysisResultsProps> = ({ analysisData, isLoadi
             <div className="p-3 space-y-3">
               {/* Issue Count Summary */}
               {(() => {
-                // Calculate counts from ALL components, not just filtered ones
+                // Calculate counts from ALL components to match the header count
                 const counts = (analysisData.analysis?.components || []).reduce((acc, component) => {
                   acc[component.impact] = (acc[component.impact] || 0) + 1;
                   return acc;

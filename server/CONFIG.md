@@ -50,6 +50,79 @@ In production/CI pipelines:
 - Or use `.env.production` files
 - Never include real API keys in committed files
 
+## 🔐 Browser Profile & Authentication API
+
+The server provides browser profile detection and authentication checking for session continuity.
+
+### Browser Detection Endpoint
+```http
+GET /api/browsers
+```
+
+**Response:**
+```json
+{
+  "browsers": [
+    {
+      "type": "chromium",
+      "name": "Microsoft Edge", 
+      "available": true,
+      "profilePath": "C:\\Users\\...\\Microsoft\\Edge\\User Data\\Default"
+    },
+    {
+      "type": "chromium",
+      "name": "Google Chrome",
+      "available": true, 
+      "profilePath": "C:\\Users\\...\\Google\\Chrome\\User Data\\Default"
+    }
+  ],
+  "message": "Found 2 available browsers"
+}
+```
+
+### Domain Authentication Check
+```http
+POST /api/browsers/check-domain
+Content-Type: application/json
+
+{
+  "url": "https://portal.example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "domain": "portal.example.com",
+  "loginStatus": {
+    "edge": true,
+    "chrome": false,
+    "firefox": false
+  },
+  "message": "Checked login status for portal.example.com"
+}
+```
+
+### Recording with Profile Sharing
+```http
+POST /api/record/start
+Content-Type: application/json
+
+{
+  "url": "https://portal.example.com",
+  "browserType": "chromium",
+  "browserName": "Microsoft Edge",
+  "useProfile": true,
+  "name": "Login Workflow Test"
+}
+```
+
+**Profile Sharing Behavior:**
+- `useProfile: true` → Uses `launchPersistentContext()` with browser profile path
+- `useProfile: false` → Uses clean browser context  
+- Analysis phase automatically matches recording session's profile settings
+- Maintains authentication state between recording and analysis for accurate results
+
 ## Getting API Keys
 
 - **Gemini API**: https://makersuite.google.com/app/apikey

@@ -49,7 +49,14 @@ export function isAuthUrl(url: string): AuthDetectionResult {
     'idp.',
     'myid.',
     'govpass',
-    'mygovid'
+    'mygovid',
+    // PowerApps and Microsoft-specific patterns
+    'powerappsportals.com',
+    'microsoftonline.com',
+    'dynamics.com',
+    '.crm',
+    'powerplatform.',
+    'azure.'
   ];
 
   // Check for auth domains

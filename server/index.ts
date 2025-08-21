@@ -608,6 +608,7 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
     processAnalysisAsync(sessionId, recordingSession.actions, dynamicTimeout, { 
       staticSectionMode,
       browserType: recordingSession.browserType as 'chromium' | 'firefox' | 'webkit' || 'chromium',
+      browserName: recordingSession.browserName,
       useProfile: recordingSession.useProfile
     });
 
@@ -623,7 +624,7 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
 /**
  * Process analysis asynchronously with phase tracking
  */
-async function processAnalysisAsync(sessionId: string, actions: UserAction[], dynamicTimeout: number, analysisOptions: { staticSectionMode?: string; browserType?: 'chromium' | 'firefox' | 'webkit'; useProfile?: boolean } = {}) {
+async function processAnalysisAsync(sessionId: string, actions: UserAction[], dynamicTimeout: number, analysisOptions: { staticSectionMode?: string; browserType?: 'chromium' | 'firefox' | 'webkit'; browserName?: string; useProfile?: boolean } = {}) {
   const analysisState = analysisStates.get(sessionId);
   if (!analysisState) {
     console.error(`Analysis state not found for session ${sessionId}`);
@@ -665,6 +666,7 @@ async function processAnalysisAsync(sessionId: string, actions: UserAction[], dy
       analyzeWithGemini: true,
       waitForStability: true,
       browserType: analysisOptions.browserType || 'chromium', // Use same browser type as recording
+      browserName: analysisOptions.browserName, // Use same browser name as recording for profile consistency
       useProfile: analysisOptions.useProfile, // Use same profile setting as recording
       onProgress,
       // Pass timeout configurations to core analyzer

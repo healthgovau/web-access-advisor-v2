@@ -281,11 +281,45 @@ package.json            # Dependencies and scripts
 - Configuration validation (API keys, browser settings)
 - Assessment parameters setup (WCAG level, specific checks)
 
-### 2. Browser Automation
-- Playwright launches browser instance directly from React application
-- DOM snapshot capture (initial state)
-- User interaction simulation (keyboard navigation, screen reader paths)
-- Post-interaction DOM snapshot capture
+### 2. Browser Automation & Profile Sharing
+
+**Browser Launch Strategy:**
+- Playwright supports both clean browsers and persistent contexts (profile sharing)
+- Profile sharing enables authenticated session testing without re-login
+- Both recording and analysis phases use consistent browser configurations
+
+**Profile Detection System:**
+```javascript
+// Browser detection with profile availability
+const browsers = await detectAvailableBrowsers();
+// Returns: [{ type: 'chromium', name: 'Microsoft Edge', available: true, profilePath: '...' }]
+
+// Profile-aware session continuity
+const recordingOptions = { browserType: 'chromium', browserName: 'Microsoft Edge', useProfile: true };
+const analysisOptions = { ...recordingOptions }; // Maintains same browser/profile
+```
+
+**Authentication Flow Support:**
+
+*Without Profile Sharing:*
+- Recording: Clean browser → User logs in manually → Actions recorded
+- Analysis: Clean browser → Hits authentication barriers → Analyzes wrong pages
+- Result: "Page not found" or login screens analyzed instead of intended workflow
+
+*With Profile Sharing:*
+- Recording: Browser with existing profile → Already authenticated → Actions recorded  
+- Analysis: Same browser profile → Authentication maintained → Analyzes correct pages
+- Result: Accurate analysis of authenticated workflow pages
+
+**Browser-Specific Implementation:**
+- **Microsoft Edge**: `launchPersistentContext(edgeProfilePath)` - Most reliable
+- **Google Chrome**: `launchPersistentContext(chromeProfilePath)` - Enhanced with Chrome-specific args
+- **Firefox**: Limited support (profile detection only, no persistent context yet)
+
+**Technical Consistency:**
+- Recording Service: `headless: false, slowMo: 50` for visible interaction recording
+- Analysis Phase: Identical settings to maintain session consistency  
+- Profile Paths: Exact same paths used in both phases for authentication continuity
 
 ### 3. Accessibility Analysis
 - Axe-core integration for automated rule checking

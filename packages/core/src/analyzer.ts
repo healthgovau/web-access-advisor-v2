@@ -38,11 +38,12 @@ export class AccessibilityAnalyzer {
   private previousHtmlState: string | null = null;
 
   /**
-   * Initialize the analyzer
+   * Initialize the analyzer with specific browser profile consistency
    */
-  async initialize(geminiApiKey?: string, browserType: 'chromium' | 'firefox' | 'webkit' = 'chromium', useProfile?: boolean): Promise<void> {
+  async initialize(geminiApiKey?: string, browserType: 'chromium' | 'firefox' | 'webkit' = 'chromium', useProfile?: boolean, browserName?: string): Promise<void> {
     console.log(`🔍 Analyzer init: geminiApiKey provided = ${geminiApiKey ? 'Yes (' + geminiApiKey.substring(0, 10) + '...)' : 'No'}`);
     console.log(`🔍 Analyzer init: browserType = ${browserType}`);
+    console.log(`🔍 Analyzer init: browserName = ${browserName}`);
     console.log(`🔍 Analyzer init: useProfile = ${useProfile ? 'Yes' : 'No'}`);
     
     // Store API key for potential reinitializations
@@ -52,43 +53,68 @@ export class AccessibilityAnalyzer {
     const browserEngine = browserType === 'firefox' ? firefox : browserType === 'webkit' ? webkit : chromium;
     
     if (useProfile && browserType === 'chromium') {
-      // Try to use persistent context with profile for Chrome/Edge
+      // Use consistent profile detection logic
       try {
+        console.log('🔍 Detecting browser profiles for analysis consistency...');
         const { homedir } = await import('os');
         const { access } = await import('fs/promises');
         
-        // Try Edge profile first, then Chrome
-        const edgeProfilePath = path.join(homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data', 'Default');
-        const chromeProfilePath = path.join(homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default');
-        
+        // Determine which profile to use based on browserName
         let profilePath: string;
+        let profileSource: string;
         
-        try {
-          await access(edgeProfilePath);
-          profilePath = edgeProfilePath;
-          console.log(`🔍 Using Edge profile: ${profilePath}`);
-        } catch {
+        if (browserName === 'Microsoft Edge') {
+          const edgeProfilePath = path.join(homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data', 'Default');
+          try {
+            await access(edgeProfilePath);
+            profilePath = edgeProfilePath;
+            profileSource = 'Edge';
+          } catch {
+            throw new Error('Microsoft Edge profile not found or not accessible');
+          }
+        } else if (browserName === 'Google Chrome') {
+          const chromeProfilePath = path.join(homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default');
           try {
             await access(chromeProfilePath);
             profilePath = chromeProfilePath;
-            console.log(`🔍 Using Chrome profile: ${profilePath}`);
+            profileSource = 'Chrome';
           } catch {
-            throw new Error('No Chrome or Edge profile found');
+            throw new Error('Google Chrome profile not found or not accessible');
+          }
+        } else {
+          // Fallback: try Edge first, then Chrome
+          const edgeProfilePath = path.join(homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data', 'Default');
+          const chromeProfilePath = path.join(homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default');
+          
+          try {
+            await access(edgeProfilePath);
+            profilePath = edgeProfilePath;
+            profileSource = 'Edge (fallback)';
+          } catch {
+            try {
+              await access(chromeProfilePath);
+              profilePath = chromeProfilePath;
+              profileSource = 'Chrome (fallback)';
+            } catch {
+              throw new Error('No Chrome or Edge profile found');
+            }
           }
         }
         
+        console.log(`🔍 Using ${profileSource} profile for analysis: ${profilePath}`);
+        
         this.context = await chromium.launchPersistentContext(profilePath, { 
-          headless: true,
+          headless: false, // CRITICAL: Match recording service - use visible browser for session consistency
           slowMo: 50
         });
         this.browser = this.context.browser()!;
-        console.log(`✅ ${browserType} browser launched with persistent profile context`);
+        console.log(`✅ ${browserType} browser launched with persistent profile context (${profileSource})`);
       } catch (error) {
         console.log(`⚠️ Failed to launch with profile, falling back to clean browser:`, error instanceof Error ? error.message : 'Unknown error');
-        // Fallback to clean browser
-        this.browser = await browserEngine.launch({ headless: true });
+        // Fallback to clean browser - also match recording service settings
+        this.browser = await browserEngine.launch({ headless: false }); // Match recording service
         this.context = await this.browser.newContext();
-        console.log(`✅ ${browserType} browser launched in clean headless mode (profile fallback)`);
+        console.log(`✅ ${browserType} browser launched in clean mode (profile fallback)`);
       }
     } else if (useProfile && browserType === 'firefox') {
       // Try to use persistent context with Firefox profile
@@ -97,20 +123,20 @@ export class AccessibilityAnalyzer {
         const profilesPath = path.join(homedir(), 'AppData', 'Roaming', 'Mozilla', 'Firefox', 'Profiles');
         // For now, we'll fallback to clean browser for Firefox since profile detection is complex
         console.log(`⚠️ Firefox profile support not fully implemented, using clean browser`);
-        this.browser = await browserEngine.launch({ headless: true });
+        this.browser = await browserEngine.launch({ headless: false }); // Match recording service
         this.context = await this.browser.newContext();
-        console.log(`✅ ${browserType} browser launched in clean headless mode (Firefox profile not implemented)`);
+        console.log(`✅ ${browserType} browser launched in clean mode (Firefox profile not implemented)`);
       } catch (error) {
         console.log(`⚠️ Failed to launch Firefox with profile, falling back to clean browser:`, error instanceof Error ? error.message : 'Unknown error');
-        this.browser = await browserEngine.launch({ headless: true });
+        this.browser = await browserEngine.launch({ headless: false }); // Match recording service
         this.context = await this.browser.newContext();
-        console.log(`✅ ${browserType} browser launched in clean headless mode (profile fallback)`);
+        console.log(`✅ ${browserType} browser launched in clean mode (profile fallback)`);
       }
     } else {
-      // Standard clean browser launch
-      this.browser = await browserEngine.launch({ headless: true });
+      // Standard clean browser launch - match recording service settings  
+      this.browser = await browserEngine.launch({ headless: false, slowMo: 50 }); // Match recording service
       this.context = await this.browser.newContext();
-      console.log(`✅ ${browserType} browser launched in headless mode for analysis`);
+      console.log(`✅ ${browserType} browser launched in visible mode for analysis consistency`);
     }
     
     this.page = await this.context.newPage();
@@ -137,6 +163,7 @@ export class AccessibilityAnalyzer {
       analyzeWithGemini = true,
       outputDir = './snapshots',
       browserType = 'chromium',
+      browserName,
       useProfile = false,
       onProgress,
       llmComponentTimeout,
@@ -144,10 +171,10 @@ export class AccessibilityAnalyzer {
       staticSectionMode = 'ignore'
     } = options;
 
-    // Reinitialize with correct browser type if needed
+    // Reinitialize with correct browser type and name if needed
     if (!this.browser) {
-      console.log(`🔍 Browser not initialized, initializing ${browserType} for analysis`);
-      await this.initialize(this.geminiApiKey, browserType, useProfile);
+      console.log(`🔍 Browser not initialized, initializing ${browserType} (${browserName || 'Generic'}) for analysis`);
+      await this.initialize(this.geminiApiKey, browserType, useProfile, browserName);
     }
 
     // Use provided sessionId or generate a new one

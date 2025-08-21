@@ -91,6 +91,83 @@ npm run cli           # Run CLI tool
 - **Tailwind CSS** - Utility-first styling
 - **Vite** - Fast development and build tooling
 
+## 🔐 Browser Profile Sharing
+
+Web Access Advisor supports **authenticated session testing** through browser profile sharing, allowing you to test logged-in workflows without re-authentication during analysis.
+
+### How Profile Sharing Works
+
+**Profile Detection:**
+- Automatically detects available browser profiles (Chrome, Edge, Firefox)
+- Shows login status for each browser on your system
+- Indicates which browsers have active sessions for tested domains
+
+**Recording with Profiles:**
+- Check "Use Profile" when recording authenticated workflows
+- Browser launches with your existing login session (cookies, tokens, etc.)
+- No need to log in again during recording - you're already authenticated
+
+**Analysis Consistency:**
+- Analysis phase uses the **same browser profile** as recording
+- Maintains authentication state between recording and analysis
+- Ensures analysis captures the same pages you recorded (not login screens)
+
+### Supported Browsers
+
+| Browser | Profile Support | Session Sharing | Notes |
+|---------|----------------|-----------------|-------|
+| **Microsoft Edge** | ✅ Full | ✅ Reliable | Recommended for enterprise SSO |
+| **Google Chrome** | ✅ Full | ✅ Enhanced | Improved profile detection |
+| **Firefox** | ⚠️ Limited | ❌ Not Yet | Profile detection only |
+
+### Authentication Flow Options
+
+**Option 1: Profile Sharing (Recommended for Auth)**
+```
+1. Already logged in to Chrome/Edge → Check "Use Profile" 
+2. Recording launches with existing session → Record workflow
+3. Analysis uses same profile → Maintains login throughout
+4. Results show authenticated pages → Accurate analysis
+```
+
+**Option 2: Manual Login (Public Workflows)**
+```
+1. Don't check "Use Profile" → Clean browser launches
+2. Log in manually during recording → Record workflow  
+3. Analysis uses clean browser → Hits login walls
+4. Results may show login pages → Less accurate for auth workflows
+```
+
+### Best Practices
+
+**For Authenticated Workflows:**
+- ✅ **Always use profile sharing** for login-required sites
+- ✅ **Verify login status** shown in browser selection
+- ✅ **Close browser instances** before recording to avoid profile locks
+- ✅ **Use Chrome or Edge** for best profile compatibility
+
+**For Public Workflows:**  
+- ✅ **Clean browser is fine** for public sites
+- ✅ **Faster startup** without profile loading
+- ✅ **No authentication dependencies**
+
+### Troubleshooting Profile Issues
+
+**"Profile not accessible" errors:**
+- Close all browser instances before recording
+- Ensure browser isn't running in background
+- Try different browser (Edge often more reliable than Chrome)
+
+**Analysis shows login pages instead of recorded content:**
+- Recording was likely done without profile sharing
+- Re-record with "Use Profile" enabled
+- Verify login status before starting analysis
+
+**Chrome profile sharing not working:**
+- Chrome can have stricter profile locking
+- Try Microsoft Edge instead (same engine, better profile access)
+- Ensure Chrome isn't running when starting recording
+
 ## 🧠 LLM Integration
 
 The system uses Google Gemini for intelligent accessibility analysis:

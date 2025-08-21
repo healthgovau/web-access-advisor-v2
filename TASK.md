@@ -1,6 +1,47 @@
 # Web Access Advisor - Current Tasks
 
+# Web Access Advisor - Current Tasks
+
 ## ✅ Recently Completed (2025-08-21)
+
+### Browser Profile Sharing & Authentication Consistency Fixes
+- ✅ **Fixed Analysis Results Counting Bug** - Header count now matches breakdown boxes (was showing filtered count vs total count mismatch)
+- ✅ **Chrome Profile Sharing Enhancement** - Improved Chrome profile detection with Chrome-specific launch arguments and longer timeouts
+- ✅ **Analysis Phase Browser Consistency** - Analyzer now uses exact same browser and profile as recording session (no more arbitrary Edge-first fallback)
+- ✅ **Headless Mode Fix** - Changed analyzer from `headless: true` to `headless: false` to match recording service for session consistency  
+- ✅ **browserName Parameter Threading** - Added browserName to AnalysisOptions and threaded through entire analysis chain for profile precision
+- ✅ **Profile Launch Settings Alignment** - Both recording and analysis phases now use identical launch options (`slowMo: 50`, visible browsers)
+- ✅ **Chrome Profile Access Improvements** - Enhanced Chrome profile accessibility checks and error recovery for profile lock scenarios
+
+#### Technical Details
+```typescript
+// Fixed AnalysisOptions to include browser specificity
+export interface AnalysisOptions {
+  // ... existing options
+  browserName?: string; // Specific browser name for profile consistency
+}
+
+// Analyzer initialization now matches recording service
+await this.initialize(this.geminiApiKey, browserType, useProfile, browserName);
+
+// Profile sharing consistency between phases
+const analysisPromise = currentAnalyzer.analyzeActions(actions, {
+  browserType: analysisOptions.browserType || 'chromium',
+  browserName: analysisOptions.browserName, // NEW: Exact browser from recording
+  useProfile: analysisOptions.useProfile,
+  // ...
+});
+
+// Chrome-specific enhancements in recording service
+launchOptions.args = [
+  '--no-first-run',
+  '--no-default-browser-check', 
+  '--disable-dev-shm-usage'
+];
+launchOptions.timeout = 60000; // Extended timeout for Chrome
+```
+
+**Problem Solved**: "Gruesome discovery" where analysis captured login/error pages instead of recorded authenticated workflow pages. Now maintains authentication session consistency between recording and analysis phases.
 
 ### Browser Selection UX Overhaul & Authentication State Management
 - ✅ **Progressive Disclosure Implementation** - Restructured workflow with Session Mode Toggle → Browser Selection → URL Input/Session Selector for logical user flow

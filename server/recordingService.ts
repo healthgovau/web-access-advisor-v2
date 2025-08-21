@@ -65,17 +65,25 @@ export class BrowserRecordingService {
    * Check if user has cookies/login for a specific search term in browser profiles
    */
   async checkDomainLogin(searchTerm: string): Promise<{ [browserName: string]: boolean }> {
+    console.log(`🔍 DEBUG: Starting checkDomainLogin for "${searchTerm}"`);
     const browsers = await this.detectAvailableBrowsers();
     const results: { [browserName: string]: boolean } = {};
     
+    console.log(`🔍 DEBUG: Found ${browsers.length} browsers to check:`, browsers.map(b => `${b.name} (available: ${b.available})`));
+    
     // Simple timeout-based approach - don't spend more than 500ms total
-    const timeout = 100; // 100ms per browser max
+    const timeout = 2000; // Increased timeout for debugging
     
     const checkPromises = browsers.map(async (browser) => {
+      console.log(`🔍 DEBUG: Checking ${browser.name}...`);
+      
       if (!browser.available || !browser.profilePath) {
+        console.log(`🔍 DEBUG: ${browser.name} - not available or no profile path`);
         results[browser.name] = false;
         return;
       }
+      
+      console.log(`🔍 DEBUG: ${browser.name} - profile path: ${browser.profilePath}`);
       
       try {
         // Race condition with timeout
@@ -83,14 +91,17 @@ export class BrowserRecordingService {
           this.checkBrowserDomainCookies(browser, searchTerm),
           new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('timeout')), timeout))
         ]);
+        console.log(`🔍 DEBUG: ${browser.name} - login detected: ${hasLogin}`);
         results[browser.name] = hasLogin;
       } catch (error) {
         // If timeout or error, assume no login to be safe
+        console.log(`🔍 DEBUG: ${browser.name} - error/timeout:`, error.message);
         results[browser.name] = false;
       }
     });
     
     await Promise.allSettled(checkPromises);
+    console.log(`🔍 DEBUG: Final results:`, results);
     return results;
   }
 
@@ -122,8 +133,68 @@ export class BrowserRecordingService {
         try {
           const fs = await import('fs');
           const cookieData = await fs.promises.readFile(cookiesPath);
-          const containsTerm = cookieData.includes(searchTerm);
-          console.log(`🔍 DEBUG: Cookies contain term "${searchTerm}": ${containsTerm}`);
+          const cookieString = cookieData.toString();
+          
+          console.log(`🔍 DEBUG: Cookie file size: ${cookieData.length} bytes`);
+          console.log(`🔍 DEBUG: Searching for domain: "${searchTerm}"`);
+          
+          // Check for direct domain match
+          const containsTerm = cookieString.includes(searchTerm);
+          console.log(`🔍 DEBUG: Direct domain match for "${searchTerm}": ${containsTerm}`);
+          
+          // For PowerApps Portals, also check for Microsoft SSO indicators
+          if (searchTerm.includes('powerappsportals.com') || searchTerm.includes('hprgdesign-dev')) {
+            console.log(`🔍 DEBUG: Detected PowerApps Portal domain, checking for Microsoft SSO indicators...`);
+            
+            const ssoIndicators = [
+              'login.microsoftonline.com',
+              '.b2clogin.com',
+              'MSISAuthenticated',
+              'ESTSAUTH',
+              'ESTSAUTHPERSISTENT',
+              'microsoftonline',
+              'azure',
+              'dynamics',
+              // Also check for the actual domain components
+              'hprgdesign-dev',
+              'powerappsportals'
+            ];
+            
+            let foundIndicator = false;
+            for (const indicator of ssoIndicators) {
+              if (cookieString.includes(indicator)) {
+                console.log(`🔍 DEBUG: ✅ Found SSO indicator: "${indicator}"`);
+                foundIndicator = true;
+              } else {
+                console.log(`🔍 DEBUG: ❌ No match for indicator: "${indicator}"`);
+              }
+            }
+            
+            if (foundIndicator) {
+              console.log(`🔍 DEBUG: PowerApps Portal authentication detected via SSO indicators`);
+              return true;
+            }
+          }
+          
+          // Check for any authentication-related cookies
+          const authCookiePatterns = [
+            'auth',
+            'session', 
+            'login',
+            'token',
+            'jwt',
+            'bearer',
+            'oauth',
+            'sso'
+          ];
+          
+          console.log(`🔍 DEBUG: Checking for general auth cookie patterns...`);
+          for (const pattern of authCookiePatterns) {
+            if (cookieString.toLowerCase().includes(pattern)) {
+              console.log(`🔍 DEBUG: Found potential auth cookie pattern: "${pattern}"`);
+            }
+          }
+          
           return containsTerm;
         } catch (error) {
           console.log(`🔍 DEBUG: Could not read cookies for ${browser.name}:`, error.message);
@@ -378,19 +449,52 @@ export class BrowserRecordingService {
 
     switch (browserType) {
       case 'chromium':
-        // If browser name is specified and it's Edge, try Edge first but fallback to Chrome
+        // Handle specific browser requirements for profile sharing
         if (browserName === 'Microsoft Edge') {
-          console.log('🔍 DEBUG: Microsoft Edge selected, but using Chrome for stability');
-          // Don't set executablePath - let Playwright use its bundled Chromium
-          // This gives us Edge-like experience with better stability
+          console.log('🔍 DEBUG: Microsoft Edge selected, using Chromium for stability (Edge profile)');
+          // Use Chromium with Edge profile - this combination works reliably
+        } else if (browserName === 'Google Chrome') {
+          console.log('🔍 DEBUG: Google Chrome selected, attempting Chrome profile sharing');
+          // Chrome can be more restrictive with profile sharing
+          try {
+            console.log('🔍 DEBUG: Checking Chrome profile accessibility...');
+            const { access } = await import('fs/promises');
+            await access(browserOption.profilePath);
+            console.log('✅ DEBUG: Chrome profile accessible');
+            
+            // For Chrome, we might need to wait a bit longer for profile unlock
+            console.log('🔍 DEBUG: Adding Chrome-specific launch options...');
+            launchOptions.timeout = 60000; // Longer timeout for Chrome
+            launchOptions.args = [
+              '--no-first-run',
+              '--no-default-browser-check',
+              '--disable-dev-shm-usage'
+            ];
+          } catch (error) {
+            console.error('❌ DEBUG: Chrome profile access issue:', error);
+            console.log('🔄 DEBUG: Chrome profile might be locked - will attempt launch anyway');
+          }
+        } else {
+          console.log('🔍 DEBUG: Generic Chromium selected, using default profile');
         }
         
         console.log('🔍 DEBUG: Final launch options:', JSON.stringify(launchOptions, null, 2));
+        console.log('🔍 DEBUG: Profile path:', browserOption.profilePath);
         
         try {
-          return await chromium.launchPersistentContext(browserOption.profilePath, launchOptions);
+          const context = await chromium.launchPersistentContext(browserOption.profilePath, launchOptions);
+          console.log('✅ DEBUG: Successfully launched with persistent context');
+          return context;
         } catch (error) {
           console.error('❌ DEBUG: Failed to launch with persistent context:', error);
+          // Provide more specific error information
+          if (error instanceof Error) {
+            if (error.message.includes('not found') || error.message.includes('access')) {
+              console.error('❌ DEBUG: Profile access error - browser may be running or profile locked');
+            } else if (error.message.includes('permission')) {
+              console.error('❌ DEBUG: Permission error - profile may be in use');
+            }
+          }
           // Fallback to regular browser launch if persistent context fails
           console.log('🔄 DEBUG: Attempting fallback to clean browser');
           const browser = await this.launchCleanBrowser(browserType, browserName);
