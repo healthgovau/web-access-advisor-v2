@@ -179,7 +179,7 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
       <h3 className="text-xl font-medium text-brand-dark mb-3 text-center">
         {sessionMode === 'new' 
           ? (selectedBrowser ? 'Browser Options' : 'Choose Browser')
-          : 'Browser for Analysis'}
+          : 'Browser Details'}
       </h3>
       {sessionMode === 'new' && !selectedBrowser && (
         <p className="text-sm text-gray-600 mb-4 text-center">
@@ -198,13 +198,13 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
           <div className="p-4 bg-white border rounded-lg">
             <div 
               className={`flex items-center justify-center text-sm p-2 rounded transition-colors ${
-                sessionMode === 'load'
+                disabled || sessionMode === 'load'
                   ? 'text-gray-400 bg-gray-50 cursor-not-allowed'
                   : useProfile 
                     ? 'text-blue-600 bg-blue-50 cursor-pointer hover:shadow-sm' 
                     : 'text-gray-400 bg-gray-50 cursor-pointer hover:shadow-sm'
               }`}
-              onClick={() => sessionMode === 'new' && handleProfileToggle(!useProfile)}
+              onClick={() => sessionMode === 'new' && !disabled && handleProfileToggle(!useProfile)}
             >
               <span>
                 {sessionMode === 'load' 
@@ -231,7 +231,7 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
           {availableBrowsers.map((browser) => {
             const isBrowserDisabled = disabled || (sessionMode === 'load');
             const isSelected = selectedBrowser === browser.name;
-            const showSelection = isSelected && sessionMode === 'new';
+            const showSelection = isSelected; // Show selection in both new and load modes
             
             return (
               <div
@@ -255,9 +255,13 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                 <div className="text-center">
                   <div className="font-medium text-base mb-2">{browser.name}</div>
                   <div className="text-sm text-gray-500">
-                    {sessionMode === 'load' 
+                    {sessionMode === 'load' && !selectedBrowser
                       ? 'Awaiting session selection'
-                      : (browser.available && browser.profilePath ? getLoginStatusText(browser.name) : 'Clean session only')
+                      : sessionMode === 'load' && selectedBrowser && browser.type === selectedBrowser
+                        ? `Selected from session${useProfile ? ' with profile' : ''}`
+                        : sessionMode === 'load' && selectedBrowser && browser.type !== selectedBrowser
+                          ? 'Not used in this session'
+                          : (browser.available && browser.profilePath ? getLoginStatusText(browser.name) : 'Clean session only')
                     }
                   </div>
                 </div>

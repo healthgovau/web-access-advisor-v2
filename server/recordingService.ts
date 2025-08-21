@@ -20,6 +20,7 @@ export interface RecordingSession {
   context?: BrowserContext;
   page?: Page;
   browserType?: string;
+  browserName?: string;
   useProfile?: boolean;
 }
 
@@ -47,6 +48,7 @@ export interface SavedRecording {
   actionCount: number;
   actions: UserAction[];
   browserType?: string;
+  browserName?: string;
   useProfile?: boolean;
   metadata: {
     version: string;
@@ -269,6 +271,7 @@ export class BrowserRecordingService {
         context,
         page,
         browserType,
+        browserName,
         useProfile
       };
 
@@ -555,6 +558,7 @@ export class BrowserRecordingService {
         actionCount: session.actions.length,
         actions: session.actions,
         browserType: session.browserType,
+        browserName: session.browserName,
         useProfile: session.useProfile,
         metadata: {
           version: '2.0.0',

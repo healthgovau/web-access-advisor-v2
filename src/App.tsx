@@ -403,6 +403,14 @@ function App() {
         loading: false
       });
 
+      // Scroll to browser options to show analysis context
+      setTimeout(() => {
+        browserSelectionRef.current?.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 100);
+
     } catch (error) {
       updateProgress('error', 'Failed to stop recording', undefined, undefined, error instanceof Error ? error.message : 'Unknown error');
       updateState({
@@ -693,29 +701,31 @@ function App() {
       updateProgress('preparing-analysis', 'Loading saved session'); const sessionData = await recordingApi.loadSavedSession(sessionId);
 
       // Extract browser metadata from saved session
-      const { browserType, useProfile } = sessionData;
+      const { browserType, browserName, useProfile } = sessionData;
       
       if (browserType) {
         // Auto-populate browser selection from saved session
         console.log(`🔄 Auto-populating browser selection from saved session:`);
         console.log(`   - Browser Type: ${browserType}`);
+        console.log(`   - Browser Name: ${browserName}`);
         console.log(`   - Use Profile: ${useProfile ? 'Yes' : 'No'}`);
         
-        // Map browserType to browser name for display
-        const browserNameMap: { [key: string]: string } = {
-          'chromium': 'Chrome',
-          'firefox': 'Firefox', 
-          'webkit': 'Safari'
-        };
-        
-        const browserName = browserNameMap[browserType] || 'Chrome';
+        // Use stored browserName if available, otherwise fallback to mapping
+        const displayName = browserName || (() => {
+          const browserNameMap: { [key: string]: string } = {
+            'chromium': 'Google Chrome',
+            'firefox': 'Mozilla Firefox', 
+            'webkit': 'Safari'
+          };
+          return browserNameMap[browserType] || 'Chrome';
+        })();
         
         // Apply browser settings from saved session
-        setSelectedBrowser(browserName);
+        setSelectedBrowser(displayName);
         setSelectedBrowserType(browserType as 'chromium' | 'firefox' | 'webkit');
         setUseProfile(useProfile ?? true);
         
-        updateProgress('preparing-analysis', `Loaded session settings: ${browserName}${useProfile ? ' with profile' : ''}`);
+        updateProgress('preparing-analysis', `Loaded session settings: ${displayName}${useProfile ? ' with profile' : ''}`);
       } else {
         // Fallback for sessions without browser metadata
         console.log(`⚠️ No browser metadata found in saved session - using default settings`);
@@ -736,6 +746,14 @@ function App() {
           details: 'Ready for accessibility analysis'
         }
       });
+
+      // Auto-scroll to browser details after session loading
+      setTimeout(() => {
+        browserSelectionRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
 
     } catch (error) {
       updateProgress('error', 'Failed to load session', undefined, undefined, error instanceof Error ? error.message : 'Unknown error');
@@ -856,46 +874,52 @@ function App() {
               warnings={state.analysisResult?.warnings || []}
             />
 
-          {/* Session Mode - Only visible during setup */}
-            {state.mode === 'setup' && (
-              // Interactive session mode during setup only
+          {/* Session Mode & Browser Selection - Visible during setup and after recording completion */}
+            {(state.mode === 'setup' || state.mode === 'ready') && (
+              // Interactive during setup, read-only display when session loaded or recording completed
               <>
-                {/* Session Mode Toggle - First choice */}
-                <SessionModeToggle
-                  mode={sessionMode}
-                  onModeChange={handleSessionModeChange}
-                  disabled={state.loading}
-                />
+                {/* Session Mode Toggle - Only visible during setup */}
+                {state.mode === 'setup' && (
+                  <SessionModeToggle
+                    mode={sessionMode}
+                    onModeChange={handleSessionModeChange}
+                    disabled={state.loading}
+                  />
+                )}
 
-                {/* Browser Selection - Below session mode, always visible */}
-                <BrowserSelection
-                  ref={browserSelectionRef}
-                  url={state.url}
-                  selectedBrowser={selectedBrowser}
-                  useProfile={useProfile}
-                  onBrowserChange={handleBrowserChange}
-                  onProfileToggle={handleProfileToggle}
-                  disabled={state.loading}
-                  sessionMode={sessionMode}
-                />
+                {/* Browser Selection - Shows populated settings from loaded session */}
+                {(sessionMode === 'new' || (sessionMode === 'load' && selectedBrowser)) && (
+                  <BrowserSelection
+                    ref={browserSelectionRef}
+                    url={state.url}
+                    selectedBrowser={selectedBrowser}
+                    useProfile={useProfile}
+                    onBrowserChange={handleBrowserChange}
+                    onProfileToggle={handleProfileToggle}
+                    disabled={state.loading || state.mode === 'ready'}
+                    sessionMode={sessionMode}
+                  />
+                )}
 
                 {/* Show URL input/session selector based on mode */}
-                {sessionMode === 'new' ? (
-                  // New Recording: Only show URL input after browser is selected
-                  selectedBrowser && (
-                    <URLInput
-                      url={state.url}
-                      onUrlChange={handleUrlChange}
-                      onNavigate={handleNavigateAndRecord}
+                {state.mode === 'setup' && (
+                  sessionMode === 'new' ? (
+                    // New Recording: Only show URL input after browser is selected
+                    selectedBrowser && (
+                      <URLInput
+                        url={state.url}
+                        onUrlChange={handleUrlChange}
+                        onNavigate={handleNavigateAndRecord}
+                        isLoading={state.loading}
+                      />
+                    )
+                  ) : (
+                    // Load Session: Always show session selector (browser comes from session)
+                    <SessionSelector
+                      onSessionSelect={handleLoadSession}
                       isLoading={state.loading}
                     />
                   )
-                ) : (
-                  // Load Session: Always show session selector (browser comes from session)
-                  <SessionSelector
-                    onSessionSelect={handleLoadSession}
-                    isLoading={state.loading}
-                  />
                 )}
               </>
             )}            {/* Error Display */}

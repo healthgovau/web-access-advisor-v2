@@ -226,6 +226,7 @@ export async function loadSavedSession(sessionId: string): Promise<{
   actions: UserAction[];
   actionCount: number;
   browserType?: string;
+  browserName?: string;
   useProfile?: boolean;
 }> {
   const response = await fetch(`${API_BASE}/recordings/${sessionId}`);
