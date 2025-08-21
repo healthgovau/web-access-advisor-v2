@@ -383,7 +383,15 @@ app.get('/api/browsers', async (req: any, res: any) => {
   try {
     console.log('🔍 Detecting available browsers...');
     
-    const browsers = await browserRecordingService.detectAvailableBrowsers();
+    // Add overall timeout for the entire browser detection process
+    const browserDetectionPromise = browserRecordingService.detectAvailableBrowsers();
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Browser detection timeout after 15 seconds')), 15000)
+    );
+    
+    const browsers = await Promise.race([browserDetectionPromise, timeoutPromise]);
+    
+    console.log(`✅ Browser detection completed: ${browsers.filter(b => b.available).length} available`);
     
     res.json({
       browsers,
@@ -391,8 +399,18 @@ app.get('/api/browsers', async (req: any, res: any) => {
     });
 
   } catch (error: any) {
-    console.error('Failed to detect browsers:', error);
-    res.status(500).json({
+    console.error('❌ Failed to detect browsers:', error);
+    
+    // Return fallback browsers if detection fails
+    const fallbackBrowsers = [
+      { type: 'chromium', name: 'Microsoft Edge', available: false },
+      { type: 'chromium', name: 'Google Chrome', available: false },
+      { type: 'firefox', name: 'Mozilla Firefox', available: false }
+    ];
+    
+    res.status(200).json({
+      browsers: fallbackBrowsers,
+      message: 'Browser detection failed, showing fallback options',
       error: 'Failed to detect available browsers',
       details: error.message
     });

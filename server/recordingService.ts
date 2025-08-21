@@ -168,40 +168,81 @@ export class BrowserRecordingService {
    * Detect available browsers and their profile paths on Windows
    */
   async detectAvailableBrowsers(): Promise<BrowserOption[]> {
+    console.log('🔍 Starting browser detection...');
     const browsers: BrowserOption[] = [];
     const userHome = homedir();
+    console.log(`🏠 User home: ${userHome}`);
     
-    // Edge (Chromium-based)
-    const edgeProfilePath = path.join(userHome, 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data', 'Default');
-    const edgeAvailable = await this.checkPathExists(edgeProfilePath);
-    browsers.push({
-      type: 'chromium',
-      name: 'Microsoft Edge',
-      available: edgeAvailable,
-      profilePath: edgeAvailable ? edgeProfilePath : undefined
-    });
+    try {
+      // Edge (Chromium-based)
+      console.log('🔍 Checking Microsoft Edge...');
+      const edgeProfilePath = path.join(userHome, 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data', 'Default');
+      console.log(`📁 Edge path: ${edgeProfilePath}`);
+      const edgeAvailable = await this.checkPathExistsWithTimeout(edgeProfilePath, 'Microsoft Edge');
+      browsers.push({
+        type: 'chromium',
+        name: 'Microsoft Edge',
+        available: edgeAvailable,
+        profilePath: edgeAvailable ? edgeProfilePath : undefined
+      });
 
-    // Chrome
-    const chromeProfilePath = path.join(userHome, 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default');
-    const chromeAvailable = await this.checkPathExists(chromeProfilePath);
-    browsers.push({
-      type: 'chromium',
-      name: 'Google Chrome',
-      available: chromeAvailable,
-      profilePath: chromeAvailable ? chromeProfilePath : undefined
-    });
+      // Chrome
+      console.log('🔍 Checking Google Chrome...');
+      const chromeProfilePath = path.join(userHome, 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default');
+      console.log(`📁 Chrome path: ${chromeProfilePath}`);
+      const chromeAvailable = await this.checkPathExistsWithTimeout(chromeProfilePath, 'Google Chrome');
+      browsers.push({
+        type: 'chromium',
+        name: 'Google Chrome',
+        available: chromeAvailable,
+        profilePath: chromeAvailable ? chromeProfilePath : undefined
+      });
 
-    // Firefox
-    const firefoxProfilesPath = path.join(userHome, 'AppData', 'Roaming', 'Mozilla', 'Firefox', 'Profiles');
-    const firefoxProfilePath = await this.findFirefoxDefaultProfile(firefoxProfilesPath);
-    browsers.push({
-      type: 'firefox',
-      name: 'Mozilla Firefox',
-      available: !!firefoxProfilePath,
-      profilePath: firefoxProfilePath
-    });
+      // Firefox
+      console.log('🔍 Checking Mozilla Firefox...');
+      const firefoxProfilesPath = path.join(userHome, 'AppData', 'Roaming', 'Mozilla', 'Firefox', 'Profiles');
+      console.log(`📁 Firefox profiles path: ${firefoxProfilesPath}`);
+      const firefoxProfilePath = await this.findFirefoxDefaultProfileWithTimeout(firefoxProfilesPath);
+      browsers.push({
+        type: 'firefox',
+        name: 'Mozilla Firefox',
+        available: !!firefoxProfilePath,
+        profilePath: firefoxProfilePath
+      });
 
-    return browsers;
+      console.log(`✅ Browser detection completed. Found ${browsers.filter(b => b.available).length} available browsers.`);
+      return browsers;
+    } catch (error) {
+      console.error('❌ Browser detection failed:', error);
+      // Return empty browsers array as fallback
+      return [
+        { type: 'chromium', name: 'Microsoft Edge', available: false },
+        { type: 'chromium', name: 'Google Chrome', available: false },
+        { type: 'firefox', name: 'Mozilla Firefox', available: false }
+      ];
+    }
+  }
+
+  /**
+   * Check if a path exists with timeout protection
+   */
+  private async checkPathExistsWithTimeout(path: string, browserName: string, timeoutMs = 5000): Promise<boolean> {
+    console.log(`⏱️ Checking ${browserName} path with ${timeoutMs}ms timeout...`);
+    
+    try {
+      const result = await Promise.race([
+        this.checkPathExists(path),
+        new Promise<boolean>((_, reject) => 
+          setTimeout(() => reject(new Error(`Timeout checking ${browserName} path after ${timeoutMs}ms`)), timeoutMs)
+        )
+      ]);
+      
+      console.log(`${result ? '✅' : '❌'} ${browserName}: ${result ? 'Available' : 'Not found'}`);
+      return result;
+    } catch (error) {
+      console.warn(`⚠️ ${browserName} check failed:`, error instanceof Error ? error.message : error);
+      return false;
+    }
   }
 
   /**
@@ -213,6 +254,28 @@ export class BrowserRecordingService {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Find Firefox default profile with timeout protection
+   */
+  private async findFirefoxDefaultProfileWithTimeout(profilesPath: string, timeoutMs = 5000): Promise<string | null> {
+    console.log(`⏱️ Searching Firefox profiles with ${timeoutMs}ms timeout...`);
+    
+    try {
+      const result = await Promise.race([
+        this.findFirefoxDefaultProfile(profilesPath),
+        new Promise<string | null>((_, reject) => 
+          setTimeout(() => reject(new Error(`Timeout searching Firefox profiles after ${timeoutMs}ms`)), timeoutMs)
+        )
+      ]);
+      
+      console.log(`${result ? '✅' : '❌'} Firefox profile: ${result || 'Not found'}`);
+      return result;
+    } catch (error) {
+      console.warn(`⚠️ Firefox profile search failed:`, error instanceof Error ? error.message : error);
+      return null;
     }
   }
 
