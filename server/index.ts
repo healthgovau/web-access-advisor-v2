@@ -604,6 +604,11 @@ app.post('/api/sessions/:sessionId/analyze', async (req: any, res: any) => {
       estimatedDuration: Math.round(dynamicTimeout / 60000) // Include estimated duration in minutes
     });
 
+    console.log(`🔍 DEBUG: Recording session browser info:`);
+    console.log(`  - browserType: ${recordingSession.browserType}`);
+    console.log(`  - browserName: ${recordingSession.browserName}`);
+    console.log(`  - useProfile: ${recordingSession.useProfile}`);
+
     // Process analysis asynchronously
     processAnalysisAsync(sessionId, recordingSession.actions, dynamicTimeout, { 
       staticSectionMode,
@@ -809,9 +814,6 @@ app.use((error: Error, req: any, res: any, next: any) => {
  */
 async function startServer() {
   try {
-    // Initialize analyzer on startup
-    await initializeAnalyzer();
-    
     const server = app.listen(PORT, () => {
       console.log(`🚀 Web Access Advisor API Server running on http://localhost:${PORT}`);
       console.log(`📋 Health check: http://localhost:${PORT}/api/health`);

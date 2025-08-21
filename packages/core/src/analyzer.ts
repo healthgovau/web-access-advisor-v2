@@ -53,68 +53,50 @@ export class AccessibilityAnalyzer {
     const browserEngine = browserType === 'firefox' ? firefox : browserType === 'webkit' ? webkit : chromium;
     
     if (useProfile && browserType === 'chromium') {
-      // Use consistent profile detection logic
+      // CRITICAL: Match recording service's browser profile detection exactly
       try {
-        console.log('🔍 Detecting browser profiles for analysis consistency...');
+        console.log(`🔍 Analysis phase: Launching with profile for ${browserName || 'Chromium'}`);
         const { homedir } = await import('os');
         const { access } = await import('fs/promises');
         
-        // Determine which profile to use based on browserName
+        // Use the same profile path logic as recording service
         let profilePath: string;
         let profileSource: string;
         
         if (browserName === 'Microsoft Edge') {
           const edgeProfilePath = path.join(homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data', 'Default');
-          try {
-            await access(edgeProfilePath);
-            profilePath = edgeProfilePath;
-            profileSource = 'Edge';
-          } catch {
-            throw new Error('Microsoft Edge profile not found or not accessible');
-          }
+          await access(edgeProfilePath); // Verify accessibility
+          profilePath = edgeProfilePath;
+          profileSource = 'Microsoft Edge';
+          console.log(`🔍 Analysis: Using Edge profile (consistent with recording)`);
         } else if (browserName === 'Google Chrome') {
           const chromeProfilePath = path.join(homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default');
-          try {
-            await access(chromeProfilePath);
-            profilePath = chromeProfilePath;
-            profileSource = 'Chrome';
-          } catch {
-            throw new Error('Google Chrome profile not found or not accessible');
-          }
+          await access(chromeProfilePath); // Verify accessibility
+          profilePath = chromeProfilePath;
+          profileSource = 'Google Chrome';
+          console.log(`🔍 Analysis: Using Chrome profile (consistent with recording)`);
         } else {
-          // Fallback: try Edge first, then Chrome
-          const edgeProfilePath = path.join(homedir(), 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data', 'Default');
-          const chromeProfilePath = path.join(homedir(), 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default');
-          
-          try {
-            await access(edgeProfilePath);
-            profilePath = edgeProfilePath;
-            profileSource = 'Edge (fallback)';
-          } catch {
-            try {
-              await access(chromeProfilePath);
-              profilePath = chromeProfilePath;
-              profileSource = 'Chrome (fallback)';
-            } catch {
-              throw new Error('No Chrome or Edge profile found');
-            }
-          }
+          // If no specific browserName, this is a problem - we should know which browser was used for recording
+          console.error(`❌ Analysis: No browserName specified, cannot maintain profile consistency!`);
+          throw new Error('browserName required for profile consistency between recording and analysis');
         }
         
-        console.log(`🔍 Using ${profileSource} profile for analysis: ${profilePath}`);
+        console.log(`🔍 Analysis: Profile path: ${profilePath}`);
         
+        // Launch with same settings as recording service
         this.context = await chromium.launchPersistentContext(profilePath, { 
-          headless: false, // CRITICAL: Match recording service - use visible browser for session consistency
-          slowMo: 50
+          headless: false, // Match recording service
+          slowMo: 50       // Match recording service
         });
         this.browser = this.context.browser()!;
-        console.log(`✅ ${browserType} browser launched with persistent profile context (${profileSource})`);
+        console.log(`✅ Analysis: Browser launched with persistent profile context (${profileSource})`);
       } catch (error) {
-        console.log(`⚠️ Failed to launch with profile, falling back to clean browser:`, error instanceof Error ? error.message : 'Unknown error');
-        // Fallback to clean browser - also match recording service settings
-        this.browser = await browserEngine.launch({ headless: false }); // Match recording service
+        console.error(`❌ Analysis: Failed to launch with profile:`, error);
+        console.log(`🔄 Analysis: Falling back to clean browser - THIS WILL CAUSE AUTHENTICATION ISSUES`);
+        // Fallback to clean browser - this will likely cause auth issues
+        this.browser = await browserEngine.launch({ headless: false, slowMo: 50 });
         this.context = await this.browser.newContext();
-        console.log(`✅ ${browserType} browser launched in clean mode (profile fallback)`);
+        console.log(`⚠️ Analysis: Using clean browser (authentication may fail)`);
       }
     } else if (useProfile && browserType === 'firefox') {
       // Try to use persistent context with Firefox profile
@@ -191,7 +173,7 @@ export class AccessibilityAnalyzer {
       if (!this.page) {
         throw new Error('Analyzer not initialized');
       }      console.log(`🎬 PHASE 1: Starting analysis session: ${sessionId}`);
-      console.log(`📋 Actions to replay: ${actions.length} using ${browserType} headless browser`);
+      console.log(`📋 Actions to replay: ${actions.length} using ${browserType} browser (profile: ${useProfile ? browserName || 'Yes' : 'No'})`);
       console.log(`🌐 Browser type: ${browserType} (headless mode for consistent analysis)`);
       
       if (actions.length === 0) {
