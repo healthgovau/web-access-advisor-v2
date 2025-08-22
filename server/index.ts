@@ -329,9 +329,9 @@ app.post('/api/browsers/check-domain', async (req: any, res: any) => {
       return res.json({
         domain: null,
         loginStatus: {
-          edge: false,
-          chrome: false,
-          firefox: false
+          "Microsoft Edge": false,
+          "Google Chrome": false,
+          "Mozilla Firefox": false
         },
         message: 'No login detected - URL required'
       });
@@ -359,9 +359,9 @@ app.post('/api/browsers/check-domain', async (req: any, res: any) => {
       return res.json({
         domain: null,
         loginStatus: {
-          edge: false,
-          chrome: false,
-          firefox: false
+          "Microsoft Edge": false,
+          "Google Chrome": false,
+          "Mozilla Firefox": false
         },
         message: 'No login detected - Invalid domain'
       });
@@ -370,10 +370,11 @@ app.post('/api/browsers/check-domain', async (req: any, res: any) => {
     console.log(`🔍 Valid domain found: "${domain}"`);
     
     const loginStatus = await browserRecordingService.checkDomainLogin(domain);
+    console.log(`🔍 DEBUG: Login status from service:`, loginStatus);
     
     res.json({
       domain: domain,
-      loginStatus,
+      loginStatus, // Use the actual results from checkDomainLogin (with full browser names)
       message: `Checked login status for ${domain}`
     });
 
@@ -383,9 +384,9 @@ app.post('/api/browsers/check-domain', async (req: any, res: any) => {
     res.json({
       domain: null,
       loginStatus: {
-        edge: false,
-        chrome: false,
-        firefox: false
+        "Microsoft Edge": false,
+        "Google Chrome": false,
+        "Mozilla Firefox": false
       },
       message: 'No login detected - Service error'
     });
@@ -875,7 +876,16 @@ app.get('/api/recordings', async (req: any, res: any) => {
       duration: recording.duration,
       actionCount: recording.actionCount,
       fileSize: 0, // Not available in new structure
-      created: recording.startTime
+      created: recording.startTime,
+      // Authentication context for playback guidance
+      recordingContext: {
+        useProfile: recording.useProfile || false,
+        browserType: recording.browserType,
+        browserName: recording.browserName,
+        authenticationNote: recording.useProfile 
+          ? `Recorded with ${recording.browserName || recording.browserType} profile`
+          : 'Recorded without profile (clean session)'
+      }
     }));
     
     res.json(transformedRecordings);

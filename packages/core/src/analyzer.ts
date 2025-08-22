@@ -36,6 +36,11 @@ export class AccessibilityAnalyzer {
   private geminiApiKey: string | undefined = undefined;
   private domChangeDetector: DOMChangeDetector = new DOMChangeDetector();
   private previousHtmlState: string | null = null;
+  
+  // Browser configuration for recording context
+  private useProfile?: boolean = false;
+  private browserType?: 'chromium' | 'firefox' | 'webkit' = 'chromium';
+  private browserName?: string;
 
   /**
    * Initialize the analyzer with specific browser profile consistency
@@ -48,6 +53,11 @@ export class AccessibilityAnalyzer {
     
     // Store API key for potential reinitializations
     this.geminiApiKey = geminiApiKey;
+    
+    // Store browser configuration for recording context
+    this.useProfile = useProfile;
+    this.browserType = browserType;
+    this.browserName = browserName;
     
     // Get browser configuration from environment
     const headlessMode = process.env.PLAYWRIGHT_HEADLESS === 'true';
@@ -720,6 +730,15 @@ export class AccessibilityAnalyzer {
         authStepsFiltered: enhancedStepDetails.filter(s => s.isAuthRelated).length,
         relevantStepsForAnalysis: enhancedStepDetails.filter(s => !s.excludeFromAnalysis).length,
         totalTokenEstimate: enhancedStepDetails.reduce((sum, s) => sum + s.tokenEstimate, 0)
+      },
+      recordingContext: {
+        useProfile: this.useProfile || false,
+        browserType: this.browserType,
+        browserName: this.browserName,
+        authenticationState: 'unknown', // Will be determined during recording
+        recordingNote: this.useProfile 
+          ? `Recorded with ${this.browserName || this.browserType} profile - may include saved logins`
+          : `Recorded without profile - clean browser session`
       }
     };
 

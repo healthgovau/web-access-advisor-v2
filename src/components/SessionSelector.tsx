@@ -11,6 +11,12 @@ interface SavedSession {
   startTime: string;
   actionCount: number;
   created: string;
+  recordingContext?: {
+    useProfile: boolean;
+    browserType?: string;
+    browserName?: string;
+    authenticationNote?: string;
+  };
 }
 
 interface SessionSelectorProps {
@@ -135,13 +141,60 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
           </select>
         </div>
 
-        {selectedSessionId && (
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-            <div className="text-sm text-blue-700">
-              Loading {sessions.find(s => s.sessionId === selectedSessionId)?.sessionName} for analysis...
+        {selectedSessionId && (() => {
+          const selectedSession = sessions.find(s => s.sessionId === selectedSessionId);
+          const context = selectedSession?.recordingContext;
+          
+          if (!context) return null;
+          
+          return (
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <h4 className="text-sm font-medium text-amber-800">
+                  🎬 Playback Preparation
+                </h4>
+                {/* Info icon with popover */}
+                <div className="relative group">
+                  <button
+                    type="button"
+                    aria-label="Show playback preparation information"
+                    className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 rounded-full transition-colors"
+                  >
+                    <svg className="w-4 h-4 text-amber-600 hover:text-amber-800 cursor-help" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  {/* Popover */}
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div className="space-y-3 text-sm text-left">
+                      <div>
+                        <div className="font-semibold text-gray-900 mb-1">Why prepare for playback?</div>
+                        <div className="text-gray-700">The Web Access Advisor replays your exact interactions. If your session included authenticated content, you need to be logged in for accurate replay.</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-900 mb-1">Preparation steps:</div>
+                        <div className="text-gray-700">1. Open your website in a separate tab<br/>2. Log in normally<br/>3. Return here and click 'Analyze Recording'</div>
+                      </div>
+                    </div>
+                    {/* Arrow pointing down */}
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-200"></div>
+                  </div>
+                </div>
+              </div>
+              <div className="text-sm text-amber-700 space-y-2">
+                <div>
+                  <span className="font-medium">Original Recording:</span> {context.authenticationNote}
+                </div>
+                <div className="bg-amber-100 border border-amber-300 rounded p-2 text-xs">
+                  {context.useProfile 
+                    ? "⚠️ This session was recorded WITH authentication. Please log in to your website first before clicking 'Analyze Recording' to ensure accurate playback."
+                    : "✅ This session was recorded WITHOUT authentication (clean session). You can analyze directly - no login required."
+                  }
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

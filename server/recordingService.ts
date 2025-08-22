@@ -78,7 +78,7 @@ export class BrowserRecordingService {
       console.log(`🔍 DEBUG: Checking ${browser.name}...`);
       
       if (!browser.available || !browser.profilePath) {
-        console.log(`🔍 DEBUG: ${browser.name} - not available or no profile path`);
+        console.log(`🔍 DEBUG: ${browser.name} - not available or no profile path (available: ${browser.available}, profilePath: ${!!browser.profilePath})`);
         results[browser.name] = false;
         return;
       }
@@ -91,11 +91,11 @@ export class BrowserRecordingService {
           this.checkBrowserDomainCookies(browser, searchTerm),
           new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('timeout')), timeout))
         ]);
-        console.log(`🔍 DEBUG: ${browser.name} - login detected: ${hasLogin}`);
+        console.log(`🔍 DEBUG: ${browser.name} - login detected: ${hasLogin} for domain: ${searchTerm}`);
         results[browser.name] = hasLogin;
       } catch (error) {
         // If timeout or error, assume no login to be safe
-        console.log(`🔍 DEBUG: ${browser.name} - error/timeout:`, error.message);
+        console.log(`🔍 DEBUG: ${browser.name} - error/timeout for domain ${searchTerm}:`, error.message);
         results[browser.name] = false;
       }
     });
@@ -198,7 +198,14 @@ export class BrowserRecordingService {
           return containsTerm;
         } catch (error) {
           console.log(`🔍 DEBUG: Could not read cookies for ${browser.name}:`, error.message);
-          return false;
+          
+          // Cookie files are often locked when browsers are running
+          if (error.code === 'EBUSY') {
+            console.log(`🔍 DEBUG: ${browser.name} cookie file is locked - browser is currently running`);
+            console.log(`🔍 DEBUG: Cannot determine login status for active browser`);
+          }
+          
+          return false; // Default to no login detected when cookies are unreadable
         }
       }
       

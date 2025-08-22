@@ -73,6 +73,14 @@ export interface SessionManifest {
     relevantStepsForAnalysis: number;
     totalTokenEstimate: number;
   };
+  // Authentication context for playback guidance
+  recordingContext?: {
+    useProfile: boolean;
+    browserType?: string;
+    browserName?: string;
+    authenticationState?: 'logged_in' | 'logged_out' | 'unknown';
+    recordingNote?: string;
+  };
 }
 
 export interface ActionGroup {
