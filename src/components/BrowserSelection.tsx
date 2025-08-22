@@ -54,6 +54,9 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
 
   const selectedBrowserOption = browsers.find(b => b.name === selectedBrowser);
   const canUseProfile = selectedBrowserOption?.available && selectedBrowserOption?.profilePath;
+  
+  // Check if any browser supports profiles to show the authentication bar early
+  const anyBrowserSupportsProfile = browsers.some(b => b.available && b.profilePath);
 
   // Memoized handlers to prevent unnecessary re-renders
   const handleBrowserClick = useCallback((browserType: 'chromium' | 'firefox' | 'webkit', browserName: string) => {
@@ -77,7 +80,7 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
     
     return useProfile 
       ? 'Using browser profile' 
-      : 'Available (not using)';
+      : 'Not using browser profile';
   };
 
   if (loading) {
@@ -136,8 +139,8 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
         </p>
       )}
       
-      {/* Profile Sharing Toggle - moved to top */}
-      {canUseProfile && (
+      {/* Profile Sharing Toggle - show early to prevent layout shift */}
+      {anyBrowserSupportsProfile && (
         <div className="mb-6">
           <div className="p-4 bg-white border rounded-lg">
             <div className="flex items-center gap-3">
