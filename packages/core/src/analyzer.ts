@@ -372,28 +372,9 @@ export class AccessibilityAnalyzer {
         console.log(`⚠️ No snapshots captured - skipping AI analysis`);
       }
 
-      // After Gemini analysis is generated, components should already have URLs from batch context
+      // Components should now have correct URLs from step mapping - no verification needed
       if (geminiAnalysis && Array.isArray(geminiAnalysis.components) && snapshots.length > 0) {
-        console.log(`🔍 Verifying ${geminiAnalysis.components.length} components have correct batch URLs`);
-        
-        // Build step URL map for any missing assignments
-        const manifest = await this.generateManifest(sessionId, actions, snapshots);
-        const stepUrlMap = new Map<number, string>();
-        for (const stepDetail of manifest.stepDetails) {
-          stepUrlMap.set(stepDetail.step, stepDetail.url);
-        }
-        
-        geminiAnalysis.components.forEach(component => {
-          // Components should already have URLs assigned from batch context
-          if (component.url && component.url !== 'unknown' && component.step) {
-            console.log(`✅ BATCH URL VERIFIED: "${component.componentName}" has URL ${component.url} (step ${component.step})`);
-          } else {
-            // Fallback for any components without proper batch assignment
-            component.step = snapshots[0].step;
-            component.url = stepUrlMap.get(snapshots[0].step) || snapshots[0].axeContext?.url || 'unknown';
-            console.warn(`⚠️ MISSING BATCH URL: "${component.componentName}" fallback assigned → ${component.url} (step ${component.step})`);
-          }
-        });
+        console.log(`✅ ${geminiAnalysis.components.length} components processed with step-mapped URLs`);
       }
 
       // Generate final report
@@ -1543,33 +1524,37 @@ export class AccessibilityAnalyzer {
           hasSummary: !!batchResult.summary
         });
 
-        // FIXED: Assign URLs to components from their batch context immediately after analysis
+        // FIXED: Use component's step number to assign exact URL from step-URL mapping
         if (batchResult.components && batch.snapshots.length > 0) {
-          const batchUrls = [...new Set(batch.snapshots.map(s => s.axeContext?.url).filter(Boolean))];
-          console.log(`🔗 Assigning batch URLs to ${batchResult.components.length} components from batch ${i + 1}:`);
-          console.log(`   Batch contains URLs: ${batchUrls.join(', ')}`);
+          // Create step-to-URL mapping from batch snapshots
+          const stepUrlMap = new Map<number, string>();
+          batch.snapshots.forEach(snapshot => {
+            if (snapshot.step && snapshot.axeContext?.url) {
+              stepUrlMap.set(snapshot.step, snapshot.axeContext.url);
+            }
+          });
           
+          const batchUrls = [...new Set(Array.from(stepUrlMap.values()))];
+          console.log(`🔗 Assigning URLs to ${batchResult.components.length} components from batch ${i + 1} using step mapping:`);
+          console.log(`   Batch step-URL mapping:`, Array.from(stepUrlMap.entries()).map(([step, url]) => `step ${step} → ${url}`));
+
           batchResult.components.forEach(component => {
-            // Strategy 1: If batch has only one unique URL, assign it to all components
-            if (batchUrls.length === 1) {
+            // Use component's step number to get the exact URL from that step
+            if (component.step && stepUrlMap.has(component.step)) {
+              component.url = stepUrlMap.get(component.step)!;
+              console.log(`✅ STEP MAPPED: "${component.componentName}" → ${component.url} (step ${component.step})`);
+            } 
+            // Fallback: use first URL if step mapping fails
+            else if (batchUrls.length > 0) {
               component.url = batchUrls[0];
-              // Find the step for this URL
-              const stepWithUrl = batch.snapshots.find(s => s.axeContext?.url === batchUrls[0]);
-              component.step = stepWithUrl?.step || batch.snapshots[0].step;
-              console.log(`✅ SINGLE URL BATCH: "${component.componentName}" → ${component.url} (step ${component.step})`);
+              component.step = batch.snapshots[0]?.step || component.step;
+              console.warn(`⚠️ STEP MAPPING FAILED: "${component.componentName}" → ${component.url} (step ${component.step || 'unknown'}) - used fallback URL`);
             }
-            // Strategy 2: If batch has multiple URLs, use first URL as fallback (batching should group by URL)
-            else if (batchUrls.length > 1) {
-              component.url = batchUrls[0]; // Use first URL as primary context
-              const stepWithUrl = batch.snapshots.find(s => s.axeContext?.url === batchUrls[0]);
-              component.step = stepWithUrl?.step || batch.snapshots[0].step;
-              console.log(`⚠️ MULTI URL BATCH: "${component.componentName}" → ${component.url} (step ${component.step}) - used first URL from batch`);
-            }
-            // Strategy 3: No URLs found, use step 1 as fallback
+            // Final fallback
             else {
               component.url = batch.snapshots[0]?.axeContext?.url || 'unknown';
-              component.step = batch.snapshots[0]?.step || 1;
-              console.warn(`❌ NO BATCH URLS: "${component.componentName}" → ${component.url} (step ${component.step})`);
+              component.step = batch.snapshots[0]?.step || component.step;
+              console.warn(`❌ NO URLS AVAILABLE: "${component.componentName}" → ${component.url} (step ${component.step})`);
             }
           });
         }
