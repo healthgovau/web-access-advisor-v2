@@ -972,6 +972,11 @@ ${GeminiService.SHARED_OUTPUT_FORMAT}
     },
     filterStaticSections?: boolean
   ): string {
+    console.log(`🤖 DEBUG: Building Gemini flow analysis prompt:`);
+    console.log(`   - Snapshots: ${snapshots.length} steps`);
+    console.log(`   - Step URLs:`, snapshots.map(s => ({ step: s.step, url: s.axeContext?.url })));
+    console.log(`   - Context URL: ${context.url}`);
+    
     // Group snapshots by flow context
     const flowGroups = this.groupSnapshotsByFlow(snapshots, manifest);
     
@@ -1031,6 +1036,7 @@ ${typedSteps.map((step: any, index: number) => {
         return `
 Step ${step.step} (Parent: ${stepDetail?.parentStep || 'none'}):
 - Action: ${stepDetail?.action || step.action} 
+- URL: ${step.axeContext?.url || 'unknown'}
 - UI State: ${stepDetail?.uiState || 'unknown'}
 - DOM Changes: ${stepDetail?.domChanges || step.domChangeDetails?.description || 'none'}
 - Axe Violations: ${step.axeResults?.length || 0}

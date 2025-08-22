@@ -49,7 +49,12 @@ export class AccessibilityAnalyzer {
     // Store API key for potential reinitializations
     this.geminiApiKey = geminiApiKey;
     
-    // Launch the specified browser in headless mode
+    // Get browser configuration from environment
+    const headlessMode = process.env.PLAYWRIGHT_HEADLESS === 'true';
+    const slowMo = parseInt(process.env.PLAYWRIGHT_SLOW_MO || '50', 10);
+    console.log(`🔧 Browser config: headless=${headlessMode}, slowMo=${slowMo}ms`);
+    
+    // Launch the specified browser with configurable visibility
     const browserEngine = browserType === 'firefox' ? firefox : browserType === 'webkit' ? webkit : chromium;
     
     if (useProfile && browserType === 'chromium') {
@@ -83,10 +88,10 @@ export class AccessibilityAnalyzer {
         
         console.log(`🔍 Analysis: Profile path: ${profilePath}`);
         
-        // Launch with same settings as recording service
+        // Launch with environment-configured settings
         this.context = await chromium.launchPersistentContext(profilePath, { 
-          headless: false, // Match recording service
-          slowMo: 50       // Match recording service
+          headless: headlessMode,
+          slowMo: slowMo
         });
         this.browser = this.context.browser()!;
         console.log(`✅ Analysis: Browser launched with persistent profile context (${profileSource})`);
@@ -94,7 +99,7 @@ export class AccessibilityAnalyzer {
         console.error(`❌ Analysis: Failed to launch with profile:`, error);
         console.log(`🔄 Analysis: Falling back to clean browser - THIS WILL CAUSE AUTHENTICATION ISSUES`);
         // Fallback to clean browser - this will likely cause auth issues
-        this.browser = await browserEngine.launch({ headless: false, slowMo: 50 });
+        this.browser = await browserEngine.launch({ headless: headlessMode, slowMo: slowMo });
         this.context = await this.browser.newContext();
         console.log(`⚠️ Analysis: Using clean browser (authentication may fail)`);
       }
@@ -105,20 +110,20 @@ export class AccessibilityAnalyzer {
         const profilesPath = path.join(homedir(), 'AppData', 'Roaming', 'Mozilla', 'Firefox', 'Profiles');
         // For now, we'll fallback to clean browser for Firefox since profile detection is complex
         console.log(`⚠️ Firefox profile support not fully implemented, using clean browser`);
-        this.browser = await browserEngine.launch({ headless: false }); // Match recording service
+        this.browser = await browserEngine.launch({ headless: headlessMode }); // Environment-configured
         this.context = await this.browser.newContext();
         console.log(`✅ ${browserType} browser launched in clean mode (Firefox profile not implemented)`);
       } catch (error) {
         console.log(`⚠️ Failed to launch Firefox with profile, falling back to clean browser:`, error instanceof Error ? error.message : 'Unknown error');
-        this.browser = await browserEngine.launch({ headless: false }); // Match recording service
+        this.browser = await browserEngine.launch({ headless: headlessMode }); // Environment-configured
         this.context = await this.browser.newContext();
         console.log(`✅ ${browserType} browser launched in clean mode (profile fallback)`);
       }
     } else {
-      // Standard clean browser launch - match recording service settings  
-      this.browser = await browserEngine.launch({ headless: false, slowMo: 50 }); // Match recording service
+      // Standard clean browser launch - environment-configured  
+      this.browser = await browserEngine.launch({ headless: headlessMode, slowMo: slowMo }); // Environment-configured
       this.context = await this.browser.newContext();
-      console.log(`✅ ${browserType} browser launched in visible mode for analysis consistency`);
+      console.log(`✅ ${browserType} browser launched (headless: ${headlessMode}, slowMo: ${slowMo}ms)`);
     }
     
     this.page = await this.context.newPage();
@@ -367,43 +372,27 @@ export class AccessibilityAnalyzer {
         console.log(`⚠️ No snapshots captured - skipping AI analysis`);
       }
 
-      // After Gemini analysis is generated, assign step and url to each component if possible
+      // After Gemini analysis is generated, components should already have URLs from batch context
       if (geminiAnalysis && Array.isArray(geminiAnalysis.components) && snapshots.length > 0) {
-        // Build a lookup from step to url using the manifest (stepDetails)
+        console.log(`🔍 Verifying ${geminiAnalysis.components.length} components have correct batch URLs`);
+        
+        // Build step URL map for any missing assignments
         const manifest = await this.generateManifest(sessionId, actions, snapshots);
         const stepUrlMap = new Map<number, string>();
         for (const stepDetail of manifest.stepDetails) {
           stepUrlMap.set(stepDetail.step, stepDetail.url);
         }
+        
         geminiAnalysis.components.forEach(component => {
-          // Try to match the component to the correct snapshot step by selector or other context
-          let matchedStep = undefined;
-          if (component.selector) {
-            // Try to find the most recent snapshot whose HTML contains the selector
-            for (let i = snapshots.length - 1; i >= 0; i--) {
-              const snap = snapshots[i];
-              if (snap.html && snap.html.includes(component.selector.replace(/^[.#]/, ''))) {
-                matchedStep = snap.step;
-                break;
-              }
-            }
+          // Components should already have URLs assigned from batch context
+          if (component.url && component.url !== 'unknown' && component.step) {
+            console.log(`✅ BATCH URL VERIFIED: "${component.componentName}" has URL ${component.url} (step ${component.step})`);
+          } else {
+            // Fallback for any components without proper batch assignment
+            component.step = snapshots[0].step;
+            component.url = stepUrlMap.get(snapshots[0].step) || snapshots[0].axeContext?.url || 'unknown';
+            console.warn(`⚠️ MISSING BATCH URL: "${component.componentName}" fallback assigned → ${component.url} (step ${component.step})`);
           }
-          // Fallback: if not matched by selector, use the step from the manifest with the closest url
-          if (!matchedStep && component.url) {
-            for (let i = snapshots.length - 1; i >= 0; i--) {
-              const snap = snapshots[i];
-              if (snap.axeContext && snap.axeContext.url === component.url) {
-                matchedStep = snap.step;
-                break;
-              }
-            }
-          }
-          // If still not matched, fallback to the first snapshot
-          if (!matchedStep) {
-            matchedStep = snapshots[0].step;
-          }
-          component.step = matchedStep;
-          component.url = stepUrlMap.get(matchedStep) || (snapshots[0].axeContext && snapshots[0].axeContext.url) || undefined;
         });
       }
 
@@ -448,6 +437,10 @@ export class AccessibilityAnalyzer {
         axeResults: [],
         error: error instanceof Error ? error.message : 'Unknown error'
       };
+    } finally {
+      // Always cleanup browser resources after analysis
+      console.log(`🧹 Cleaning up browser resources...`);
+      await this.cleanup();
     }
   }
 
@@ -1549,6 +1542,37 @@ export class AccessibilityAnalyzer {
           components: batchResult.components?.length || 0,
           hasSummary: !!batchResult.summary
         });
+
+        // FIXED: Assign URLs to components from their batch context immediately after analysis
+        if (batchResult.components && batch.snapshots.length > 0) {
+          const batchUrls = [...new Set(batch.snapshots.map(s => s.axeContext?.url).filter(Boolean))];
+          console.log(`🔗 Assigning batch URLs to ${batchResult.components.length} components from batch ${i + 1}:`);
+          console.log(`   Batch contains URLs: ${batchUrls.join(', ')}`);
+          
+          batchResult.components.forEach(component => {
+            // Strategy 1: If batch has only one unique URL, assign it to all components
+            if (batchUrls.length === 1) {
+              component.url = batchUrls[0];
+              // Find the step for this URL
+              const stepWithUrl = batch.snapshots.find(s => s.axeContext?.url === batchUrls[0]);
+              component.step = stepWithUrl?.step || batch.snapshots[0].step;
+              console.log(`✅ SINGLE URL BATCH: "${component.componentName}" → ${component.url} (step ${component.step})`);
+            }
+            // Strategy 2: If batch has multiple URLs, use first URL as fallback (batching should group by URL)
+            else if (batchUrls.length > 1) {
+              component.url = batchUrls[0]; // Use first URL as primary context
+              const stepWithUrl = batch.snapshots.find(s => s.axeContext?.url === batchUrls[0]);
+              component.step = stepWithUrl?.step || batch.snapshots[0].step;
+              console.log(`⚠️ MULTI URL BATCH: "${component.componentName}" → ${component.url} (step ${component.step}) - used first URL from batch`);
+            }
+            // Strategy 3: No URLs found, use step 1 as fallback
+            else {
+              component.url = batch.snapshots[0]?.axeContext?.url || 'unknown';
+              component.step = batch.snapshots[0]?.step || 1;
+              console.warn(`❌ NO BATCH URLS: "${component.componentName}" → ${component.url} (step ${component.step})`);
+            }
+          });
+        }
 
         // Accumulate results
         batchResults.push(batchResult);

@@ -107,19 +107,30 @@ const analysisStates = new Map<string, AnalysisState>();
 /**
  * Initialize analyzer
  */
-async function initializeAnalyzer() {
-  if (!analyzer) {
-    analyzer = new AccessibilityAnalyzer();
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    console.log(`🔍 Environment check: GEMINI_API_KEY = ${geminiApiKey ? '[SET]' : '[NOT SET]'}`);
-    await analyzer.initialize(geminiApiKey);
-    console.log('✓ Accessibility analyzer initialized');
-    if (geminiApiKey) {
-      console.log('✓ Gemini AI service enabled');
-    } else {
-      console.log('⚠️ Gemini AI service disabled - no API key provided');
+async function initializeAnalyzer(browserType?: 'chromium' | 'firefox' | 'webkit', useProfile?: boolean, browserName?: string) {
+  // Always reinitialize analyzer with correct browser parameters for profile consistency
+  if (analyzer) {
+    // Clean up existing analyzer if it exists
+    try {
+      await analyzer.cleanup();
+    } catch (error) {
+      console.warn('Warning during analyzer cleanup:', error);
     }
   }
+  
+  analyzer = new AccessibilityAnalyzer();
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  console.log(`🔍 Environment check: GEMINI_API_KEY = ${geminiApiKey ? '[SET]' : '[NOT SET]'}`);
+  console.log(`🔍 Analyzer init with: browserType=${browserType}, useProfile=${useProfile}, browserName=${browserName}`);
+  
+  await analyzer.initialize(geminiApiKey, browserType, useProfile, browserName);
+  console.log('✓ Accessibility analyzer initialized with browser profile settings');
+  if (geminiApiKey) {
+    console.log('✓ Gemini AI service enabled');
+  } else {
+    console.log('⚠️ Gemini AI service disabled - no API key provided');
+  }
+  
   return analyzer;
 }
 
@@ -151,7 +162,12 @@ app.post('/api/analyze', async (req: any, res: any) => {
       });
     }
 
-    const currentAnalyzer = await initializeAnalyzer();
+    // Initialize analyzer with browser profile parameters from options
+    const currentAnalyzer = await initializeAnalyzer(
+      options?.browserType,
+      options?.useProfile,
+      options?.browserName
+    );
     
     console.log(`Starting analysis with ${actions.length} actions`);
     const result: AnalysisResult = await currentAnalyzer.analyzeActions(actions, options);
@@ -637,7 +653,14 @@ async function processAnalysisAsync(sessionId: string, actions: UserAction[], dy
   }
 
   try {
-    const currentAnalyzer = await initializeAnalyzer();
+    // Initialize analyzer with browser profile parameters for authentication consistency
+    const currentAnalyzer = await initializeAnalyzer(
+      analysisOptions.browserType || 'chromium',
+      analysisOptions.useProfile || false,
+      analysisOptions.browserName
+    );
+    
+    console.log(`🔍 Analysis initialized with: browser=${analysisOptions.browserName || analysisOptions.browserType}, profile=${analysisOptions.useProfile ? 'enabled' : 'disabled'}`);
 
     // Progress callback to update analysis state
     const onProgress = (
