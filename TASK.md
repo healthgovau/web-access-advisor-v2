@@ -2,6 +2,39 @@
 
 # Web Access Advisor - Current Tasks
 
+## ✅ Recently Completed (2025-08-22)
+
+### URL Context Assignment Fix for Dynamic Routing Environments  
+- ✅ **Fixed Component URL Misassignment Bug** - Components found on page 2 were incorrectly logged as issues for page 1 in Power Pages dynamic routing environment
+- ✅ **Replaced Complex Component Matching Logic** - Removed faulty selector/keyword/backward-search matching system that broke with URL reuse patterns
+- ✅ **Implemented Step-to-URL Mapping** - Components now get URLs assigned based on their exact step number using direct step-URL mapping from batch metadata
+- ✅ **Browser Visibility Environment Configuration** - Added PLAYWRIGHT_HEADLESS and PLAYWRIGHT_SLOW_MO environment variables for debugging browser behavior
+
+#### Technical Details
+```typescript
+// NEW: Step-to-URL mapping replaces complex matching logic
+const stepUrlMap = new Map<number, string>();
+batch.snapshots.forEach(snapshot => {
+  if (snapshot.step && snapshot.axeContext?.url) {
+    stepUrlMap.set(snapshot.step, snapshot.axeContext.url);
+  }
+});
+
+// Components get precise URLs from their exact step
+if (component.step && stepUrlMap.has(component.step)) {
+  component.url = stepUrlMap.get(component.step)!;
+  console.log(`✅ STEP MAPPED: "${component.componentName}" → ${component.url} (step ${component.step})`);
+}
+
+// REMOVED: Complex matching logic with selector/keyword fallbacks
+// - componentMatches.get(component.componentName)  
+// - Keyword matching with componentKeywords
+// - Backward step searching with findComponentInStep
+// - Complex selector matching patterns
+```
+
+**Problem Solved**: Power Pages dynamic routing where URLs like "hprg-home" appear at multiple steps (1, 5, 11) broke existing component matching assumptions. Components from forms-library page (step 2) were getting misassigned to home page URL due to faulty matching logic. Now each component gets the exact URL from the step where it was found.
+
 ## ✅ Recently Completed (2025-08-21)
 
 ### Browser Profile Sharing & Authentication Consistency Fixes

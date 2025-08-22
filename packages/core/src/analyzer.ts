@@ -928,11 +928,19 @@ export class AccessibilityAnalyzer {
    * Clean up resources
    */
   async cleanup(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
-      this.context = null;
-      this.page = null;
+    try {
+      if (this.browser) {
+        console.log(`🧹 Closing browser (visible mode cleanup)...`);
+        await this.browser.close();
+        console.log(`✅ Browser closed successfully`);
+        this.browser = null;
+        this.context = null;
+        this.page = null;
+      } else {
+        console.log(`🧹 No browser to cleanup (already closed)`);
+      }
+    } catch (error) {
+      console.error(`❌ Error during browser cleanup:`, error);
     }
     this.domChangeDetector.reset();
     this.previousHtmlState = null;
