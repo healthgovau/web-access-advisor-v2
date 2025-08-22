@@ -255,9 +255,9 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                   <div className="text-sm text-gray-500">
                     {sessionMode === 'load' && !selectedBrowser
                       ? 'Awaiting session selection'
-                      : sessionMode === 'load' && selectedBrowser && browser.type === selectedBrowser
-                        ? `Selected from session${useProfile ? ' with profile' : ''}`
-                        : sessionMode === 'load' && selectedBrowser && browser.type !== selectedBrowser
+                      : sessionMode === 'load' && selectedBrowser && browser.name === selectedBrowser
+                        ? `Used in this session${useProfile ? ' with profile' : ' without profile'}`
+                        : sessionMode === 'load' && selectedBrowser && browser.name !== selectedBrowser
                           ? 'Not used in this session'
                           : getProfileStatusText(browser)
                     }
