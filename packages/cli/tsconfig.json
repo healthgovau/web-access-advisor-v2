@@ -15,7 +15,8 @@
     "composite": true,
     "baseUrl": "../../",
     "paths": {
-      "@web-access-advisor/core/*": ["./packages/core/src/*"]
+      "@web-access-advisor/core": ["../core/dist/index.d.ts"],
+      "@web-access-advisor/core/*": ["../core/dist/*"]
     }
   },
   "include": ["src/**/*"],

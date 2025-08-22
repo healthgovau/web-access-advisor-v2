@@ -1,3 +1,15 @@
+## [2025-08-22] TypeScript Workspace Build Fix
+
+If CLI cannot find types from @web-access-advisor/core (error TS2307 or TS7016), update CLI's tsconfig.json paths mapping:
+
+```
+"paths": {
+  "@web-access-advisor/core": ["../core/dist/index.d.ts"],
+  "@web-access-advisor/core/*": ["../core/dist/*"]
+}
+```
+
+This ensures CLI resolves types from the built output, not the source. Always build core before CLI, or use `npm run build` from the root. If issues persist, clean node_modules, dist folders, and reinstall dependencies.
 # Web Access Advisor - Current Tasks
 
 # Web Access Advisor - Current Tasks
