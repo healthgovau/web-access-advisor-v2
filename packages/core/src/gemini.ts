@@ -201,14 +201,25 @@ ${GeminiService.SHARED_REQUIREMENTS}
 
 **SCREEN READER PRIORITY**: Every identified issue should be evaluated from the perspective of a screen reader user. Prioritize problems that would prevent, confuse, or frustrate someone using assistive technology to navigate and interact with the interface.
 
-**CRITICAL: Return ONLY the JSON object with BOTH components AND enhancedAxeViolations arrays - no other text.**`;
+**CRITICAL: Return ONLY the JSON object with BOTH components AND enhancedAxeViolations arrays - no other text.**
+
+  ---
+  # Accessibility Issue Headings
+  For each defect, generate a concise heading that matches the style of axe-core output. Headings must:
+  - Be short and specific (ideally 3-7 words)
+  - Reference the accessibility problem directly (e.g. "Image missing alt text", "Insufficient color contrast", "Form field missing label")
+  - Avoid generic phrases (do not use "Accessibility issue" or "Problem detected")
+  - Use the same terminology as axe-core rules when possible
+  ---
+
+  Input data:
+`;
 
   constructor(apiKey: string) {
     this.genAI = new GoogleGenerativeAI(apiKey);
   }  /**
    * Analyzes accessibility issues using Gemini AI with before/after state comparison
    * 
-   * @param htmlContent - The current HTML content to analyze
    * @param axeResults - Results from axe accessibility testing  
    * @param context - Additional context about the page/interaction
    * @param previousHtml - Previous HTML state for before/after comparison (optional)
@@ -1442,10 +1453,10 @@ ${bodyMatch[1]}
             issue: component.issue
           });
           return false;
-        }
+               }
 
         return true;
-      }).map(component => {
+           }).map(component => {
         console.log('🔍 Processing component from Gemini:', {
           componentName: component.componentName,
           wcagRule: component.wcagRule,
