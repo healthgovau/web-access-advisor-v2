@@ -311,6 +311,13 @@ const analysisOptions = { ...recordingOptions }; // Maintains same browser/profi
 - Analysis: Same browser profile → Authentication maintained → Analyzes correct pages
 - Result: Accurate analysis of authenticated workflow pages
 
+**StorageState export & validation:**
+
+- At the end of each recording we export Playwright's storageState (cookies + localStorage) to the session directory (`./snapshots/session_<id>/storageState.json`).
+- A quick status endpoint reports whether a storageState exists and if any cookie expiry appears to have passed.
+- A deep validation endpoint loads the saved storageState into a Playwright context and probes a page (navigation + optional selector wait) to confirm the saved login remains usable.
+- Frontend exposes a "Validate" action in the replay controls and a "Re-login" detour when validation fails; Re-login opens the browser for an interactive sign-in and saves a new storageState for the session.
+
 **Browser-Specific Implementation:**
 - **Microsoft Edge**: `launchPersistentContext(edgeProfilePath)` - Most reliable
 - **Google Chrome**: `launchPersistentContext(chromeProfilePath)` - Enhanced with Chrome-specific args

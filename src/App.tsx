@@ -878,14 +878,12 @@ function App() {
             {(state.mode === 'setup' || state.mode === 'ready') && (
               // Interactive during setup, read-only display when session loaded or recording completed
               <>
-                {/* Session Mode Toggle - Only visible during setup */}
-                {state.mode === 'setup' && (
-                  <SessionModeToggle
-                    mode={sessionMode}
-                    onModeChange={handleSessionModeChange}
-                    disabled={state.loading}
-                  />
-                )}
+                {/* Session Mode Toggle - visible while in setup or ready state so it's available on the Load Session page */}
+                <SessionModeToggle
+                  mode={sessionMode}
+                  onModeChange={handleSessionModeChange}
+                  disabled={state.loading}
+                />
 
                 {/* Browser Selection - Shows populated settings from loaded session */}
                 {(sessionMode === 'new' || (sessionMode === 'load' && selectedBrowser)) && (

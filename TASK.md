@@ -58,6 +58,12 @@ if (component.step && stepUrlMap.has(component.step)) {
 - ✅ **Profile Launch Settings Alignment** - Both recording and analysis phases now use identical launch options (`slowMo: 50`, visible browsers)
 - ✅ **Chrome Profile Access Improvements** - Enhanced Chrome profile accessibility checks and error recovery for profile lock scenarios
 
+### StorageState & Replay Validation (New)
+- ✅ **Export storageState on recording stop** - `storageState.json` (cookies + localStorage) saved to `./snapshots/<sessionId>/storageState.json` when recording ends.
+- ✅ **Storage-state status endpoint** - `GET /api/sessions/:id/storage-state/status` reports presence/expiry/earliest expiry.
+- ✅ **Deep validation endpoint** - `POST /api/sessions/:id/storage-state/validate` loads saved storageState into Playwright and probes a page/selector to confirm usability.
+- ✅ **Frontend Validate / Re-login UI** - Replay controls include "Validate" to check saved login and a lightweight "Re-login" detour to allow interactive sign-in and re-save storageState for the session.
+
 #### Technical Details
 ```typescript
 // Fixed AnalysisOptions to include browser specificity

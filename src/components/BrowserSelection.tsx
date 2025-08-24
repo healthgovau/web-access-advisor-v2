@@ -89,6 +89,28 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
   const [showPopovers, setShowPopovers] = useState<Record<string, boolean>>({});
   const [popoverPlacement, setPopoverPlacement] = useState<Record<string, 'top' | 'bottom'>>({});
 
+  // Close popovers when clicking outside any button or popup
+  useEffect(() => {
+    const onDocMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+
+      // If click is inside any popup or button, do nothing
+      for (const name of Object.keys(btnRefs.current)) {
+        const btn = btnRefs.current[name];
+        const pop = popupRefs.current[name];
+        if (btn && btn.contains(target)) return;
+        if (pop && pop.contains(target)) return;
+      }
+
+      // Otherwise close all popovers
+      setShowPopovers({});
+    };
+
+    document.addEventListener('mousedown', onDocMouseDown);
+    return () => document.removeEventListener('mousedown', onDocMouseDown);
+  }, []);
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -117,16 +139,16 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
 
   const showPopover = (name: string) => {
     setShowPopovers(prev => ({ ...prev, [name]: true }));
-    // measure on next frame
+    // measure on next frame; if measurement appears invalid, fallback to bottom placement
     requestAnimationFrame(() => {
       const btn = btnRefs.current[name];
       const pop = popupRefs.current[name];
       if (!btn || !pop) return;
       const btnRect = btn.getBoundingClientRect();
       const popRect = pop.getBoundingClientRect();
-      // If there's not enough space above the button for the popover, show it below
       const spaceAbove = btnRect.top;
-      if (spaceAbove < popRect.height + 8) {
+      // If measurement failed (0 height) or not enough space above, place below
+      if (!popRect.height || spaceAbove < popRect.height + 8) {
         setPopoverPlacement(prev => ({ ...prev, [name]: 'bottom' }));
       } else {
         setPopoverPlacement(prev => ({ ...prev, [name]: 'top' }));
@@ -136,6 +158,30 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
 
   const hidePopover = (name: string) => {
     setShowPopovers(prev => ({ ...prev, [name]: false }));
+  };
+
+  // Robust toggle that measures placement when opening
+  const togglePopover = (name: string) => {
+    setShowPopovers(prev => {
+      const opening = !prev[name];
+      if (opening) {
+        // measure after render
+        requestAnimationFrame(() => {
+          const btn = btnRefs.current[name];
+          const pop = popupRefs.current[name];
+          if (!btn || !pop) return;
+          const btnRect = btn.getBoundingClientRect();
+          const popRect = pop.getBoundingClientRect();
+          const spaceAbove = btnRect.top;
+          if (!popRect.height || spaceAbove < popRect.height + 8) {
+            setPopoverPlacement(prev2 => ({ ...prev2, [name]: 'bottom' }));
+          } else {
+            setPopoverPlacement(prev2 => ({ ...prev2, [name]: 'top' }));
+          }
+        });
+      }
+      return { ...prev, [name]: opening };
+    });
   };
   
   if (availableBrowsers.length === 0) {
@@ -171,15 +217,15 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
       {/* Profile Sharing Toggle - show early to prevent layout shift */}
       {anyBrowserSupportsProfile && (
         <div className="mb-6">
-          <div className="p-4 bg-white border rounded-lg">
+            <div className="p-4 bg-white border rounded-lg">
             <div className="flex items-center gap-3">
               <div 
                 className={`flex-1 flex items-center justify-between text-sm p-2 rounded transition-colors ${
                   disabled || sessionMode === 'load'
-                    ? 'text-gray-400 bg-gray-50 cursor-not-allowed'
+                    ? 'text-gray-400 bg-gray-50'
                     : useProfile 
-                      ? 'text-blue-600 bg-blue-50 cursor-pointer hover:shadow-sm' 
-                      : 'text-gray-400 bg-gray-50 cursor-pointer hover:shadow-sm'
+                      ? 'text-blue-600 bg-blue-50' 
+                      : 'text-gray-400 bg-gray-50'
                 }`}
                 onClick={() => sessionMode === 'new' && !disabled && handleProfileToggle(!useProfile)}
               >
@@ -189,7 +235,7 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                     : 'Will use your existing login sessions and browser settings'
                   }
                 </span>
-                
+
                 <input
                   type="checkbox"
                   id="use-profile"
@@ -210,19 +256,21 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           {availableBrowsers.map((browser) => {
-            const isBrowserDisabled = disabled || (sessionMode === 'load');
+            // In `load` (replay) mode we disable browsers except the one used by the loaded session.
+            // This keeps the active/selected browser (if any) interactive so its popover isn't dimmed.
+            const isBrowserDisabled = disabled || (sessionMode === 'load' && browser.name !== selectedBrowser);
             const isSelected = selectedBrowser === browser.name;
             const showSelection = isSelected; // Show selection in both new and load modes
             
-            return (
+              return (
               <div
                 key={browser.name}
                 onClick={() => handleBrowserClick(browser.type, browser.name)}
                 className={`relative p-4 border-2 rounded-lg transition-colors ${
                   showSelection
                     ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                } ${isBrowserDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    : 'border-gray-200'
+                }`}
               >
                 <input
                   type="radio"
@@ -252,18 +300,25 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                         ref={(el) => { btnRefs.current[browser.name] = el }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          showPopovers[browser.name] ? hidePopover(browser.name) : showPopover(browser.name);
+                          // allow popovers to open even for replayed/disabled cards so users can read instructions
+                          togglePopover(browser.name);
                         }}
-                        onMouseEnter={() => showPopover(browser.name)}
-                        onFocus={() => showPopover(browser.name)}
-                        onBlur={() => hidePopover(browser.name)}
-                        onMouseLeave={() => hidePopover(browser.name)}
+                        onFocus={() => { showPopover(browser.name) }}
+                        onMouseEnter={() => { showPopover(browser.name) }}
+                        onMouseLeave={() => { hidePopover(browser.name) }}
+                        onKeyDown={(e) => {
+                          // Allow keyboard toggles regardless of card disabled state
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            togglePopover(browser.name);
+                          }
+                        }}
                         type="button"
                         aria-label={`Show ${browser.name} instructions`}
                         aria-expanded={!!showPopovers[browser.name]}
-                        className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 rounded-full bg-white p-1"
+                        className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 rounded-full bg-white p-1 cursor-pointer"
                       >
-                        <svg className="w-5 h-5 text-gray-500 hover:text-gray-700 cursor-help" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-5 h-5 text-gray-500 hover:text-gray-700" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                         </svg>
                       </button>
@@ -280,26 +335,26 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                             browser.type === 'firefox' ? (
                               <div>
                                 <div className="font-semibold text-gray-900">Recording — Firefox</div>
-                                  <ol className="list-decimal list-inside text-gray-700 ml-3">
+                                  <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
                                     <li>Open Firefox and sign in to the website you want to test.</li>
                                     <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
                                     <li>Return here and start the recording.</li>
-                                  </ol>
+                                  </ul>
                               </div>
                             ) : (
                               <div>
                                 <div className="font-semibold text-gray-900">Recording — {browser.name}</div>
                                 {browser.name && browser.name.includes('Edge') ? (
-                                  <ol className="list-decimal list-inside text-gray-700 ml-3">
+                                  <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
                                     <li>Make sure you are already signed in to the website in Microsoft Edge.</li>
                                     <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
                                     <li>Return here and start the recording. You do not need to sign in while recording.</li>
-                                  </ol>
+                                  </ul>
                                 ) : browser.type === 'chromium' && !browser.name.includes('Edge') ? (
-                                  <ol className="list-decimal list-inside text-gray-700 ml-3">
+                                  <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
                                     <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
                                     <li>We save your login state at the end of recording so replays can reuse it; if you don't have a saved login, sign in while recording.</li>
-                                  </ol>
+                                  </ul>
                                 ) : (
                                   <ol className="list-decimal list-inside text-gray-700 ml-3">
                                     <li>Open {browser.name} and sign in to the website you want to test.</li>
@@ -314,21 +369,21 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                             browser.type === 'firefox' ? (
                               <div>
                                 <div className="font-semibold text-gray-900">Replay — Firefox</div>
-                                <ol className="list-decimal list-inside text-gray-700 ml-3">
+                                <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
                                   <li>Open Firefox and make sure you are signed in to the website.</li>
                                   <li>In the replay controls, click "Validate" to check your login.</li>
                                   <li>If validation fails, sign in again in the browser and retry validation.</li>
-                                </ol>
+                                </ul>
                               </div>
                             ) : (
                               <div>
                                 <div className="font-semibold text-gray-900">Replay — {browser.name}</div>
                                 {browser.type === 'chromium' && !browser.name.includes('Edge') ? (
-                                  <ol className="list-decimal list-inside text-gray-700 ml-3">
+                                  <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
                                     <li>Open {browser.name} and sign in to the website you want to test.</li>
                                     <li>Click "Validate" in the replay controls to confirm your saved login (storage state) is usable.</li>
                                     <li>If validation fails, click "Re-login" — this opens the browser so you can sign in; once signed in we'll save a new login state for the session so replays can reuse it. Then click "Validate" again.</li>
-                                  </ol>
+                                  </ul>
                                 ) : (
                                   <ol className="list-decimal list-inside text-gray-700 ml-3">
                                     <li>Open {browser.name} and make sure you are signed in to the website.</li>

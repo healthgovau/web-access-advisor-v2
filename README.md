@@ -146,6 +146,22 @@ Web Access Advisor supports **authenticated session testing** through browser pr
 - ✅ **Close browser instances** before recording to avoid profile locks
 - ✅ **Use Chrome or Edge** for best profile compatibility
 
+## StorageState export & replay validation
+
+To make replays reuse authenticated sessions without requiring manual remote-debugging, Web Access Advisor now exports and validates Playwright storageState for recordings.
+
+- When a recording stops we export the Playwright storage state (cookies + localStorage) to `./snapshots/<sessionId>/storageState.json`.
+- The backend exposes two helper endpoints:
+	- `GET /api/sessions/:id/storage-state/status` — quick status (present/expired/earliest expiry) based on saved cookies.
+	- `POST /api/sessions/:id/storage-state/validate` — deep validation: the server loads the saved storageState into a temporary Playwright context, navigates to a probe URL and optionally waits for a selector to confirm the login is usable.
+- Frontend flows:
+	- Recording: sign in while recording if you want replays to reuse your login — we save the login state at stop (storageState.json).
+	- Replay: use the "Validate" button in the replay controls to check the saved state. If validation fails, the UI offers a lightweight "Re-login" detour that opens the browser for an interactive sign-in and saves a new storageState for the session.
+
+Notes:
+- We avoid logging cookie values or other secrets; validation is a behavioural probe (navigation + selector) rather than cookie inspection.
+- Edge profile sharing remains the most reliable path for reusing local sign-in state on Windows; Chrome storageState is saved and validated but persistent-profile reuse may have platform-specific fallbacks.
+
 **For Public Workflows:**  
 - ✅ **Clean browser is fine** for public sites
 - ✅ **Faster startup** without profile loading
