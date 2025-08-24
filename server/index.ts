@@ -252,6 +252,23 @@ app.get('/api/sessions/:id/storage-state/status', async (req: any, res: any) => 
 });
 
 /**
+ * Deep-validate a session's saved storageState by loading it into Playwright and probing a page.
+ */
+app.post('/api/sessions/:id/storage-state/validate', async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    const { probeUrl, successSelector, timeoutMs } = req.body || {};
+
+    const result = await browserRecordingService.validateStorageState(id, { probeUrl, successSelector, timeoutMs });
+
+    res.json({ sessionId: id, validation: result });
+  } catch (error: any) {
+    console.error('Failed to validate storage-state:', error);
+    res.status(500).json({ error: 'Failed to validate storage-state', message: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+/**
  * Get snapshot data for specific step
  */
 app.get('/api/sessions/:id/snapshots/:step', (req: any, res: any) => {

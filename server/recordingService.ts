@@ -793,6 +793,82 @@ export class BrowserRecordingService {
   }
 
   /**
+   * Validate storageState by creating a context, navigating to a probe URL and checking for a selector/XHR.
+   * Returns elapsed time and outcome. Designed to be short-running and safe (does not log cookies).
+   */
+  async validateStorageState(sessionId: string, options: { probeUrl?: string; successSelector?: string; timeoutMs?: number } = {}): Promise<{ ok: boolean; elapsedMs: number; reason?: string; earliestExpiry?: number | null }>{
+    const start = Date.now();
+    const timeoutMs = typeof options.timeoutMs === 'number' ? options.timeoutMs : 10000; // default 10s
+
+    // Load saved storageState
+    const storagePath = path.join(this.snapshotsDir, sessionId, 'storageState.json');
+    let storageJson: any = null;
+    try {
+      const raw = await readFile(storagePath, 'utf8');
+      storageJson = JSON.parse(raw);
+    } catch (err) {
+      return { ok: false, elapsedMs: Date.now() - start, reason: 'storage_state_missing' };
+    }
+
+    // Determine a probe URL: prefer provided, fall back to recorded session url
+    let probeUrl = options.probeUrl;
+    try {
+      const session = await this.getSession(sessionId);
+      if (!probeUrl && session && session.url) probeUrl = session.url;
+    } catch {}
+    if (!probeUrl) probeUrl = 'about:blank';
+
+    // Use a warm browser if available (any in-memory session), otherwise cold-launch a clean browser
+    let browserInstance: Browser | undefined;
+    let context: BrowserContext | undefined;
+    try {
+      // Try reuse any existing browser instance attached to this session
+      const memorySession = this.sessions.get(sessionId);
+      if (memorySession && memorySession.browser) {
+        browserInstance = memorySession.browser;
+      }
+
+      if (!browserInstance) {
+        // Launch a clean browser (chromium) for validation - headless for speed
+        browserInstance = await chromium.launch({ headless: true });
+      }
+
+      // Create a new context using the storage state object
+      context = await browserInstance.newContext({ storageState: storageJson });
+      const page = await context.newPage();
+
+      // Apply navigation timeout and selector wait
+      const navPromise = page.goto(probeUrl, { timeout: Math.min(timeoutMs, 30000) }).catch(e => { throw e; });
+      // Use Promise.race to respect overall timeout
+      await Promise.race([
+        navPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('navigation_timeout')), timeoutMs))
+      ]);
+
+      if (options.successSelector) {
+        await Promise.race([
+          page.waitForSelector(options.successSelector, { timeout: Math.min(Math.max(1000, Math.floor(timeoutMs / 3)), timeoutMs) }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('selector_timeout')), timeoutMs))
+        ]);
+      }
+
+      const elapsedMs = Date.now() - start;
+      try { await context.close(); } catch {}
+      // If we created a cold browser, close it
+      if (browserInstance && !this.sessions.get(sessionId)) {
+        try { await browserInstance.close(); } catch {}
+      }
+
+      return { ok: true, elapsedMs, earliestExpiry: Array.isArray(storageJson?.cookies) && storageJson.cookies.length ? Math.min(...storageJson.cookies.filter((c:any)=>typeof c.expires==='number'&&c.expires>0).map((c:any)=>c.expires)) : null };
+    } catch (error: any) {
+      try { if (context) await context.close(); } catch {}
+      try { if (browserInstance && !this.sessions.get(sessionId)) await browserInstance.close(); } catch {}
+      const elapsedMs = Date.now() - start;
+      return { ok: false, elapsedMs, reason: error && error.message ? String(error.message) : 'probe_failed' };
+    }
+  }
+
+  /**
    * Get session by ID - loads from disk if not in memory
    */
   async getSession(sessionId: string): Promise<RecordingSession | null> {

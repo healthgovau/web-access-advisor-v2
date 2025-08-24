@@ -2,14 +2,16 @@
  * Controls for replaying recorded actions and capturing snapshots
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const ReplayControls = ({ 
   hasActions, 
   onStartReplay, 
   isReplaying, 
   replayProgress,
-  hasSnapshots 
+  hasSnapshots,
+  sessionId,
+  onRefreshAuth
 }) => {
   const [replayOptions, setReplayOptions] = useState({
     captureScreenshots: true,
@@ -17,9 +19,50 @@ const ReplayControls = ({
     analyzeWithGemini: true
   });
 
+  const [storageStateStatus, setStorageStateStatus] = useState(null);
+  const [checkingStorage, setCheckingStorage] = useState(false);
+  const [validatingStorage, setValidatingStorage] = useState(false);
+  const [validationResult, setValidationResult] = useState(null);
+
   const handleStartReplay = () => {
     onStartReplay(replayOptions);
   };
+
+  const checkStorageState = async () => {
+    if (!sessionId) return;
+    try {
+      setCheckingStorage(true);
+      const res = await fetch(`/api/sessions/${sessionId}/storage-state/status`);
+      const json = await res.json();
+      setStorageStateStatus(json.storageState || null);
+    } catch (err) {
+      setStorageStateStatus(null);
+    } finally {
+      setCheckingStorage(false);
+    }
+  };
+
+  const validateStorageState = async () => {
+    if (!sessionId) return;
+    try {
+      setValidatingStorage(true);
+      setValidationResult(null);
+      const res = await fetch(`/api/sessions/${sessionId}/storage-state/validate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timeoutMs: 10000 }) });
+      const json = await res.json();
+      setValidationResult(json.validation || null);
+      // Refresh status after validation
+      await checkStorageState();
+    } catch (err) {
+      setValidationResult({ ok: false, reason: 'request_failed' });
+    } finally {
+      setValidatingStorage(false);
+    }
+  };
+
+  // Check on mount and when sessionId changes
+  useEffect(() => {
+    if (sessionId) checkStorageState();
+  }, [sessionId]);
 
   const canReplay = hasActions && !isReplaying;
 
@@ -44,6 +87,49 @@ const ReplayControls = ({
 
       {hasActions && !isReplaying && (
         <div className="space-y-3">
+          {/* Storage state status */}
+          {sessionId && (
+            <div className="mb-2">
+              {checkingStorage && (
+                <div className="text-sm text-gray-500">Checking authentication...</div>
+              )}
+
+              {!checkingStorage && storageStateStatus && storageStateStatus.present && storageStateStatus.expired === true && (
+                <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+                  Storage state expired on {storageStateStatus.earliestExpiry ? new Date(storageStateStatus.earliestExpiry * 1000).toLocaleString() : 'unknown'}. Please re-login to refresh authentication.
+                  {onRefreshAuth && (
+                    <button onClick={onRefreshAuth} className="ml-3 underline text-sm">Re-login</button>
+                  )}
+                </div>
+              )}
+
+              {!checkingStorage && storageStateStatus && storageStateStatus.present && (
+                <div className="mt-2">
+                  <button onClick={validateStorageState} disabled={validatingStorage} className="px-2 py-1 bg-white border rounded text-sm">{validatingStorage ? 'Validating...' : 'Validate authentication'}</button>
+                  {validationResult && (
+                    <span className={`ml-3 text-sm ${validationResult.ok ? 'text-green-700' : 'text-red-700'}`}>
+                      {validationResult.ok ? `OK (${validationResult.elapsedMs}ms)` : `Failed: ${validationResult.reason || 'unknown'}`}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {!checkingStorage && storageStateStatus && storageStateStatus.present && storageStateStatus.expired !== true && (
+                <div className="p-2 bg-green-50 border border-green-200 rounded-md text-sm text-green-700">
+                  Storage state present and valid. Replay will use recorded authentication.
+                </div>
+              )}
+
+              {!checkingStorage && (!storageStateStatus || storageStateStatus.present === false) && (
+                <div className="p-2 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+                  No storage state found for this session. Replay will run in a clean session unless you refresh authentication.
+                  {onRefreshAuth && (
+                    <button onClick={onRefreshAuth} className="ml-3 underline text-sm">Re-login</button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Replay Options:</label>
             
@@ -90,8 +176,8 @@ const ReplayControls = ({
           </div>
           
           <button
-            onClick={handleStartReplay}
-            disabled={!canReplay}
+            onClick={() => { checkStorageState(); handleStartReplay(); }}
+            disabled={!canReplay || (storageStateStatus && storageStateStatus.present === false)}
             className="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Analyze Recording
