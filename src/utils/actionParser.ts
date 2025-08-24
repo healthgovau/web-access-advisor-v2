@@ -292,8 +292,8 @@ export const validateActionSequence = (actions) => {
  * @param {Object} options - Conversion options
  * @returns {string} Playwright script
  */
-export const actionsToPlaywrightScript = (actions, options = {}) => {
-  const { includeComments = true, includeWaits = true } = options;
+export const actionsToPlaywrightScript = (actions: any[], options: any = {}) => {
+  const { includeComments = true, includeWaits = true } = options as any;
 
   let script = '';
   
@@ -410,9 +410,9 @@ const calculateScrollDistance = (position) => {
 const calculateTimeSpan = (actions) => {
   if (actions.length < 2) return 0;
   
-  const start = new Date(actions[0].timestamp);
-  const end = new Date(actions[actions.length - 1].timestamp);
-  
+  const start = new Date(actions[0].timestamp).getTime();
+  const end = new Date(actions[actions.length - 1].timestamp).getTime();
+
   return end - start;
 };
 

@@ -13,7 +13,7 @@ import { auto } from 'auto-playwright';
  * @param {string} url - URL to navigate to
  * @returns {Promise<Object>} Navigation result
  */
-export const navigateToPage = async (page, test, url) => {
+export const navigateToPage = async (page: any, test: any, url: string) => {
   try {
     await page.goto(url);
     
@@ -41,7 +41,7 @@ export const navigateToPage = async (page, test, url) => {
  * @param {string} instruction - Natural language instruction for auto-playwright
  * @returns {Promise<Object>} Action result
  */
-export const performAction = async (page, test, instruction) => {
+export const performAction = async (page: any, test: any, instruction: string) => {
   try {
     const result = await auto(instruction, { page, test });
     
@@ -65,7 +65,7 @@ export const performAction = async (page, test, instruction) => {
  * @param {string} query - Natural language query
  * @returns {Promise<Object>} Query result
  */
-export const queryPage = async (page, test, query) => {
+export const queryPage = async (page: any, test: any, query: string) => {
   try {
     const result = await auto(query, { page, test });
     
@@ -89,7 +89,7 @@ export const queryPage = async (page, test, query) => {
  * @param {string} assertion - Natural language assertion
  * @returns {Promise<Object>} Assertion result (true/false)
  */
-export const checkPageState = async (page, test, assertion) => {
+export const checkPageState = async (page: any, test: any, assertion: string) => {
   try {
     const result = await auto(assertion, { page, test });
     
@@ -113,7 +113,7 @@ export const checkPageState = async (page, test, assertion) => {
  * @param {string} url - URL to test
  * @returns {Promise<Object>} Accessibility test results
  */
-export const runAccessibilityWorkflow = async (page, test, url) => {
+export const runAccessibilityWorkflow = async (page: any, test: any, url: string) => {
   try {
     // Navigate to page
     await auto(`Go to ${url}`, { page, test });

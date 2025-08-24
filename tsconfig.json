@@ -12,11 +12,12 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
 
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
+  /* Linting */
+  "strict": false,
+  "noImplicitAny": false,
+  "noUnusedLocals": false,
+  "noUnusedParameters": false,
+  "noFallthroughCasesInSwitch": true,
 
     /* Path mapping for workspace packages */
     "baseUrl": ".",

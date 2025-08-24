@@ -232,6 +232,26 @@ app.get('/api/sessions/:id', (req: any, res: any) => {
 });
 
 /**
+ * Get storageState status for a saved recording session
+ */
+app.get('/api/sessions/:id/storage-state/status', async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+
+    // Ask recording service about storage state
+    const status = await browserRecordingService.getStorageStateStatus(id);
+
+    res.json({
+      sessionId: id,
+      storageState: status
+    });
+  } catch (error: any) {
+    console.error('Failed to get storage-state status:', error);
+    res.status(500).json({ error: 'Failed to get storage-state status', message: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+/**
  * Get snapshot data for specific step
  */
 app.get('/api/sessions/:id/snapshots/:step', (req: any, res: any) => {

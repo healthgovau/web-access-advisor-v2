@@ -4,6 +4,13 @@
  */
 
 class StepTracker {
+  // Tracker state
+  currentStep: number;
+  contextStack: Array<any>;
+  flowStates: Map<string, { startStep: number; lastStep: number; actionCount: number }>;
+  modalDepth: number;
+  currentContext: { type: string; startStep: number | null; parentStep: number | null };
+
   constructor() {
     this.reset();
   }

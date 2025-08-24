@@ -12,12 +12,13 @@
  * @param {Object} options - Replay options
  * @returns {Promise<Object>} Replay results with snapshots
  */
-export const replayWithSnapshots = async (actions, options = {}) => {
+export const replayWithSnapshots = async (actions: any[], options: any = {}) => {
   try {
     const {
       captureScreenshots = true,
-      waitForStability = true,      analyzeWithGemini = true
-    } = options;
+      waitForStability = true,
+      analyzeWithGemini = true
+    } = options as any;
 
     const sessionId = generateReplaySessionId();
     // Browser storage - simplified for frontend use
@@ -380,11 +381,11 @@ const testFocusTrap = async (page, stepNumber) => {
       ];
       
       for (const selector of modalSelectors) {
-        const modal = document.querySelector(selector);
-        if (modal && modal.offsetParent !== null) { // Check if visible
+    const modal = document.querySelector(selector) as HTMLElement | null;
+    if (modal && (modal as any).offsetParent !== null) { // Check if visible
           // Get focusable elements within the modal
           const focusableSelectors = 'a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])';
-          const focusableElements = modal.querySelectorAll(focusableSelectors);
+              const focusableElements = modal.querySelectorAll(focusableSelectors) as NodeListOf<HTMLElement>;
           
           return {
             detected: true,
@@ -424,22 +425,22 @@ const testFocusTrap = async (page, stepNumber) => {
     // Test focus trapping
     const focusTrapTest = await page.evaluate(() => {
       const modal = document.querySelector('[role="dialog"], [aria-modal="true"], .modal:not([style*="display: none"]), .dialog:not([style*="display: none"]), [data-modal="true"]');
-      if (!modal || modal.offsetParent === null) return { success: false, reason: 'Modal disappeared' };
+  if (!modal || (modal as any).offsetParent === null) return { success: false, reason: 'Modal disappeared' };
 
-      // Store original focus
-      const originalFocus = document.activeElement;
+  // Store original focus
+  const originalFocus = document.activeElement as HTMLElement | null;
       
       // Get focusable elements
       const focusableSelectors = 'a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])';
       const focusableElements = Array.from(modal.querySelectorAll(focusableSelectors))
-        .filter(el => el.offsetParent !== null && !el.disabled);
+  .filter(el => (el as any).offsetParent !== null && !(el as any).disabled) as HTMLElement[];
       
       if (focusableElements.length === 0) {
         return { success: false, reason: 'No visible focusable elements' };
       }
 
       // Focus first element
-      focusableElements[0].focus();
+  (focusableElements[0] as HTMLElement).focus();
       
       let currentFocusIndex = 0;
       let tabCount = 0;
@@ -455,13 +456,13 @@ const testFocusTrap = async (page, stepNumber) => {
         currentFocusIndex = (currentFocusIndex + 1) % focusableElements.length;
         focusableElements[currentFocusIndex].focus();
         
-        const activeElement = document.activeElement;
+  const activeElement = document.activeElement as HTMLElement | null;
         
         // Check if focus is still within modal
-        if (!modal.contains(activeElement)) {
+  if (!modal.contains(activeElement as Node)) {
           // Restore original focus
-          if (originalFocus && typeof originalFocus.focus === 'function') {
-            try { originalFocus.focus({ preventScroll: true }); } catch (e) {}
+          if (originalFocus && typeof (originalFocus as HTMLElement).focus === 'function') {
+            try { (originalFocus as HTMLElement).focus({ preventScroll: true } as any); } catch (e) {}
           }
           return {
             success: false,
@@ -472,11 +473,11 @@ const testFocusTrap = async (page, stepNumber) => {
         }
         
         // Track visited elements to detect cycles
-        const elementKey = activeElement.tagName + (activeElement.id ? '#' + activeElement.id : '') + (activeElement.className ? '.' + activeElement.className.split(' ')[0] : '');
+  const elementKey = (activeElement ? activeElement.tagName : 'unknown') + (activeElement && activeElement.id ? '#' + activeElement.id : '') + (activeElement && activeElement.className ? '.' + (activeElement.className || '').split(' ')[0] : '');
         if (visitedElements.has(elementKey) && visitedElements.size === focusableElements.length) {
           // We've cycled through all elements - focus trap is working
-          if (originalFocus && typeof originalFocus.focus === 'function') {
-            try { originalFocus.focus({ preventScroll: true }); } catch (e) {}
+          if (originalFocus && typeof (originalFocus as any).focus === 'function') {
+        try { (originalFocus as HTMLElement).focus({ preventScroll: true } as any); } catch (e) {}
           }
           return {
             success: true,
@@ -489,8 +490,8 @@ const testFocusTrap = async (page, stepNumber) => {
       }
       
       // Restore original focus
-      if (originalFocus && typeof originalFocus.focus === 'function') {
-        try { originalFocus.focus({ preventScroll: true }); } catch (e) {}
+      if (originalFocus && typeof (originalFocus as any).focus === 'function') {
+        try { (originalFocus as HTMLElement).focus({ preventScroll: true } as any); } catch (e) {}
       }
       
       return {
@@ -544,7 +545,7 @@ const testWithKeyboard = async (page, modalInfo) => {
     const modal = document.querySelector('[role="dialog"], [aria-modal="true"], .modal:not([style*="display: none"]), .dialog:not([style*="display: none"]), [data-modal="true"]');
     if (modal) {
       const focusable = modal.querySelector('a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])');
-      if (focusable) focusable.focus();
+  if (focusable) (focusable as HTMLElement).focus();
     }
   });
 

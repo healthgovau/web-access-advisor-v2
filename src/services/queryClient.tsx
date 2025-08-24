@@ -53,8 +53,9 @@ export const QueryProvider = ({ children }: QueryProviderProps) => {
       {import.meta.env.DEV && (
         <ReactQueryDevtools 
           initialIsOpen={false}
-          position="bottom-right"
-          buttonPosition="bottom-right"
+          // Cast to any to avoid type mismatch with DevtoolsPosition union
+          position={("bottom-right" as any)}
+          buttonPosition={("bottom-right" as any)}
         />
       )}
     </QueryClientProvider>

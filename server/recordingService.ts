@@ -744,8 +744,51 @@ export class BrowserRecordingService {
       await writeFile(filePath, JSON.stringify(savedRecording, null, 2), 'utf8');
 
       console.log(`✓ Recording saved to: ${filePath}`);
+
+      // If we have an active Playwright context for this session, export storageState
+      try {
+        if (session.context && typeof session.context.storageState === 'function') {
+          const storagePath = path.join(sessionDir, 'storageState.json');
+          // Export storage state (cookies + localStorage)
+          await session.context.storageState({ path: storagePath });
+          console.log(`✓ storageState exported to: ${storagePath}`);
+        }
+      } catch (err) {
+        console.warn(`⚠️ Failed to export storageState for ${session.sessionId}:`, err instanceof Error ? err.message : String(err));
+      }
     } catch (error) {
       console.error(`Failed to save recording for session ${session.sessionId}:`, error);
+    }
+  }
+
+  /**
+   * Get storageState status for a saved session (present / expired / earliestExpiry)
+   */
+  async getStorageStateStatus(sessionId: string): Promise<{ present: boolean; expired: boolean | null; earliestExpiry?: number | null; message?: string }> {
+    try {
+      const storagePath = path.join(this.snapshotsDir, sessionId, 'storageState.json');
+      // Check if file exists by attempting to read
+      const raw = await readFile(storagePath, 'utf8');
+      const parsed = JSON.parse(raw);
+
+      // Playwright storageState format contains cookies array
+      const cookies: any[] = Array.isArray(parsed.cookies) ? parsed.cookies : [];
+
+      // Determine earliest expiry (cookies use epoch seconds; 0 or missing => session cookie)
+      const expiries = cookies
+        .map(c => (typeof c.expires === 'number' && c.expires > 0 ? c.expires : null))
+        .filter((e): e is number => e !== null);
+
+      if (expiries.length === 0) {
+        return { present: true, expired: null, earliestExpiry: null, message: 'Storage state present but no cookie expiry found (session-only cookies)' };
+      }
+
+      const earliest = Math.min(...expiries);
+      const expired = earliest * 1000 < Date.now();
+      return { present: true, expired, earliestExpiry: earliest, message: expired ? 'Storage state appears expired' : 'Storage state valid' };
+    } catch (error) {
+      // File not found or unreadable
+      return { present: false, expired: null, earliestExpiry: null, message: 'Storage state missing or unreadable' };
     }
   }
 

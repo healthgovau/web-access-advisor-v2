@@ -3,7 +3,7 @@
  * Fast recording for smooth user experience
  */
 
-let recordingContext = null;
+let recordingContext: any = null;
 
 /**
  * Initialize recording session
@@ -12,7 +12,7 @@ let recordingContext = null;
  * @param {string} recordingName - Name for this recording session
  * @returns {Promise<Object>} Recording session info
  */
-export const startRecording = async (url, recordingName) => {
+export const startRecording = async (url: string, recordingName?: string) => {
   try {
     // TODO: Initialize Playwright browser context for recording
     // This will use Playwright's codegen or custom event listeners
@@ -47,7 +47,7 @@ export const startRecording = async (url, recordingName) => {
  * 
  * @returns {Promise<Object>} Recording results
  */
-export const stopRecording = async () => {
+export const stopRecording = async (): Promise<any> => {
   try {
     if (!recordingContext || !recordingContext.isRecording) {
       throw new Error('No active recording session');
@@ -59,7 +59,7 @@ export const stopRecording = async () => {
     // Save recording to file system
     const recordingData = {
       ...recordingContext,
-      duration: new Date(recordingContext.endTime) - new Date(recordingContext.startTime)
+      duration: new Date(recordingContext.endTime).getTime() - new Date(recordingContext.startTime).getTime()
     };
 
     // TODO: Save to recordings directory
@@ -89,7 +89,7 @@ export const stopRecording = async () => {
  * 
  * @param {Object} action - Action details
  */
-export const recordAction = (action) => {
+export const recordAction = (action: any) => {
   if (recordingContext && recordingContext.isRecording) {
     const recordedAction = {
       ...action,
@@ -122,7 +122,7 @@ export const getRecordingStatus = () => {
  * @param {string} url - URL to navigate to
  * @returns {Promise<Object>} Navigation result
  */
-export const navigateInRecording = async (url) => {
+export const navigateInRecording = async (url: string) => {
   try {
     // TODO: Implement Playwright navigation
     // This should open the browser and navigate to the URL
