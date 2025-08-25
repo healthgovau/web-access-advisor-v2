@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { QueryProvider } from './services/queryClient';
 import URLInput from './components/URLInput';
+import ConfirmModal from './components/ConfirmModal';
 import BrowserSelection from './components/BrowserSelection';
 import ActionList from './components/ActionList';
 import ThreePhaseStatus from './components/ThreePhaseStatus';
@@ -211,6 +212,9 @@ function App() {
   const [isExporting, setIsExporting] = useState(false);
   // Info modal state
   const [infoOpen, setInfoOpen] = useState(false);
+  // Confirm modal state (used for profile-locked choice)
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const confirmResolveRef = useRef<(value: boolean) => void | null>(null);
   // Toast state for error notifications
   const [toasts, setToasts] = useState<{ id: string; message: string; type?: 'error' | 'info' }[]>([]);
   
@@ -349,29 +353,64 @@ function App() {
       updateProgress('starting-browser', 'Launching browser session');
       if (!isMountedRef.current) return; // Check before API call
 
-      // Pre-check: if using a Chromium profile, ensure there's a saved storageState or run interactive relogin detour
-      if (selectedBrowserType === 'chromium' && useProfile) {
-        updateProgress('starting-browser', 'Checking for existing saved authentication');
-        // We don't have a sessionId yet; call interactive relogin which will open the user's browser to sign in if needed
+      // Pre-check sequence: try persistent profile first, if that fails try saved storageState (n/a here), otherwise run detour
+      let provisionalId: string | undefined = undefined;
+  if (useProfile) {
+        updateProgress('starting-browser', 'Checking persistent browser profile');
         try {
-          const reloginResult = await recordingApi.interactiveRelogin({ browserType: 'chromium', browserName: selectedBrowser, probeUrl: state.url, timeoutMs: 120000 });
-          console.log('Interactive relogin result:', reloginResult);
-          if (!reloginResult.ok) {
-            throw new Error(`Re-login failed: ${reloginResult.reason || 'unknown'}`);
+          const probe = await recordingApi.profileProbe({ browserType: selectedBrowserType, browserName: selectedBrowser });
+          if (probe.status === 'usable') {
+            // proceed - startRecording will attempt to use profile
+            console.log('Profile probe usable');
+          } else if (probe.status === 'locked') {
+            // Show confirm modal to let user choose close browser (confirm) or run interactive detour (cancel)
+            const choice = await new Promise<boolean>((resolve) => {
+              confirmResolveRef.current = resolve;
+              setConfirmOpen(true);
+            });
+
+            setConfirmOpen(false);
+            confirmResolveRef.current = null;
+
+            if (!choice) {
+              // user chose to run detour (Cancel)
+              updateProgress('starting-browser', 'Running interactive sign-in detour');
+              const reloginResult = await recordingApi.interactiveRelogin({ browserType: selectedBrowserType, browserName: selectedBrowser, probeUrl: state.url, timeoutMs: 120000 });
+              console.log('Interactive relogin result:', reloginResult);
+              if (reloginResult && (reloginResult as any).provisionalId) {
+                provisionalId = (reloginResult as any).provisionalId;
+              }
+            } else {
+              // user chose to close browser - throw to surface UI state so user can retry
+              throw new Error('Please close your browser to allow profile access and try again');
+            }
+          } else {
+            // no_profile or error - run detour
+            updateProgress('starting-browser', 'No usable profile found, running interactive sign-in detour');
+            const reloginResult = await recordingApi.interactiveRelogin({ browserType: selectedBrowserType, browserName: selectedBrowser, probeUrl: state.url, timeoutMs: 120000 });
+            if (reloginResult && (reloginResult as any).provisionalId) {
+              provisionalId = (reloginResult as any).provisionalId;
+            }
           }
         } catch (err) {
-          throw new Error(`Authentication refresh required but failed: ${err instanceof Error ? err.message : String(err)}`);
+          // If probe fails unexpectedly, fall back to interactive relogin
+          console.warn('Profile probe error, falling back to interactive relogin:', err);
+          const reloginResult = await recordingApi.interactiveRelogin({ browserType: selectedBrowserType, browserName: selectedBrowser, probeUrl: state.url, timeoutMs: 120000 });
+          if (reloginResult && (reloginResult as any).provisionalId) {
+            provisionalId = (reloginResult as any).provisionalId;
+          }
         }
       }
 
-      // Start recording session
+      // Start recording session. If we have a provisionalId from the detour, pass it so recording uses saved storageState
       const response = await recordingApi.startRecordingSession({
         url: state.url,
         browserType: selectedBrowserType,
         browserName: selectedBrowser,
         useProfile: useProfile,
-        name: `Recording ${new Date().toLocaleString()}`
-      });
+        name: `Recording ${new Date().toLocaleString()}`,
+        precreatedSessionId: provisionalId
+      } as any);
       
       if (!isMountedRef.current) return; // Check after async operation
 
@@ -1172,6 +1211,22 @@ function App() {
 
         {/* Info Modal */}
         <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
+        {/* Confirm Modal for profile-locked choice */}
+        <ConfirmModal
+          open={confirmOpen}
+          title="Browser profile locked"
+          description="Your browser profile appears to be locked by the running browser. Close the browser to use the profile, or sign in now via an interactive detour so the recording can use saved authentication without capturing the sign-in."
+          confirmText="I will close the browser"
+          cancelText="Sign in now"
+          onConfirm={() => {
+            if (confirmResolveRef.current) confirmResolveRef.current(true);
+            setConfirmOpen(false);
+          }}
+          onCancel={() => {
+            if (confirmResolveRef.current) confirmResolveRef.current(false);
+            setConfirmOpen(false);
+          }}
+        />
 
         <footer className="mt-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">

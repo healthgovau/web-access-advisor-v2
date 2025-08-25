@@ -373,7 +373,7 @@ export class BrowserRecordingService {
    * Start a new recording session with browser and profile options
    */
   async startRecording(url: string, options: RecordingOptions = {}): Promise<RecordingSession> {
-    const { browserType = 'chromium', browserName, useProfile = false, name } = options;
+  const { browserType = 'chromium', browserName, useProfile = false, name, precreatedSessionId } = options as RecordingOptions & { precreatedSessionId?: string };
     
     // Generate session ID consistent with analyzer format
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -383,22 +383,38 @@ export class BrowserRecordingService {
     let page: Page;
     
     try {
-      if (useProfile) {
-        // Use persistent context with user profile - this already opens a page
-        context = await this.launchWithProfile(browserType, browserName);
-        // Get the existing page from persistent context instead of creating new one
-        const pages = context.pages();
-        if (pages.length > 0) {
-          page = pages[0];
-        } else {
+      if (precreatedSessionId) {
+        // Use saved storageState from provisional session directory to create a clean context with auth preloaded
+        const storagePath = path.join(this.snapshotsDir, precreatedSessionId, 'storageState.json');
+        try {
+          const stat = await readFile(storagePath, 'utf8');
+          const storageObj = JSON.parse(stat);
+          const browserInstance = await chromium.launch({ headless: false, slowMo: 50 });
+          context = await browserInstance.newContext({ storageState: storageObj });
           page = await context.newPage();
+        } catch (err) {
+          console.warn('Failed to start from precreated storageState, falling back to profile/clean launch:', err instanceof Error ? err.message : String(err));
         }
-      } else {
+      }
+
+      if (!context) {
+        if (useProfile) {
+          // Use persistent context with user profile - this already opens a page
+          context = await this.launchWithProfile(browserType, browserName);
+          // Get the existing page from persistent context instead of creating new one
+          const pages = context.pages();
+          if (pages.length > 0) {
+            page = pages[0];
+          } else {
+            page = await context.newPage();
+          }
+        } else {
         // Use clean browser context
         const browserInstance = await this.launchCleanBrowser(browserType, browserName);
         browser = browserInstance;
         context = await browser.newContext();
         page = await context.newPage();
+        }
       }
       
       const session: RecordingSession = {

@@ -157,6 +157,17 @@ export async function interactiveRelogin(request: { browserType?: string; browse
   return response.json();
 }
 
+export async function profileProbe(request: { browserType?: string; browserName?: string }): Promise<{ status: string; message?: string }> {
+  const resp = await fetch(`${API_BASE}/storage/profile-probe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request)
+  });
+
+  if (!resp.ok) throw new Error(`Profile probe failed: ${resp.statusText}`);
+  return resp.json();
+}
+
 /**
  * Get storage state status for a session id (proxy to server endpoint)
  */

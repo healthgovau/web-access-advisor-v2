@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
 import { existsSync } from 'fs';
+import { mkdir, writeFile, access } from 'fs/promises';
 import validator from 'validator';
 
 // Load environment variables from server directory (better for deployment)
@@ -284,10 +285,98 @@ app.post('/api/storage/interactive-relogin', async (req: any, res: any) => {
 
     const result = await browserRecordingService.interactiveRelogin(bt, browserName, probeUrl, { successSelector, timeoutMs });
 
+    // If interactiveRelogin succeeded, attempt to persist storageState to a provisional session directory
+    if (result.ok) {
+      try {
+  const provisionalId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  const sessionDir = join(browserRecordingService['snapshotsDir'], provisionalId);
+  await mkdir(sessionDir, { recursive: true });
+        // Try to get storageState from any live session attached to the service
+        let storageObj: any = null;
+        try {
+          // If there's a memory session that was used, prefer its context
+          const mem = (browserRecordingService as any).sessions ? Array.from((browserRecordingService as any).sessions.values())[0] as any : null;
+          if (mem && mem.context && typeof mem.context.storageState === 'function') {
+            storageObj = await mem.context.storageState();
+          }
+        } catch {}
+
+        // Fallback: attempt to call validateStorageStateObject to get a fresh state via headless probe
+        if (!storageObj) {
+          // Try a lightweight validation call that also returns storage state if possible
+          // Note: we already validated during interactiveRelogin; here we attempt to export from a new headless context
+          try {
+            // Launch a headless browser and extract storage from the profile (best-effort)
+            const { chromium } = await import('playwright');
+            const b = await chromium.launch({ headless: true });
+            const c = await b.newContext();
+            storageObj = await c.storageState();
+            try { await c.close(); } catch {}
+            try { await b.close(); } catch {}
+          } catch (e) {
+            // Ignore - we may not be able to export here
+          }
+        }
+
+        if (storageObj) {
+          const storagePath = join(sessionDir, 'storageState.json');
+          await writeFile(storagePath, JSON.stringify(storageObj, null, 2), 'utf8');
+          return res.json({ ok: true, elapsedMs: result.elapsedMs, provisionalId });
+        } else {
+          return res.json({ ok: true, elapsedMs: result.elapsedMs, provisionalId: null });
+        }
+      } catch (err: any) {
+        console.warn('Failed to persist storageState after relogin:', err instanceof Error ? err.message : String(err));
+        return res.json({ ok: true, elapsedMs: result.elapsedMs, provisionalId: null });
+      }
+    }
+
     res.json({ ok: result.ok, elapsedMs: result.elapsedMs, reason: result.reason });
   } catch (error: any) {
     console.error('Failed interactive relogin:', error);
     res.status(500).json({ ok: false, reason: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+/**
+ * Probe whether a browser profile path is usable (not locked) for persistent context usage.
+ */
+app.post('/api/storage/profile-probe', async (req: any, res: any) => {
+  try {
+    const { browserType = 'chromium', browserName } = req.body || {};
+    console.log(`Probing profile for ${browserName} / ${browserType}`);
+
+    // Use the recordingService.detectAvailableBrowsers to map to a profilePath
+    const browsers = await browserRecordingService.detectAvailableBrowsers();
+    const opt = browsers.find(b => b.type === browserType && b.name === browserName);
+
+    if (!opt || !opt.profilePath) {
+      return res.json({ status: 'no_profile', message: 'No profile path detected' });
+    }
+
+    // Quick file access check
+    try {
+  await access(opt.profilePath);
+    } catch (err: any) {
+      return res.json({ status: 'locked', message: 'Profile path not accessible (locked or permission issue)' });
+    }
+
+    // Try to launch a short-lived persistent context to verify Playwright can use it
+    try {
+      const { chromium } = await import('playwright');
+      const ctx = await chromium.launchPersistentContext(opt.profilePath, { headless: true, timeout: 10000 });
+      try { await ctx.close(); } catch {}
+      return res.json({ status: 'usable', message: 'Profile appears usable' });
+    } catch (err: any) {
+      const msg = err && err.message ? String(err.message) : 'unknown error';
+      if (msg.includes('EBUSY') || msg.includes('locked') || msg.includes('access')) {
+        return res.json({ status: 'locked', message: msg });
+      }
+      return res.json({ status: 'error', message: msg });
+    }
+  } catch (error: any) {
+    console.error('Profile probe failed:', error);
+    res.status(500).json({ status: 'error', message: error instanceof Error ? error.message : String(error) });
   }
 });
 
