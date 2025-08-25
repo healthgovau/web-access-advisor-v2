@@ -270,7 +270,7 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                   showSelection
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200'
-                }`}
+                } ${!isBrowserDisabled ? 'cursor-pointer' : 'cursor-default'}`}
               >
                 <input
                   type="radio"
@@ -326,15 +326,15 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                         ref={(el) => { popupRefs.current[browser.name] = el }}
                         role="dialog"
                         aria-label={`${browser.name} instructions`}
-                        className={`absolute z-50 w-72 bg-white border border-gray-200 rounded-lg shadow-lg p-3 transition-all duration-150 text-sm ${showPopovers[browser.name] ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
+                        className={`absolute z-50 w-72 bg-white border border-gray-200 rounded-lg shadow-lg p-4 transition-all duration-150 text-sm leading-relaxed ${showPopovers[browser.name] ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
                         style={popoverPlacement[browser.name] === 'top' ? { bottom: 'calc(100% + 8px)', right: 0 } : { top: 'calc(100% + 8px)', right: 0 }}
                       >
-                        <div className="space-y-2 text-left">
+                        <div className="space-y-3 text-left">
                           {sessionMode === 'new' ? (
                             // Recording instructions (non-technical)
                             browser.type === 'firefox' ? (
                               <div>
-                                <div className="font-semibold text-gray-900">Recording — Firefox</div>
+                                <div className="text-sm font-semibold text-gray-900 mb-2">Recording — Firefox</div>
                                   <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
                                     <li>Open Firefox and sign in to the website you want to test.</li>
                                     <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
@@ -343,7 +343,7 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                               </div>
                             ) : (
                               <div>
-                                <div className="font-semibold text-gray-900">Recording — {browser.name}</div>
+                                <div className="text-sm font-semibold text-gray-900 mb-2">Recording — {browser.name}</div>
                 {browser.name && browser.name.includes('Edge') ? (
                                   <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
                                     <li>Make sure you are already signed in to the website in Microsoft Edge.</li>
@@ -352,9 +352,9 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                                   </ul>
                 ) : browser.type === 'chromium' && !browser.name.includes('Edge') ? (
                                   <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
-                  <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
-                  <li>If no saved login (storage state) exists, we will open your browser so you can sign in before recording starts — complete the sign-in and the recording will begin automatically.</li>
-                  <li>After signing in we validate the saved login; recording will only start once validation succeeds.</li>
+                                    <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
+                                    <li>If no saved login (storage state) exists, we will open your browser so you can sign in before recording starts — complete the sign-in and the recording will begin automatically.</li>
+                                    <li>After signing in we validate the saved login; recording will only start once validation succeeds.</li>
                                   </ul>
                                 ) : (
                                   <ol className="list-decimal list-inside text-gray-700 ml-3">
@@ -369,7 +369,7 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                             // Replay instructions (non-technical)
                             browser.type === 'firefox' ? (
                               <div>
-                                <div className="font-semibold text-gray-900">Replay — Firefox</div>
+                                <div className="text-sm font-semibold text-gray-900 mb-2">Replay — Firefox</div>
                                 <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
                                   <li>Open Firefox and make sure you are signed in to the website.</li>
                                   <li>In the replay controls, click "Validate" to check your login.</li>
@@ -378,7 +378,7 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                               </div>
                             ) : (
                               <div>
-                                <div className="font-semibold text-gray-900">Replay — {browser.name}</div>
+                                <div className="text-sm font-semibold text-gray-900 mb-2">Replay — {browser.name}</div>
                                 {browser.type === 'chromium' && !browser.name.includes('Edge') ? (
                                   <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
                                     <li>Open {browser.name} and sign in to the website you want to test.</li>
