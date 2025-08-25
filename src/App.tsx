@@ -353,15 +353,53 @@ function App() {
       updateProgress('starting-browser', 'Launching browser session');
       if (!isMountedRef.current) return; // Check before API call
 
-      // Pre-check sequence: try persistent profile first, if that fails try saved storageState (n/a here), otherwise run detour
+      // AUTHENTICATION FLOW: storageState → profile → interactive detour
       let provisionalId: string | undefined = undefined;
-  if (useProfile) {
-        updateProgress('starting-browser', 'Checking persistent browser profile');
+      let authenticationState: 'storageState' | 'profile' | 'detour' | 'none' = 'none';
+      
+      // Step 1: Check for existing storageState from previous sessions
+      updateProgress('starting-browser', 'Checking for saved authentication state');
+      try {
+        const sessionsWithStorage = await recordingApi.findSessionsWithStorageState(state.url);
+        console.log(`Found ${sessionsWithStorage.length} sessions with potential storageState for ${state.url}`);
+        
+        // Try to validate the most recent storageState
+        for (const session of sessionsWithStorage) {
+          try {
+            updateProgress('starting-browser', `Validating saved authentication from ${new Date(session.lastModified).toLocaleDateString()}`);
+            const validation = await recordingApi.validateStorageState(session.sessionId, {
+              probeUrl: state.url,
+              timeoutMs: 10000
+            });
+            
+            if (validation.ok) {
+              console.log(`✅ Valid storageState found in session ${session.sessionId}`);
+              provisionalId = session.sessionId;
+              authenticationState = 'storageState';
+              break;
+            } else {
+              console.log(`❌ Invalid storageState in session ${session.sessionId}: ${validation.reason}`);
+            }
+          } catch (err) {
+            console.warn(`Failed to validate storageState for ${session.sessionId}:`, err);
+            continue;
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to search for sessions with storageState:', err);
+      }
+
+      // Step 2: If no valid storageState found, check browser profile (only if profile sharing enabled)
+      if (authenticationState === 'none' && useProfile) {
+        updateProgress('starting-browser', 'Checking browser profile availability');
         try {
           const probe = await recordingApi.profileProbe({ browserType: selectedBrowserType, browserName: selectedBrowser });
+          console.log(`Profile probe result: ${probe.status}`);
+          
           if (probe.status === 'usable') {
-            // proceed - startRecording will attempt to use profile
-            console.log('Profile probe usable');
+            // Profile is available - we'll use it, but still might need detour if it doesn't have auth for this specific site
+            authenticationState = 'profile';
+            console.log('✅ Browser profile available for authentication');
           } else if (probe.status === 'locked') {
             // Show confirm modal to let user choose close browser (confirm) or run interactive detour (cancel)
             const choice = await new Promise<boolean>((resolve) => {
@@ -374,35 +412,52 @@ function App() {
 
             if (!choice) {
               // user chose to run detour (Cancel)
-              updateProgress('starting-browser', 'Running interactive sign-in detour');
-              const reloginResult = await recordingApi.interactiveRelogin({ browserType: selectedBrowserType, browserName: selectedBrowser, probeUrl: state.url, timeoutMs: 120000 });
-              console.log('Interactive relogin result:', reloginResult);
-              if (reloginResult && (reloginResult as any).provisionalId) {
-                provisionalId = (reloginResult as any).provisionalId;
-              }
+              authenticationState = 'detour';
             } else {
               // user chose to close browser - throw to surface UI state so user can retry
               throw new Error('Please close your browser to allow profile access and try again');
             }
           } else {
-            // no_profile or error - run detour
-            updateProgress('starting-browser', 'No usable profile found, running interactive sign-in detour');
-            const reloginResult = await recordingApi.interactiveRelogin({ browserType: selectedBrowserType, browserName: selectedBrowser, probeUrl: state.url, timeoutMs: 120000 });
-            if (reloginResult && (reloginResult as any).provisionalId) {
-              provisionalId = (reloginResult as any).provisionalId;
-            }
+            // no_profile or error - will need detour
+            authenticationState = 'detour';
+            console.log(`❌ Profile not available: ${probe.status} - ${probe.message}`);
           }
         } catch (err) {
-          // If probe fails unexpectedly, fall back to interactive relogin
-          console.warn('Profile probe error, falling back to interactive relogin:', err);
-          const reloginResult = await recordingApi.interactiveRelogin({ browserType: selectedBrowserType, browserName: selectedBrowser, probeUrl: state.url, timeoutMs: 120000 });
+          console.warn('Profile probe error, will run interactive detour:', err);
+          authenticationState = 'detour';
+        }
+      } else if (authenticationState === 'none' && !useProfile) {
+        // No storageState found and profile sharing disabled - need detour
+        authenticationState = 'detour';
+      }
+
+      // Step 3: Run interactive detour if needed
+      if (authenticationState === 'detour') {
+        updateProgress('starting-browser', 'Running interactive sign-in detour - please authenticate in the browser');
+        try {
+          const reloginResult = await recordingApi.interactiveRelogin({ 
+            browserType: selectedBrowserType, 
+            browserName: selectedBrowser, 
+            probeUrl: state.url, 
+            timeoutMs: 120000 
+          });
+          console.log('Interactive relogin result:', reloginResult);
           if (reloginResult && (reloginResult as any).provisionalId) {
             provisionalId = (reloginResult as any).provisionalId;
+            authenticationState = 'detour';
+          } else {
+            console.warn('Interactive detour completed but no provisionalId returned');
           }
+        } catch (err) {
+          console.error('Interactive detour failed:', err);
+          throw new Error(`Authentication detour failed: ${err instanceof Error ? err.message : String(err)}`);
         }
       }
 
-      // Start recording session. If we have a provisionalId from the detour, pass it so recording uses saved storageState
+      console.log(`🔐 Authentication flow completed using: ${authenticationState}${provisionalId ? ` (session: ${provisionalId})` : ''}`);
+      updateProgress('starting-browser', `Authentication ready${authenticationState === 'storageState' ? ' (using saved state)' : authenticationState === 'profile' ? ' (using browser profile)' : ' (interactive login completed)'}`);
+
+      // Start recording session. If we have a provisionalId from storageState or detour, pass it so recording uses saved authentication
       const response = await recordingApi.startRecordingSession({
         url: state.url,
         browserType: selectedBrowserType,

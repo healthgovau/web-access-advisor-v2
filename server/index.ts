@@ -5,11 +5,12 @@
 
 import { config } from 'dotenv';
 import { join, dirname } from 'path';
+import * as path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
 import { existsSync } from 'fs';
-import { mkdir, writeFile, access } from 'fs/promises';
+import { mkdir, writeFile, access, readdir, stat, readFile } from 'fs/promises';
 import validator from 'validator';
 
 // Load environment variables from server directory (better for deployment)
@@ -377,6 +378,83 @@ app.post('/api/storage/profile-probe', async (req: any, res: any) => {
   } catch (error: any) {
     console.error('Profile probe failed:', error);
     res.status(500).json({ status: 'error', message: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+/**
+ * Find sessions that have storageState files for a target URL domain
+ */
+app.get('/api/storage/find-sessions', async (req: any, res: any) => {
+  try {
+    const { targetUrl } = req.query;
+    if (!targetUrl) {
+      return res.status(400).json({ error: 'targetUrl parameter required' });
+    }
+
+    const results: { sessionId: string; url: string; lastModified: string }[] = [];
+    
+    // Check snapshots directory for sessions with storageState.json
+    const snapshotsDir = path.join(process.cwd(), 'snapshots');
+    
+    try {
+      const sessionDirs = await readdir(snapshotsDir);
+      
+      for (const sessionDir of sessionDirs) {
+        if (!sessionDir.startsWith('session_')) continue;
+        
+        const sessionPath = path.join(snapshotsDir, sessionDir);
+        const storageStatePath = path.join(sessionPath, 'storageState.json');
+        const manifestPath = path.join(sessionPath, 'manifest.json');
+        
+        try {
+          // Check if storageState.json exists
+          const storageStats = await stat(storageStatePath);
+          
+          // Try to read manifest to get URL
+          let sessionUrl = '';
+          try {
+            const manifestContent = await readFile(manifestPath, 'utf-8');
+            const manifest = JSON.parse(manifestContent);
+            sessionUrl = manifest.url || '';
+          } catch {
+            // Manifest not found or invalid - skip this session
+            continue;
+          }
+          
+          // Extract domain for basic matching
+          if (sessionUrl) {
+            try {
+              const sessionDomain = new URL(sessionUrl).hostname;
+              const targetDomain = new URL(targetUrl).hostname;
+              
+              // Match if domains are the same or session domain is a subdomain of target
+              if (sessionDomain === targetDomain || sessionDomain.endsWith('.' + targetDomain) || targetDomain.endsWith('.' + sessionDomain)) {
+                results.push({
+                  sessionId: sessionDir,
+                  url: sessionUrl,
+                  lastModified: storageStats.mtime.toISOString()
+                });
+              }
+            } catch {
+              // Invalid URL - skip
+            }
+          }
+        } catch {
+          // storageState.json doesn't exist - skip
+        }
+      }
+      
+      // Sort by most recent first
+      results.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
+      
+    } catch (err) {
+      console.warn('Could not read snapshots directory:', err);
+    }
+    
+    res.json(results);
+  } catch (error: any) {
+    console.error('Find sessions failed:', error);
+    res.status(500).json({ error: 'Failed to find sessions', message: error instanceof Error ? error.message : String(error) });
   }
 });
 

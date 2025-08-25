@@ -178,6 +178,29 @@ export async function getStorageStateStatus(sessionId: string): Promise<any> {
 }
 
 /**
+ * Validate storage state for a session by probing the target URL
+ */
+export async function validateStorageState(sessionId: string, options: { probeUrl?: string; successSelector?: string; timeoutMs?: number } = {}): Promise<{ ok: boolean; reason?: string }> {
+  const response = await fetch(`${API_BASE}/sessions/${sessionId}/storage-state/validate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(options)
+  });
+  
+  if (!response.ok) throw new Error(`Failed to validate storage state: ${response.statusText}`);
+  return response.json();
+}
+
+/**
+ * Find sessions that might have valid storageState for a target URL
+ */
+export async function findSessionsWithStorageState(targetUrl: string): Promise<{ sessionId: string; url: string; lastModified: string }[]> {
+  const response = await fetch(`${API_BASE}/storage/find-sessions?targetUrl=${encodeURIComponent(targetUrl)}`);
+  if (!response.ok) throw new Error(`Failed to find sessions: ${response.statusText}`);
+  return response.json();
+}
+
+/**
  * Get recorded actions for a session
  */
 export async function getSessionActions(sessionId: string): Promise<SessionActionsResponse> {
