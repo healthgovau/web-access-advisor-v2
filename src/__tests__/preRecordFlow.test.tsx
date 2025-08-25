@@ -1,3 +1,4 @@
+/** @vitest-environment jsdom */
 import React from 'react';
 import { describe, it, vi, beforeEach, afterEach, expect } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
@@ -10,7 +11,8 @@ vi.mock('../services/recordingApi', async () => {
     ...actual,
     profileProbe: vi.fn(),
     interactiveRelogin: vi.fn(),
-    startRecordingSession: vi.fn()
+  startRecordingSession: vi.fn(),
+  getAvailableBrowsers: vi.fn()
   };
 });
 
@@ -22,7 +24,7 @@ describe('pre-record flow', () => {
   });
 
   it('shows confirm modal when profile is locked and runs interactiveRelogin when user chooses sign-in', async () => {
-    // profileProbe returns locked
+  // profileProbe returns locked
     (recordingApi.profileProbe as any).mockResolvedValue({ status: 'locked' });
 
     // interactiveRelogin resolves with a provisionalId
@@ -31,9 +33,21 @@ describe('pre-record flow', () => {
     // startRecordingSession resolves with a fake session id
     (recordingApi.startRecordingSession as any).mockResolvedValue({ sessionId: 'session-1' });
 
+    // Mock available browsers so BrowserSelection renders
+    (recordingApi.getAvailableBrowsers as any).mockResolvedValue({
+      browsers: [
+        { type: 'chromium', name: 'Google Chrome', available: true, profilePath: 'C:\\Users\\tourn\\AppData' }
+      ],
+      message: 'ok'
+    });
+
     render(<App />);
 
-    // Enter a URL in the input
+    // Wait for the browser card to appear and select it to show URL input
+    const browserCard = await screen.findByText('Google Chrome');
+    fireEvent.click(browserCard);
+
+    // Enter a URL in the input (URLInput is shown after a browser is selected)
     const input = await screen.findByPlaceholderText('Enter website URL to analyze');
     fireEvent.change(input, { target: { value: 'example.com' } });
 
