@@ -17,6 +17,8 @@
     "build:server": "tsc --project server/tsconfig.json",
     "preview": "vite preview",
     "cli": "node packages/cli/dist/cli.js",
+  "test": "vitest",
+  "test:run": "vitest run",
     "postinstall": "playwright install"
   },
   "dependencies": {
