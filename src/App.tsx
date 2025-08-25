@@ -349,6 +349,21 @@ function App() {
       updateProgress('starting-browser', 'Launching browser session');
       if (!isMountedRef.current) return; // Check before API call
 
+      // Pre-check: if using a Chromium profile, ensure there's a saved storageState or run interactive relogin detour
+      if (selectedBrowserType === 'chromium' && useProfile) {
+        updateProgress('starting-browser', 'Checking for existing saved authentication');
+        // We don't have a sessionId yet; call interactive relogin which will open the user's browser to sign in if needed
+        try {
+          const reloginResult = await recordingApi.interactiveRelogin({ browserType: 'chromium', browserName: selectedBrowser, probeUrl: state.url, timeoutMs: 120000 });
+          console.log('Interactive relogin result:', reloginResult);
+          if (!reloginResult.ok) {
+            throw new Error(`Re-login failed: ${reloginResult.reason || 'unknown'}`);
+          }
+        } catch (err) {
+          throw new Error(`Authentication refresh required but failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+
       // Start recording session
       const response = await recordingApi.startRecordingSession({
         url: state.url,

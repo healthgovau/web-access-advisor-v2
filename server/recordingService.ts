@@ -869,6 +869,110 @@ export class BrowserRecordingService {
   }
 
   /**
+   * Validate a storageState object (in-memory) by launching a headless browser context
+   */
+  async validateStorageStateObject(storageJson: any, options: { probeUrl?: string; successSelector?: string; timeoutMs?: number } = {}): Promise<{ ok: boolean; elapsedMs: number; reason?: string }> {
+    const start = Date.now();
+    const timeoutMs = typeof options.timeoutMs === 'number' ? options.timeoutMs : 10000;
+
+    try {
+      // Launch a short-lived headless Chromium to validate the provided storage state
+      const browserInstance = await chromium.launch({ headless: true });
+      const context = await browserInstance.newContext({ storageState: storageJson });
+      const page = await context.newPage();
+
+      const probeUrl = options.probeUrl || 'about:blank';
+
+      // Navigation with a bounded timeout
+      await Promise.race([
+        page.goto(probeUrl, { timeout: Math.min(timeoutMs, 30000) }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('navigation_timeout')), timeoutMs))
+      ]);
+
+      if (options.successSelector) {
+        await Promise.race([
+          page.waitForSelector(options.successSelector, { timeout: Math.min(Math.max(1000, Math.floor(timeoutMs / 3)), timeoutMs) }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('selector_timeout')), timeoutMs))
+        ]);
+      }
+
+      const elapsedMs = Date.now() - start;
+      try { await context.close(); } catch {}
+      try { await browserInstance.close(); } catch {}
+      return { ok: true, elapsedMs };
+    } catch (error: any) {
+      try { /* best-effort cleanup */ } catch {}
+      return { ok: false, elapsedMs: Date.now() - start, reason: error && error.message ? String(error.message) : 'validation_failed' };
+    }
+  }
+
+  /**
+   * Launch an interactive persistent context so the user can sign in (re-login detour).
+   * Polls the profile state and validates it; returns when validation succeeds or timeout is reached.
+   */
+  async interactiveRelogin(browserType: 'chromium' | 'firefox' | 'webkit', browserName?: string, probeUrl?: string, options: { successSelector?: string; timeoutMs?: number } = {}): Promise<{ ok: boolean; elapsedMs: number; reason?: string }>{
+    const start = Date.now();
+    const timeoutMs = typeof options.timeoutMs === 'number' ? options.timeoutMs : 120000; // default 2 minutes
+    const pollInterval = 3000;
+
+    let context: BrowserContext | undefined;
+
+    try {
+      // Launch a persistent context using the user's profile so they can sign in interactively
+      context = await this.launchWithProfile(browserType, browserName);
+
+      // Ensure there is a page to navigate
+      const pages = context.pages();
+      const page = pages.length > 0 ? pages[0] : await context.newPage();
+
+      // Navigate to the target URL to make signing in easier
+      if (probeUrl && probeUrl !== 'about:blank') {
+        try {
+          await page.goto(probeUrl, { timeout: 30000 });
+        } catch (err) {
+          // ignore navigation failures - user can navigate manually
+        }
+      }
+
+      // Poll for storage state validity until timeout
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        try {
+          // Grab current in-memory storage state
+          const storageJson = await context.storageState();
+
+          // Quick check: if there are no cookies/localStorage entries, skip validation
+          const hasCookies = Array.isArray(storageJson?.cookies) && storageJson.cookies.length > 0;
+          if (!hasCookies) {
+            // wait and continue polling
+            await new Promise(r => setTimeout(r, pollInterval));
+            continue;
+          }
+
+          // Run an in-memory validation using a headless browser
+          const validation = await this.validateStorageStateObject(storageJson, { probeUrl, successSelector: options.successSelector, timeoutMs: Math.min(8000, timeoutMs) });
+          if (validation.ok) {
+            const elapsedMs = Date.now() - start;
+            try { await context.close(); } catch {}
+            return { ok: true, elapsedMs };
+          }
+        } catch (err) {
+          // ignore and continue polling until timeout
+        }
+
+        // Sleep before next poll
+        await new Promise(r => setTimeout(r, pollInterval));
+      }
+
+      try { await context.close(); } catch {}
+      return { ok: false, elapsedMs: Date.now() - start, reason: 'timeout' };
+    } catch (error: any) {
+      try { if (context) await context.close(); } catch {}
+      return { ok: false, elapsedMs: Date.now() - start, reason: error && error.message ? String(error.message) : 'interactive_relogin_failed' };
+    }
+  }
+
+  /**
    * Get session by ID - loads from disk if not in memory
    */
   async getSession(sessionId: string): Promise<RecordingSession | null> {

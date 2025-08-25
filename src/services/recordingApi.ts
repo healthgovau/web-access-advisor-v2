@@ -140,6 +140,33 @@ export async function startRecordingSession(request: StartSessionRequest): Promi
 }
 
 /**
+ * Trigger interactive re-login detour on the server. Returns { ok, elapsedMs, reason }
+ */
+export async function interactiveRelogin(request: { browserType?: string; browserName?: string; probeUrl?: string; timeoutMs?: number; successSelector?: string }): Promise<{ ok: boolean; elapsedMs?: number; reason?: string }>{
+  const response = await fetch(`${API_BASE}/storage/interactive-relogin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Interactive relogin failed: ${response.status} ${response.statusText} - ${text}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get storage state status for a session id (proxy to server endpoint)
+ */
+export async function getStorageStateStatus(sessionId: string): Promise<any> {
+  const response = await fetch(`${API_BASE}/sessions/${sessionId}/storage-state/status`);
+  if (!response.ok) throw new Error(`Failed to get storage state status: ${response.statusText}`);
+  return response.json();
+}
+
+/**
  * Get recorded actions for a session
  */
 export async function getSessionActions(sessionId: string): Promise<SessionActionsResponse> {

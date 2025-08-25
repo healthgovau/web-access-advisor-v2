@@ -269,6 +269,29 @@ app.post('/api/sessions/:id/storage-state/validate', async (req: any, res: any) 
 });
 
 /**
+ * Interactive re-login detour: launch a persistent browser context so the user can sign in,
+ * wait for storageState to appear and validate it. This is used to refresh authentication
+ * before starting a recording when no saved storageState exists.
+ */
+app.post('/api/storage/interactive-relogin', async (req: any, res: any) => {
+  try {
+    const { browserType = 'chromium', browserName, probeUrl, timeoutMs, successSelector } = req.body || {};
+
+    // Validate browserType
+    const bt = browserType === 'firefox' || browserType === 'webkit' ? browserType : 'chromium';
+
+    console.log(`🔄 Starting interactive re-login: browserType=${bt}, browserName=${browserName}, probeUrl=${probeUrl}`);
+
+    const result = await browserRecordingService.interactiveRelogin(bt, browserName, probeUrl, { successSelector, timeoutMs });
+
+    res.json({ ok: result.ok, elapsedMs: result.elapsedMs, reason: result.reason });
+  } catch (error: any) {
+    console.error('Failed interactive relogin:', error);
+    res.status(500).json({ ok: false, reason: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+/**
  * Get snapshot data for specific step
  */
 app.get('/api/sessions/:id/snapshots/:step', (req: any, res: any) => {

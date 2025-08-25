@@ -344,16 +344,17 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                             ) : (
                               <div>
                                 <div className="font-semibold text-gray-900">Recording — {browser.name}</div>
-                                {browser.name && browser.name.includes('Edge') ? (
+                {browser.name && browser.name.includes('Edge') ? (
                                   <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
                                     <li>Make sure you are already signed in to the website in Microsoft Edge.</li>
                                     <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
                                     <li>Return here and start the recording. You do not need to sign in while recording.</li>
                                   </ul>
-                                ) : browser.type === 'chromium' && !browser.name.includes('Edge') ? (
+                ) : browser.type === 'chromium' && !browser.name.includes('Edge') ? (
                                   <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
-                                    <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
-                                    <li>We save your login state at the end of recording so replays can reuse it; if you don't have a saved login, sign in while recording.</li>
+                  <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
+                  <li>If no saved login (storage state) exists, we will open your browser so you can sign in before recording starts — complete the sign-in and the recording will begin automatically.</li>
+                  <li>After signing in we validate the saved login; recording will only start once validation succeeds.</li>
                                   </ul>
                                 ) : (
                                   <ol className="list-decimal list-inside text-gray-700 ml-3">
