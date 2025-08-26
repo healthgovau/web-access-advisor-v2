@@ -360,17 +360,20 @@ function App() {
       // Step 1: Check for existing storageState from previous sessions
       updateProgress('starting-browser', 'Checking for saved authentication state');
       try {
+        console.log('🔍 Searching for sessions with storageState for URL:', state.url);
         const sessionsWithStorage = await recordingApi.findSessionsWithStorageState(state.url);
-        console.log(`Found ${sessionsWithStorage.length} sessions with potential storageState for ${state.url}`);
+        console.log(`Found ${sessionsWithStorage.length} sessions with potential storageState for ${state.url}:`, sessionsWithStorage);
         
         // Try to validate the most recent storageState
         for (const session of sessionsWithStorage) {
           try {
             updateProgress('starting-browser', `Validating saved authentication from ${new Date(session.lastModified).toLocaleDateString()}`);
+            console.log(`🔬 Validating storageState for session ${session.sessionId}`);
             const validation = await recordingApi.validateStorageState(session.sessionId, {
               probeUrl: state.url,
               timeoutMs: 10000
             });
+            console.log(`Validation result for ${session.sessionId}:`, validation);
             
             if (validation.ok) {
               console.log(`✅ Valid storageState found in session ${session.sessionId}`);
@@ -386,7 +389,11 @@ function App() {
           }
         }
       } catch (err) {
-        console.warn('Failed to search for sessions with storageState:', err);
+        console.error('Failed to search for sessions with storageState:', err);
+        // Show the error to the user instead of silently continuing
+        updateProgress('starting-browser', `Error checking saved authentication: ${err instanceof Error ? err.message : String(err)}`);
+        // Wait a moment so user can see the error
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
 
       // Step 2: If no valid storageState found, check browser profile (only if profile sharing enabled)
