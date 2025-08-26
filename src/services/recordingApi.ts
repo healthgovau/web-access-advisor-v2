@@ -157,6 +157,56 @@ export async function interactiveRelogin(request: { browserType?: string; browse
   return response.json();
 }
 
+/**
+ * Start manual authentication detour - opens browser but doesn't auto-validate
+ */
+export async function startAuthDetour(request: { browserType?: string; browserName?: string; probeUrl?: string }): Promise<{ detourId: string; message: string }>{
+  const response = await fetch(`${API_BASE}/storage/start-auth-detour`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Start auth detour failed: ${response.status} ${response.statusText} - ${text}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Complete manual authentication detour - validates and closes browser
+ */
+export async function completeAuthDetour(detourId: string): Promise<{ ok: boolean; provisionalId?: string; reason?: string }>{
+  const response = await fetch(`${API_BASE}/storage/complete-auth-detour/${detourId}`, {
+    method: 'POST'
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Complete auth detour failed: ${response.status} ${response.statusText} - ${text}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Cancel manual authentication detour - closes browser without validation
+ */
+export async function cancelAuthDetour(detourId: string): Promise<{ ok: boolean }>{
+  const response = await fetch(`${API_BASE}/storage/cancel-auth-detour/${detourId}`, {
+    method: 'POST'
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Cancel auth detour failed: ${response.status} ${response.statusText} - ${text}`);
+  }
+
+  return response.json();
+}
+
 export async function profileProbe(request: { browserType?: string; browserName?: string }): Promise<{ status: string; message?: string }> {
   const resp = await fetch(`${API_BASE}/storage/profile-probe`, {
     method: 'POST',

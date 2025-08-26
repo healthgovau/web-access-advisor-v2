@@ -15,6 +15,7 @@ import AnalysisControls from './components/AnalysisControls';
 import ErrorDisplay from './components/ErrorDisplay';
 import SessionModeToggle from './components/SessionModeToggle';
 import SessionSelector from './components/SessionSelector';
+import { AuthenticationDetourPanel } from './components/AuthenticationDetourPanel';
 import { useAccessibilityAnalysis } from './hooks/useAccessibilityAnalysis';
 import { exportAnalysisToPDF } from './utils/pdfExport';
 import { exportAnalysisToCSV } from './utils/csvExport';
@@ -215,6 +216,11 @@ function App() {
   // Confirm modal state (used for profile-locked choice)
   const [confirmOpen, setConfirmOpen] = useState(false);
   const confirmResolveRef = useRef<(value: boolean) => void | null>(null);
+  
+  // Authentication detour state - manual control over detour browser
+  const [authDetourVisible, setAuthDetourVisible] = useState(false);
+  const [authDetourResolve, setAuthDetourResolve] = useState<((success: boolean) => void) | null>(null);
+  
   // Toast state for error notifications
   const [toasts, setToasts] = useState<{ id: string; message: string; type?: 'error' | 'info' }[]>([]);
   
@@ -457,25 +463,42 @@ function App() {
       if (authenticationState === 'detour') {
         updateProgress('starting-browser', 'Opening browser for authentication - sign in and click Continue');
         try {
-          const reloginResult = await recordingApi.interactiveRelogin({ 
+          // Start manual detour - opens browser but waits for user confirmation
+          const detourResult = await recordingApi.startAuthDetour({ 
             browserType: selectedBrowserType, 
             browserName: selectedBrowser, 
-            probeUrl: state.url, 
-            timeoutMs: 300000 // 5 minutes for user to sign in
+            probeUrl: state.url
           });
-          console.log('Interactive relogin result:', reloginResult);
-          
-          if (reloginResult && reloginResult.ok) {
-            // Check if we got a provisionalId with saved storageState
-            if (reloginResult.provisionalId) {
-              provisionalId = reloginResult.provisionalId;
-              console.log(`✅ Interactive detour completed with saved storageState: ${provisionalId}`);
+
+          // Show floating authentication panel and wait for user action
+          const authSuccess = await new Promise<boolean>((resolve) => {
+            setAuthDetourResolve(() => resolve);
+            setAuthDetourVisible(true);
+          });
+
+          // Hide panel
+          setAuthDetourVisible(false);
+          setAuthDetourResolve(null);
+
+          if (authSuccess) {
+            // User clicked "Continue Recording" - complete the detour
+            const completionResult = await recordingApi.completeAuthDetour(detourResult.detourId);
+            
+            if (completionResult.ok) {
+              if (completionResult.provisionalId) {
+                provisionalId = completionResult.provisionalId;
+                console.log(`✅ Manual detour completed with saved storageState: ${provisionalId}`);
+              } else {
+                console.log('✅ Manual detour completed but storageState could not be saved - will use profile/clean browser');
+              }
+              authenticationState = 'detour';
             } else {
-              console.log('✅ Interactive detour completed but storageState could not be saved - will use profile/clean browser');
+              throw new Error(`Authentication validation failed: ${completionResult.reason || 'unknown'}`);
             }
-            authenticationState = 'detour';
           } else {
-            throw new Error(`Authentication validation failed: ${reloginResult.reason || 'unknown'}`);
+            // User clicked "Cancel" - cancel the detour
+            await recordingApi.cancelAuthDetour(detourResult.detourId);
+            throw new Error('Authentication cancelled by user');
           }
         } catch (err) {
           console.error('Interactive detour failed:', err);
@@ -1309,6 +1332,18 @@ function App() {
           onCancel={() => {
             if (confirmResolveRef.current) confirmResolveRef.current(false);
             setConfirmOpen(false);
+          }}
+        />
+
+        {/* Authentication Detour Panel for manual control */}
+        <AuthenticationDetourPanel
+          isVisible={authDetourVisible}
+          targetUrl={state.url}
+          onContinue={() => {
+            if (authDetourResolve) authDetourResolve(true);
+          }}
+          onCancel={() => {
+            if (authDetourResolve) authDetourResolve(false);
           }}
         />
 

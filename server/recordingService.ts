@@ -6,7 +6,7 @@
 import { chromium, firefox, webkit, Browser, BrowserContext, Page } from 'playwright';
 import { writeFile, mkdir, readdir, readFile, access } from 'fs/promises';
 import { homedir } from 'os';
-import path from 'path';
+import path, { join } from 'path';
 import type { UserAction } from '@web-access-advisor/core';
 
 export interface RecordingSession {
@@ -60,6 +60,7 @@ export interface SavedRecording {
 export class BrowserRecordingService {
   private sessions = new Map<string, RecordingSession>();
   private snapshotsDir = './snapshots';
+  private activeDetours?: Map<string, { context: any; browserType: string; browserName?: string; probeUrl?: string }>;
 
   /**
    * Check if user has cookies/login for a specific search term in browser profiles
@@ -983,6 +984,99 @@ export class BrowserRecordingService {
       try { if (context) await context.close(); } catch {}
       return { ok: false, elapsedMs: Date.now() - start, reason: error && error.message ? String(error.message) : 'interactive_relogin_failed' };
     }
+  }
+
+  /**
+   * Start manual authentication detour - opens browser but waits for user confirmation
+   */
+  async startAuthDetour(browserType: 'chromium' | 'firefox' | 'webkit', browserName?: string, probeUrl?: string): Promise<{ detourId: string; context: any }> {
+    const detourId = `detour_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+    
+    // Launch a persistent context using the user's profile
+    const context = await this.launchWithProfile(browserType, browserName);
+
+    // Store detour context for later completion/cancellation
+    this.activeDetours = this.activeDetours || new Map();
+    this.activeDetours.set(detourId, { context, browserType, browserName, probeUrl });
+
+    // Ensure there is a page to navigate
+    const pages = context.pages();
+    const page = pages.length > 0 ? pages[0] : await context.newPage();
+
+    // Navigate to the target URL to make signing in easier
+    if (probeUrl && probeUrl !== 'about:blank') {
+      try {
+        await page.goto(probeUrl, { timeout: 30000 });
+      } catch (err) {
+        // ignore navigation failures - user can navigate manually
+      }
+    }
+
+    return { detourId, context };
+  }
+
+  /**
+   * Complete manual authentication detour - validates current state and saves it
+   */
+  async completeAuthDetour(detourId: string): Promise<{ ok: boolean; provisionalId?: string; reason?: string }> {
+    const detour = this.activeDetours?.get(detourId);
+    if (!detour) {
+      return { ok: false, reason: 'detour_not_found' };
+    }
+
+    try {
+      // Get current storage state
+      const storageJson = await detour.context.storageState();
+
+      // Validate authentication works
+      const validation = await this.validateStorageStateObject(storageJson, { 
+        probeUrl: detour.probeUrl, 
+        timeoutMs: 8000
+      });
+      
+      if (!validation.ok) {
+        return { ok: false, reason: 'authentication_validation_failed' };
+      }
+
+      // Save storage state to provisional session
+      const provisionalId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+      const sessionDir = join(this.snapshotsDir, provisionalId);
+      await mkdir(sessionDir, { recursive: true });
+      
+      const storagePath = join(sessionDir, 'storageState.json');
+      await writeFile(storagePath, JSON.stringify(storageJson, null, 2), 'utf8');
+
+      // Clean up
+      try { await detour.context.close(); } catch {}
+      this.activeDetours.delete(detourId);
+
+      return { ok: true, provisionalId };
+    } catch (error: any) {
+      // Clean up on error
+      try { await detour.context.close(); } catch {}
+      this.activeDetours.delete(detourId);
+      
+      return { ok: false, reason: error && error.message ? String(error.message) : 'detour_completion_failed' };
+    }
+  }
+
+  /**
+   * Cancel manual authentication detour - just closes browser
+   */
+  async cancelAuthDetour(detourId: string): Promise<{ ok: boolean }> {
+    const detour = this.activeDetours?.get(detourId);
+    if (!detour) {
+      return { ok: false };
+    }
+
+    try {
+      await detour.context.close();
+    } catch {
+      // ignore cleanup errors
+    }
+    
+    this.activeDetours.delete(detourId);
+    return { ok: true };
   }
 
   /**

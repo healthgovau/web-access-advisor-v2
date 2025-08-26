@@ -340,6 +340,56 @@ app.post('/api/storage/interactive-relogin', async (req: any, res: any) => {
 });
 
 /**
+ * Start manual authentication detour - opens browser but doesn't auto-validate
+ */
+app.post('/api/storage/start-auth-detour', async (req: any, res: any) => {
+  try {
+    const { browserType = 'chromium', browserName, probeUrl } = req.body || {};
+    const bt = browserType === 'firefox' || browserType === 'webkit' ? browserType : 'chromium';
+
+    console.log(`🔄 Starting manual auth detour: browserType=${bt}, browserName=${browserName}, probeUrl=${probeUrl}`);
+    
+    const result = await browserRecordingService.startAuthDetour(bt, browserName, probeUrl);
+    res.json({ detourId: result.detourId, message: 'Authentication browser opened - sign in and click Continue' });
+  } catch (error: any) {
+    console.error('Failed to start auth detour:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+/**
+ * Complete manual authentication detour - validates and saves state
+ */
+app.post('/api/storage/complete-auth-detour/:detourId', async (req: any, res: any) => {
+  try {
+    const { detourId } = req.params;
+    console.log(`✅ Completing auth detour: ${detourId}`);
+    
+    const result = await browserRecordingService.completeAuthDetour(detourId);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Failed to complete auth detour:', error);
+    res.status(500).json({ ok: false, reason: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+/**
+ * Cancel manual authentication detour - closes browser
+ */
+app.post('/api/storage/cancel-auth-detour/:detourId', async (req: any, res: any) => {
+  try {
+    const { detourId } = req.params;
+    console.log(`❌ Cancelling auth detour: ${detourId}`);
+    
+    const result = await browserRecordingService.cancelAuthDetour(detourId);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Failed to cancel auth detour:', error);
+    res.status(500).json({ ok: false });
+  }
+});
+
+/**
  * Probe whether a browser profile path is usable (not locked) for persistent context usage.
  */
 app.post('/api/storage/profile-probe', async (req: any, res: any) => {
