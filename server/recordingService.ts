@@ -924,11 +924,12 @@ export class BrowserRecordingService {
 
   /**
    * Launch an interactive persistent context so the user can sign in (re-login detour).
-   * Shows an overlay with "Continue" button and waits for user to click after signing in.
+   * Opens browser and waits for authentication validation to succeed.
    */
   async interactiveRelogin(browserType: 'chromium' | 'firefox' | 'webkit', browserName?: string, probeUrl?: string, options: { successSelector?: string; timeoutMs?: number } = {}): Promise<{ ok: boolean; elapsedMs: number; reason?: string }>{
     const start = Date.now();
     const timeoutMs = typeof options.timeoutMs === 'number' ? options.timeoutMs : 120000; // default 2 minutes
+    const pollInterval = 3000;
 
     let context: BrowserContext | undefined;
 
@@ -949,167 +950,27 @@ export class BrowserRecordingService {
         }
       }
 
-      // Inject authentication overlay that waits for user confirmation
-      await page.addInitScript(() => {
-        console.log('[WAA] Injecting authentication overlay script');
-        
-        // Create overlay immediately and also on various page load events
-        setTimeout(createAuthOverlay, 100);
-        setTimeout(createAuthOverlay, 1000);
-        setTimeout(createAuthOverlay, 2000);
-        
-        // Listen for page load events
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', createAuthOverlay);
-        }
-        if (document.readyState !== 'complete') {
-          window.addEventListener('load', createAuthOverlay);
-        }
-
-        function createAuthOverlay() {
-          console.log('[WAA] Attempting to create auth overlay');
-          
-          // Remove any existing overlay
-          const existingOverlay = document.getElementById('auth-overlay-waa');
-          if (existingOverlay) {
-            console.log('[WAA] Removing existing overlay');
-            existingOverlay.remove();
-          }
-
-          // Create overlay container
-          const overlay = document.createElement('div');
-          overlay.id = 'auth-overlay-waa';
-          overlay.style.cssText = 
-            'position: fixed !important;' +
-            'top: 0 !important;' +
-            'left: 0 !important;' +
-            'width: 100% !important;' +
-            'height: 100% !important;' +
-            'background: rgba(0, 0, 0, 0.8) !important;' +
-            'z-index: 2147483647 !important;' +
-            'display: flex !important;' +
-            'align-items: center !important;' +
-            'justify-content: center !important;' +
-            'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;';
-
-          // Create modal box
-          const modal = document.createElement('div');
-          modal.style.cssText = 
-            'background: white !important;' +
-            'padding: 32px !important;' +
-            'border-radius: 12px !important;' +
-            'box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;' +
-            'max-width: 400px !important;' +
-            'text-align: center !important;' +
-            'position: relative !important;';
-
-          // Create content
-          modal.innerHTML = 
-            '<div style="color: #1f2937 !important; margin-bottom: 24px !important;">' +
-              '<div style="font-size: 20px !important; font-weight: 600 !important; margin-bottom: 12px !important; color: #111827 !important;">' +
-                '🔐 Authentication Required' +
-              '</div>' +
-              '<div style="font-size: 14px !important; line-height: 1.5 !important; color: #6b7280 !important;">' +
-                'Please sign in to continue with recording.<br>' +
-                'Once you\'re signed in, click Continue below.' +
-              '</div>' +
-            '</div>' +
-            '<button id="auth-continue-btn" style="' +
-              'background: #3b82f6 !important;' +
-              'color: white !important;' +
-              'border: none !important;' +
-              'padding: 12px 24px !important;' +
-              'border-radius: 6px !important;' +
-              'font-size: 14px !important;' +
-              'font-weight: 500 !important;' +
-              'cursor: pointer !important;' +
-              'transition: background-color 0.2s !important;' +
-            '" onmouseover="this.style.background=\'#2563eb\'" onmouseout="this.style.background=\'#3b82f6\'">' +
-              'Continue Recording' +
-            '</button>';
-
-          overlay.appendChild(modal);
-          document.body.appendChild(overlay);
-          
-          console.log('[WAA] Auth overlay created and added to page');
-
-          // Handle continue button click
-          const continueBtn = document.getElementById('auth-continue-btn');
-          if (continueBtn) {
-            continueBtn.addEventListener('click', () => {
-              console.log('[WAA] Continue button clicked');
-              // Set a flag that the backend can detect
-              (window as any).authenticationComplete = true;
-              overlay.remove();
-              console.log('[WAA] Overlay removed, authenticationComplete set to true');
-            });
-          }
-        }
-      });
-
-      // Wait for user to click "Continue" or timeout
+      // Poll for authentication completion
       const deadline = Date.now() + timeoutMs;
-      const pollInterval = 1000; // Check every second
-
       while (Date.now() < deadline) {
         try {
-          // Check if user clicked continue
-          const authComplete = await page.evaluate(() => (window as any).authenticationComplete);
-          if (authComplete) {
-            // User clicked continue - now validate the current storage state
-            const storageJson = await context.storageState();
-            
-            // Run validation to ensure authentication actually works
-            const validation = await this.validateStorageStateObject(storageJson, { 
-              probeUrl, 
-              successSelector: options.successSelector, 
-              timeoutMs: Math.min(8000, timeoutMs) 
-            });
-            
-            if (validation.ok) {
-              const elapsedMs = Date.now() - start;
-              try { await context.close(); } catch {}
-              return { ok: true, elapsedMs };
-            } else {
-              // Authentication validation failed - show error and continue waiting
-              await page.evaluate(() => {
-                const overlay = document.getElementById('auth-overlay-waa');
-                if (overlay) {
-                  const modal = overlay.querySelector('div');
-                  modal.innerHTML = 
-                    '<div style="color: #1f2937; margin-bottom: 24px;">' +
-                      '<div style="font-size: 20px; font-weight: 600; margin-bottom: 12px; color: #dc2626;">' +
-                        '❌ Authentication Failed' +
-                      '</div>' +
-                      '<div style="font-size: 14px; line-height: 1.5; color: #6b7280;">' +
-                        'Please ensure you\'re properly signed in and try again.' +
-                      '</div>' +
-                    '</div>' +
-                    '<button id="auth-continue-btn" style="' +
-                      'background: #3b82f6;' +
-                      'color: white;' +
-                      'border: none;' +
-                      'padding: 12px 24px;' +
-                      'border-radius: 6px;' +
-                      'font-size: 14px;' +
-                      'font-weight: 500;' +
-                      'cursor: pointer;' +
-                    '" onmouseover="this.style.background=\'#2563eb\'" onmouseout="this.style.background=\'#3b82f6\'">' +
-                      'Try Again' +
-                    '</button>';
-                  
-                  // Re-attach event listener
-                  (window as any).authenticationComplete = false;
-                  document.getElementById('auth-continue-btn').addEventListener('click', () => {
-                    (window as any).authenticationComplete = true;
-                    overlay.remove();
-                  });
-                }
-              });
-            }
+          // Grab current storage state
+          const storageJson = await context.storageState();
+
+          // Run validation to check if authentication works
+          const validation = await this.validateStorageStateObject(storageJson, { 
+            probeUrl, 
+            successSelector: options.successSelector, 
+            timeoutMs: Math.min(8000, timeoutMs) 
+          });
+          
+          if (validation.ok) {
+            const elapsedMs = Date.now() - start;
+            try { await context.close(); } catch {}
+            return { ok: true, elapsedMs };
           }
         } catch (err) {
-          // ignore and continue polling
+          // ignore and continue polling until timeout
         }
 
         // Sleep before next poll
