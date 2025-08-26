@@ -142,7 +142,7 @@ export async function startRecordingSession(request: StartSessionRequest): Promi
 /**
  * Trigger interactive re-login detour on the server. Returns { ok, elapsedMs, reason }
  */
-export async function interactiveRelogin(request: { browserType?: string; browserName?: string; probeUrl?: string; timeoutMs?: number; successSelector?: string }): Promise<{ ok: boolean; elapsedMs?: number; reason?: string }>{
+export async function interactiveRelogin(request: { browserType?: string; browserName?: string; probeUrl?: string; timeoutMs?: number; successSelector?: string }): Promise<{ ok: boolean; elapsedMs?: number; reason?: string; provisionalId?: string }>{
   const response = await fetch(`${API_BASE}/storage/interactive-relogin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

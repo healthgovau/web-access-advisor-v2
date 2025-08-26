@@ -1,3 +1,70 @@
+## [2025-08-26] Authentication Flow Overlay Implementation
+
+### Revolutionary User-Controlled Authentication
+- ✅ **Implemented authentication overlay system** - Interactive detour now shows an in-page overlay with "Continue Recording" button instead of auto-detecting authentication
+- ✅ **Added domain-specific authentication checking** - Profile sharing now validates if the browser profile actually has authentication for the target domain before proceeding
+- ✅ **Enhanced user experience** - Clear visual guidance with modal overlay that waits for user confirmation after sign-in completion
+- ✅ **Improved validation reliability** - Authentication is validated only when user confirms they're signed in, eliminating false positives from generic cookies
+
+#### Technical Implementation
+```javascript
+// NEW: Domain authentication check before using profile
+const domainCheck = await recordingApi.checkDomainLogin(state.url);
+const browserLoginStatus = domainCheck.loginStatus[selectedBrowser] || false;
+if (browserLoginStatus) {
+  authenticationState = 'profile';
+} else {
+  authenticationState = 'detour'; // Trigger overlay authentication
+}
+```
+
+**Authentication Overlay Features:**
+- 🎨 **Professional modal design** with dark overlay and centered white modal
+- 🔐 **Clear messaging** - "Authentication Required" with step-by-step instructions
+- ✅ **User-controlled flow** - User clicks "Continue Recording" only after completing sign-in
+- 🔄 **Retry mechanism** - Shows error message and "Try Again" if authentication validation fails
+- ⏱️ **Extended timeout** - 5 minutes for user to complete authentication process
+
+#### User Workflow
+```
+1. System detects no authentication → Shows overlay
+2. User signs in to website → Clicks "Continue Recording" 
+3. System validates authentication → Proceeds if valid
+4. If validation fails → Shows retry message
+5. Recording starts with authenticated context
+```
+
+**Problem Solved**: Eliminates premature authentication completion and manual login during recording. Users now have full control over when to proceed after authentication, ensuring recording starts with proper authenticated context.
+
+## [2025-08-26] Authentication Flow Contract Fix
+
+### Critical Authentication Bug Fixes
+- ✅ **Fixed broken authentication contract** - `interactiveRelogin` frontend now properly handles the `provisionalId` returned by backend when storageState is successfully saved
+- ✅ **Changed profile sharing default to false** - Profile sharing now defaults to disabled to prevent authentication issues until users explicitly enable it
+- ✅ **Fixed TypeScript interface mismatch** - Updated `interactiveRelogin` return type to include optional `provisionalId` property to match actual backend response
+- ✅ **Improved authentication error handling** - Better logging and fallback behavior when storageState cannot be saved during interactive detour
+
+#### Technical Details
+The authentication detour mechanism was failing silently because:
+1. **Contract Mismatch**: Frontend expected `provisionalId` in response but TypeScript interface was missing this property
+2. **Silent Failure**: When storageState extraction failed on backend, `provisionalId` would be `null` but frontend didn't handle this case
+3. **Profile Default**: Profile sharing was enabled by default, causing authentication flows to bypass detour mechanism inappropriately
+
+```typescript
+// FIXED: Proper provisionalId handling
+if (reloginResult && reloginResult.ok) {
+  if (reloginResult.provisionalId) {
+    provisionalId = reloginResult.provisionalId;
+    console.log(`✅ Interactive detour completed with saved storageState: ${provisionalId}`);
+  } else {
+    console.log('✅ Interactive detour completed but storageState could not be saved - will use profile/clean browser');
+  }
+  authenticationState = 'detour';
+}
+```
+
+**Problem Solved**: Authentication detour now properly validates user login, saves storageState when possible, and gracefully handles fallbacks when storageState extraction fails. Recording sessions will now properly use authenticated contexts.
+
 ## [2025-08-22] TypeScript Workspace Build Fix
 
 If CLI cannot find types from @web-access-advisor/core (error TS2307 or TS7016), update CLI's tsconfig.json paths mapping:

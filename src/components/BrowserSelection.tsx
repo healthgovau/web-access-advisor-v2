@@ -220,19 +220,21 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
             <div className="p-4 bg-white border rounded-lg">
             <div className="flex items-center gap-3">
               <div 
-                className={`flex-1 flex items-center justify-between text-sm p-2 rounded transition-colors ${
+                className={`flex-1 flex items-center justify-between text-sm p-2 rounded transition-colors cursor-pointer ${
                   disabled || sessionMode === 'load'
-                    ? 'text-gray-400 bg-gray-50'
+                    ? 'text-gray-400 bg-gray-50 cursor-not-allowed'
                     : useProfile 
-                      ? 'text-blue-600 bg-blue-50' 
-                      : 'text-gray-400 bg-gray-50'
+                      ? 'text-blue-600 bg-blue-50 hover:bg-blue-100' 
+                      : 'text-gray-600 bg-gray-50 hover:bg-gray-100'
                 }`}
                 onClick={() => sessionMode === 'new' && !disabled && handleProfileToggle(!useProfile)}
               >
                 <span className="flex-1 text-center">
                   {sessionMode === 'load' 
                     ? 'Recorded with authentication - ensure you are logged in'
-                    : 'Will use your existing login sessions and browser settings'
+                    : useProfile
+                      ? 'Will use your existing login sessions and browser settings'
+                      : 'Will use clean browser session (sign in during recording if needed)'
                   }
                 </span>
 

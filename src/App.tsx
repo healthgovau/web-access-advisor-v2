@@ -184,12 +184,12 @@ function App() {
   // Browser selection state
   const [selectedBrowser, setSelectedBrowser] = useState<string>(''); // No default selection
   const [selectedBrowserType, setSelectedBrowserType] = useState<'chromium' | 'firefox' | 'webkit'>('chromium');
-  const [useProfile, setUseProfile] = useState<boolean>(true);
+  const [useProfile, setUseProfile] = useState<boolean>(false);
   
   // Store "New Recording" browser selection separately to persist across mode switches
   const [newRecordingBrowser, setNewRecordingBrowser] = useState<string>('');
   const [newRecordingBrowserType, setNewRecordingBrowserType] = useState<'chromium' | 'firefox' | 'webkit'>('chromium');
-  const [newRecordingUseProfile, setNewRecordingUseProfile] = useState<boolean>(true);
+  const [newRecordingUseProfile, setNewRecordingUseProfile] = useState<boolean>(false);
 
   // Main application state
   const [state, setState] = useState<AppState>({
@@ -397,9 +397,24 @@ function App() {
           console.log(`Profile probe result: ${probe.status}`);
           
           if (probe.status === 'usable') {
-            // Profile is available - we'll use it, but still might need detour if it doesn't have auth for this specific site
-            authenticationState = 'profile';
-            console.log('✅ Browser profile available for authentication');
+            // Profile is available - but we need to check if it has auth for this specific domain
+            updateProgress('starting-browser', 'Checking domain authentication in browser profile');
+            try {
+              const domainCheck = await recordingApi.checkDomainLogin(state.url);
+              console.log('Domain authentication check:', domainCheck);
+              
+              const browserLoginStatus = domainCheck.loginStatus[selectedBrowser] || false;
+              if (browserLoginStatus) {
+                authenticationState = 'profile';
+                console.log(`✅ Browser profile has authentication for ${domainCheck.domain}`);
+              } else {
+                authenticationState = 'detour';
+                console.log(`❌ Browser profile lacks authentication for ${domainCheck.domain} - will run detour`);
+              }
+            } catch (domainCheckErr) {
+              console.warn('Domain check failed, assuming profile needs detour:', domainCheckErr);
+              authenticationState = 'detour';
+            }
           } else if (probe.status === 'locked') {
             // Show confirm modal to let user choose close browser (confirm) or run interactive detour (cancel)
             const choice = await new Promise<boolean>((resolve) => {
@@ -433,20 +448,27 @@ function App() {
 
       // Step 3: Run interactive detour if needed
       if (authenticationState === 'detour') {
-        updateProgress('starting-browser', 'Running interactive sign-in detour - please authenticate in the browser');
+        updateProgress('starting-browser', 'Opening browser for authentication - sign in and click Continue');
         try {
           const reloginResult = await recordingApi.interactiveRelogin({ 
             browserType: selectedBrowserType, 
             browserName: selectedBrowser, 
             probeUrl: state.url, 
-            timeoutMs: 120000 
+            timeoutMs: 300000 // 5 minutes for user to sign in
           });
           console.log('Interactive relogin result:', reloginResult);
-          if (reloginResult && (reloginResult as any).provisionalId) {
-            provisionalId = (reloginResult as any).provisionalId;
+          
+          if (reloginResult && reloginResult.ok) {
+            // Check if we got a provisionalId with saved storageState
+            if (reloginResult.provisionalId) {
+              provisionalId = reloginResult.provisionalId;
+              console.log(`✅ Interactive detour completed with saved storageState: ${provisionalId}`);
+            } else {
+              console.log('✅ Interactive detour completed but storageState could not be saved - will use profile/clean browser');
+            }
             authenticationState = 'detour';
           } else {
-            console.warn('Interactive detour completed but no provisionalId returned');
+            throw new Error(`Authentication validation failed: ${reloginResult.reason || 'unknown'}`);
           }
         } catch (err) {
           console.error('Interactive detour failed:', err);
