@@ -359,40 +359,29 @@ function App() {
       updateProgress('starting-browser', 'Launching browser session');
       if (!isMountedRef.current) return; // Check before API call
 
-      // AUTHENTICATION FLOW: storageState → profile → interactive detour
+      // SIMPLE BROWSER LAUNCH - Keep storageState but simplify flow
+      console.log(`🚀 Starting browser session: ${selectedBrowser} (${selectedBrowserType}), profile: ${useProfile}`);
+
+      // Keep authentication state for storageState functionality
       let provisionalId: string | undefined = undefined;
       let authenticationState: 'storageState' | 'profile' | 'detour' | 'none' = 'none';
-      
-      // Step 1: Check for existing storageState from previous sessions
+
+      // Start recording session immediately - let profile handle authentication
       updateProgress('starting-browser', 'Checking for saved authentication state');
       try {
         console.log('🔍 Searching for sessions with storageState for URL:', state.url);
         const sessionsWithStorage = await recordingApi.findSessionsWithStorageState(state.url);
         console.log(`Found ${sessionsWithStorage.length} sessions with potential storageState for ${state.url}:`, sessionsWithStorage);
         
-        // Try to validate the most recent storageState
-        for (const session of sessionsWithStorage) {
-          try {
-            updateProgress('starting-browser', `Validating saved authentication from ${new Date(session.lastModified).toLocaleDateString()}`);
-            console.log(`🔬 Validating storageState for session ${session.sessionId}`);
-            const validation = await recordingApi.validateStorageState(session.sessionId, {
-              probeUrl: state.url,
-              timeoutMs: 10000
-            });
-            console.log(`Validation result for ${session.sessionId}:`, validation);
-            
-            if (validation.ok) {
-              console.log(`✅ Valid storageState found in session ${session.sessionId}`);
-              provisionalId = session.sessionId;
-              authenticationState = 'storageState';
-              break;
-            } else {
-              console.log(`❌ Invalid storageState in session ${session.sessionId}: ${validation.reason}`);
-            }
-          } catch (err) {
-            console.warn(`Failed to validate storageState for ${session.sessionId}:`, err);
-            continue;
-          }
+        // SPEED OPTIMIZATION: Just use the most recent storageState without slow validation
+        // We'll check if it worked by comparing URLs after browser launches
+        if (sessionsWithStorage.length > 0) {
+          const mostRecentSession = sessionsWithStorage[0]; // Already sorted by most recent
+          console.log(`✅ Using most recent storageState from session ${mostRecentSession.sessionId} (${new Date(mostRecentSession.lastModified).toLocaleDateString()})`);
+          provisionalId = mostRecentSession.sessionId;
+          authenticationState = 'storageState';
+        } else {
+          console.log('❌ No previous storageState found');
         }
       } catch (err) {
         console.error('Failed to search for sessions with storageState:', err);
@@ -534,6 +523,49 @@ function App() {
       if (isMountedRef.current) {
         startActionPolling(response.sessionId);
       }
+
+      // **SIMPLE URL-BASED AUTHENTICATION CHECK** - happens after browser is open
+      setTimeout(async () => {
+        if (!isMountedRef.current) return;
+        
+        try {
+          console.log(`🔍 Checking if browser reached target URL...`);
+          const urlCheck = await recordingApi.getSessionCurrentUrl(response.sessionId);
+          
+          console.log(`   Target URL: ${urlCheck.targetUrl}`);
+          console.log(`   Current URL: ${urlCheck.currentUrl}`);
+          
+          // Simple check: if current URL doesn't match target URL, probably redirected to login
+          const targetHost = new URL(urlCheck.targetUrl).host;
+          const currentHost = new URL(urlCheck.currentUrl).host;
+          
+          if (targetHost !== currentHost) {
+            console.log(`🚨 URL mismatch detected - likely redirected to authentication`);
+            console.log(`   Expected: ${targetHost}`);
+            console.log(`   Actual: ${currentHost}`);
+            
+            // Show detour panel for manual login
+            const authSuccess = await new Promise<boolean>((resolve) => {
+              setAuthDetourResolve(() => resolve);
+              setAuthDetourVisible(true);
+            });
+
+            // Hide panel
+            setAuthDetourVisible(false);
+            setAuthDetourResolve(null);
+
+            if (!authSuccess) {
+              console.log(`❌ User cancelled authentication`);
+            } else {
+              console.log(`✅ User completed authentication`);
+            }
+          } else {
+            console.log(`✅ URLs match - user is on target site, no authentication needed`);
+          }
+        } catch (urlCheckError) {
+          console.warn('URL check failed (browser might not be ready):', urlCheckError);
+        }
+      }, 3000); // Check URL 3 seconds after browser opens
     } catch (error) {
       if (!isMountedRef.current) return; // Don't update if unmounted
       

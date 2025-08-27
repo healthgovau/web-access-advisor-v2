@@ -821,6 +821,35 @@ app.get('/api/record/:sessionId/actions', async (req: any, res: any) => {
 });
 
 /**
+ * Get current URL of active recording session
+ */
+app.get('/api/record/:sessionId/current-url', async (req: any, res: any) => {
+  try {
+    const { sessionId } = req.params;
+    
+    const session = await browserRecordingService.getSession(sessionId);
+    if (!session || !session.page) {
+      return res.status(404).json({ error: 'Session not found or not active' });
+    }
+    
+    const currentUrl = session.page.url();
+    const targetUrl = session.url; // Original target URL from session
+    
+    res.json({
+      currentUrl,
+      targetUrl
+    });
+
+  } catch (error: any) {
+    console.error('Failed to get current URL:', error);
+    res.status(500).json({
+      error: 'Failed to get current URL',
+      details: error.message
+    });
+  }
+});
+
+/**
  * Delete a session
  */
 app.delete('/api/sessions/:id', (req: any, res: any) => {

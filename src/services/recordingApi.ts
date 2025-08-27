@@ -328,6 +328,19 @@ export async function getAnalysisStatus(analysisId: string): Promise<AnalyzeSess
 }
 
 /**
+ * Check current URL of active recording session
+ */
+export async function getSessionCurrentUrl(sessionId: string): Promise<{ currentUrl: string; targetUrl: string }> {
+  const response = await fetch(`${API_BASE}/record/${sessionId}/current-url`);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to get current URL: ${response.statusText}`);
+  }
+  
+  return response.json();
+}
+
+/**
  * Load a saved recording session
  */
 export async function loadSavedSession(sessionId: string): Promise<{
