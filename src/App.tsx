@@ -185,12 +185,12 @@ function App() {
   // Browser selection state
   const [selectedBrowser, setSelectedBrowser] = useState<string>(''); // No default selection
   const [selectedBrowserType, setSelectedBrowserType] = useState<'chromium' | 'firefox' | 'webkit'>('chromium');
-  const [useProfile, setUseProfile] = useState<boolean>(false);
+  const [useProfile, setUseProfile] = useState<boolean>(true);
   
   // Store "New Recording" browser selection separately to persist across mode switches
   const [newRecordingBrowser, setNewRecordingBrowser] = useState<string>('');
   const [newRecordingBrowserType, setNewRecordingBrowserType] = useState<'chromium' | 'firefox' | 'webkit'>('chromium');
-  const [newRecordingUseProfile, setNewRecordingUseProfile] = useState<boolean>(false);
+  const [newRecordingUseProfile, setNewRecordingUseProfile] = useState<boolean>(true);
 
   // Main application state
   const [state, setState] = useState<AppState>({
