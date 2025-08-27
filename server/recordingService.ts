@@ -1151,8 +1151,14 @@ export class BrowserRecordingService {
             const recording = JSON.parse(content) as SavedRecording;
             recordings.push(recording);
           } catch (error) {
-            // Skip invalid or missing recording files
-            console.warn(`Skipping invalid recording in ${file.name}:`, error);
+            // Skip invalid or missing recording files (common during development/testing)
+            if (error instanceof Error && error.message.includes('ENOENT')) {
+              // Silently skip missing recording.json files
+              continue;
+            } else {
+              // Log other types of errors (malformed JSON, etc.)
+              console.warn(`Skipping invalid recording in ${file.name}: ${error instanceof Error ? error.message : String(error)}`);
+            }
           }
         }
       }
