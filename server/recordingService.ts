@@ -386,6 +386,10 @@ export class BrowserRecordingService {
       if (useProfile) {
         // Use persistent context with user profile - this already opens a page
         context = await this.launchWithProfile(browserType, browserName);
+        
+        // DIAGNOSTIC: Test session inheritance right after context creation
+        console.log(`🔍 DEBUG: Testing session inheritance by navigating to: ${url}`);
+        
         // Get the existing page from persistent context instead of creating new one
         const pages = context.pages();
         if (pages.length > 0) {
@@ -491,6 +495,60 @@ export class BrowserRecordingService {
         try {
           const context = await chromium.launchPersistentContext(browserOption.profilePath, launchOptions);
           console.log('✅ DEBUG: Successfully launched with persistent context');
+          
+          // DETAILED COOKIE DIAGNOSTICS
+          console.log('🍪 DEBUG: Starting detailed cookie analysis...');
+          
+          try {
+            const cookies = await context.cookies();
+            console.log(`🍪 DEBUG: Total cookies loaded: ${cookies.length}`);
+            
+            if (cookies.length === 0) {
+              console.log('❌ DEBUG: NO COOKIES LOADED! This explains the authentication failure.');
+            } else {
+              // Check for authentication-related cookies
+              const authCookies = cookies.filter(cookie => 
+                cookie.name.toLowerCase().includes('auth') ||
+                cookie.name.toLowerCase().includes('session') ||
+                cookie.name.toLowerCase().includes('login') ||
+                cookie.name.toLowerCase().includes('token') ||
+                cookie.domain.includes('powerappsportals') ||
+                cookie.domain.includes('powerplatformauth') ||
+                cookie.domain.includes('microsoftonline')
+              );
+              
+              console.log(`🔑 DEBUG: Authentication-related cookies: ${authCookies.length}`);
+              
+              if (authCookies.length === 0) {
+                console.log('❌ DEBUG: NO AUTH COOKIES FOUND! This explains authentication failure.');
+                console.log('🔍 DEBUG: Available cookie domains:');
+                const domains = [...new Set(cookies.map(c => c.domain))];
+                domains.forEach(domain => console.log(`   - ${domain}`));
+              } else {
+                console.log('✅ DEBUG: Found authentication cookies:');
+                authCookies.slice(0, 5).forEach(cookie => {
+                  console.log(`   🔑 ${cookie.name} (${cookie.domain}) = ${cookie.value.substring(0, 20)}...`);
+                });
+              }
+              
+              // Check for Power Apps specific cookies
+              const powerAppsCookies = cookies.filter(cookie => 
+                cookie.domain.includes('powerappsportals') || 
+                cookie.domain.includes('.microsoftonline.com')
+              );
+              
+              console.log(`⚡ DEBUG: Power Apps Portal cookies: ${powerAppsCookies.length}`);
+              if (powerAppsCookies.length > 0) {
+                powerAppsCookies.slice(0, 3).forEach(cookie => {
+                  console.log(`   ⚡ ${cookie.name} (${cookie.domain})`);
+                });
+              }
+            }
+            
+          } catch (cookieError) {
+            console.error('❌ DEBUG: Failed to read cookies from context:', cookieError);
+          }
+          
           return context;
         } catch (error) {
           console.error('❌ DEBUG: Failed to launch with persistent context:', error);
