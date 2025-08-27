@@ -390,7 +390,21 @@ export class BrowserRecordingService {
         try {
           const stat = await readFile(storagePath, 'utf8');
           const storageObj = JSON.parse(stat);
-          const browserInstance = await chromium.launch({ headless: false, slowMo: 50 });
+          const browserInstance = await chromium.launch({ 
+            headless: false, 
+            slowMo: 50,
+            args: [
+              '--start-maximized', 
+              '--window-size=1920,1080', 
+              '--window-position=0,0',
+              '--no-first-run',
+              '--no-default-browser-check',
+              '--disable-dev-shm-usage',
+              '--force-device-scale-factor=1',
+              '--disable-web-security',
+              '--disable-features=VizDisplayCompositor'
+            ]
+          });
           context = await browserInstance.newContext({ storageState: storageObj });
           page = await context.newPage();
         } catch (err) {
@@ -415,6 +429,35 @@ export class BrowserRecordingService {
         browser = browserInstance;
         context = await browser.newContext();
         page = await context.newPage();
+        }
+      }
+      
+      // Force the browser window to come to front
+      if (page) {
+        try {
+          // Attempt to bring window to front using multiple methods
+          await page.bringToFront();
+          await page.evaluate(() => {
+            window.focus();
+            // Try to make the window visible and focused
+            if (window.parent && window.parent !== window) {
+              window.parent.focus();
+            }
+          });
+          
+          // Additional focus attempts with slight delay
+          setTimeout(async () => {
+            try {
+              await page.bringToFront();
+              await page.focus('body');
+            } catch (e) {
+              console.warn('Secondary focus attempt failed:', e);
+            }
+          }, 500);
+          
+          console.log('🎯 Browser window brought to front');
+        } catch (error) {
+          console.warn('⚠️  Could not bring browser window to front:', error);
         }
       }
       
@@ -469,10 +512,14 @@ export class BrowserRecordingService {
     const launchOptions: any = {
       headless: false,
       slowMo: 50,
+      viewport: null, // Disable viewport emulation to allow natural window sizing with maximization
       args: [
         '--start-maximized',
         '--window-size=1920,1080',
-        '--window-position=0,0'
+        '--window-position=0,0',
+        '--force-device-scale-factor=1',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor'
       ]
     };
 
@@ -500,7 +547,10 @@ export class BrowserRecordingService {
               '--window-position=0,0',
               '--no-first-run',
               '--no-default-browser-check',
-              '--disable-dev-shm-usage'
+              '--disable-dev-shm-usage',
+              '--force-device-scale-factor=1',
+              '--disable-web-security',
+              '--disable-features=VizDisplayCompositor'
             ];
           } catch (error) {
             console.error('❌ DEBUG: Chrome profile access issue:', error);
@@ -550,7 +600,18 @@ export class BrowserRecordingService {
   private async launchCleanBrowser(browserType: 'chromium' | 'firefox' | 'webkit', browserName?: string): Promise<Browser> {
     const launchOptions: any = {
       headless: false,
-      slowMo: 50
+      slowMo: 50,
+      args: [
+        '--start-maximized', 
+        '--window-size=1920,1080', 
+        '--window-position=0,0',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--disable-dev-shm-usage',
+        '--force-device-scale-factor=1',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor'
+      ]
     };
 
     switch (browserType) {
