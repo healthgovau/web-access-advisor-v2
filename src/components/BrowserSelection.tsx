@@ -75,12 +75,12 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
 
   const getProfileStatusText = (browser: BrowserOption) => {
     if (!browser.profilePath) {
-      return 'Clean session only';
+      return 'Fresh session only';
     }
     
     return useProfile 
-      ? 'Using browser profile' 
-      : 'Not using browser profile';
+      ? 'Will use your saved logins' 
+      : 'Fresh session (no saved logins)';
   };
 
   // Refs and state for controlled popovers that can flip when off-screen
@@ -199,18 +199,18 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
       <div className="flex items-center justify-center mb-3">
         <h3 className="text-xl font-medium text-brand-dark">
           {sessionMode === 'new' 
-            ? (selectedBrowser ? 'Browser Options' : 'Choose Browser')
+            ? (selectedBrowser ? 'Browser Settings' : 'Choose Your Browser')
             : 'Browser Details'}
         </h3>
       </div>
       {sessionMode === 'new' && !selectedBrowser && (
         <p className="text-sm text-gray-600 mb-4 text-center">
-          Select a browser to get started with accessibility testing
+          Select the browser you'd like to use for accessibility testing
         </p>
       )}
       {sessionMode === 'load' && !selectedBrowser && (
         <p className="text-sm text-gray-600 mb-4 text-center">
-          Browser settings will be automatically configured based on the selected recording
+          Browser settings will match the selected recording
         </p>
       )}
       
@@ -231,10 +231,10 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
               >
                 <span className="flex-1 text-center">
                   {sessionMode === 'load' 
-                    ? 'Recorded with authentication - ensure you are logged in'
+                    ? 'This recording used your saved logins - make sure you are signed in'
                     : useProfile
-                      ? 'Will use your existing login sessions and browser settings'
-                      : 'Will use clean browser session (sign in during recording if needed)'
+                      ? 'Use my saved logins and browser data'
+                      : 'Start fresh (I will sign in during recording if needed)'
                   }
                 </span>
 
@@ -272,7 +272,7 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                   showSelection
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200'
-                } ${!isBrowserDisabled ? 'cursor-pointer' : 'cursor-default'}`}
+                } ${!isBrowserDisabled ? 'cursor-pointer hover:border-gray-300' : 'cursor-default'}`}
               >
                 <input
                   type="radio"
@@ -289,10 +289,12 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                     {sessionMode === 'load' && !selectedBrowser
                       ? 'Awaiting session selection'
                       : sessionMode === 'load' && selectedBrowser && browser.name === selectedBrowser
-                        ? `Used in this session${useProfile ? ' with profile' : ' without profile'}`
+                        ? `Used in this recording${useProfile ? ' with login' : ' without login'}`
                         : sessionMode === 'load' && selectedBrowser && browser.name !== selectedBrowser
-                          ? 'Not used in this session'
-                          : getProfileStatusText(browser)
+                          ? 'Not used in this recording'
+                          : useProfile 
+                            ? 'Will use your saved logins' 
+                            : 'Fresh session (no saved logins)'
                     }
                   </div>
                   {/* Per-browser info popover (top-right of card) */}
@@ -333,69 +335,50 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
                       >
                         <div className="space-y-3 text-left">
                           {sessionMode === 'new' ? (
-                            // Recording instructions (non-technical)
+                            // Recording instructions (simplified)
                             browser.type === 'firefox' ? (
                               <div>
-                                <div className="text-sm font-semibold text-gray-900 mb-2">Recording — Firefox</div>
-                                  <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
-                                    <li>Open Firefox and sign in to the website you want to test.</li>
-                                    <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
-                                    <li>Return here and start the recording.</li>
-                                  </ul>
-                              </div>
-                            ) : (
-                              <div>
-                                <div className="text-sm font-semibold text-gray-900 mb-2">Recording — {browser.name}</div>
-                {browser.name && browser.name.includes('Edge') ? (
-                                  <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
-                                    <li>Make sure you are already signed in to the website in Microsoft Edge.</li>
-                                    <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
-                                    <li>Return here and start the recording. You do not need to sign in while recording.</li>
-                                  </ul>
-                ) : browser.type === 'chromium' && !browser.name.includes('Edge') ? (
-                                  <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
-                                    <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
-                                    <li>If no saved login (storage state) exists, we will open your browser so you can sign in before recording starts — complete the sign-in and the recording will begin automatically.</li>
-                                    <li>After signing in we validate the saved login; recording will only start once validation succeeds.</li>
-                                  </ul>
-                                ) : (
-                                  <ol className="list-decimal list-inside text-gray-700 ml-3">
-                                    <li>Open {browser.name} and sign in to the website you want to test.</li>
-                                    <li>Avoid private or incognito windows — use a normal window so your login is saved.</li>
-                                    <li>You may need to sign in during recording if you are not already signed in.</li>
-                                  </ol>
-                                )}
-                              </div>
-                            )
-                          ) : (
-                            // Replay instructions (non-technical)
-                            browser.type === 'firefox' ? (
-                              <div>
-                                <div className="text-sm font-semibold text-gray-900 mb-2">Replay — Firefox</div>
-                                <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
-                                  <li>Open Firefox and make sure you are signed in to the website.</li>
-                                  <li>In the replay controls, click "Validate" to check your login.</li>
-                                  <li>If validation fails, sign in again in the browser and retry validation.</li>
+                                <div className="text-sm font-semibold text-gray-900 mb-2">Recording with Firefox</div>
+                                <ul className="list-disc list-inside text-gray-700 space-y-1">
+                                  <li>Sign in to your website in Firefox first</li>
+                                  <li>Keep Firefox open (don't use private browsing)</li>
+                                  <li>Come back here and click "Start Recording"</li>
                                 </ul>
                               </div>
                             ) : (
                               <div>
-                                <div className="text-sm font-semibold text-gray-900 mb-2">Replay — {browser.name}</div>
-                                {browser.type === 'chromium' && !browser.name.includes('Edge') ? (
-                                  <ul className="list-disc list-inside text-gray-700 pl-4 space-y-1">
-                                    <li>Open {browser.name} and sign in to the website you want to test.</li>
-                                    <li>Click "Validate" in the replay controls to confirm your saved login (storage state) is usable.</li>
-                                    <li>If validation fails, click "Re-login" — this opens the browser so you can sign in; once signed in we'll save a new login state for the session so replays can reuse it. Then click "Validate" again.</li>
+                                <div className="text-sm font-semibold text-gray-900 mb-2">Recording with {browser.name}</div>
+                                {browser.name && browser.name.includes('Edge') ? (
+                                  <ul className="list-disc list-inside text-gray-700 space-y-1">
+                                    <li>Sign in to your website in Edge first</li>
+                                    <li>Keep Edge open (don't use InPrivate browsing)</li>
+                                    <li>Come back here and click "Start Recording"</li>
+                                  </ul>
+                                ) : browser.type === 'chromium' && !browser.name.includes('Edge') ? (
+                                  <ul className="list-disc list-inside text-gray-700 space-y-1">
+                                    <li>If you have saved logins, we'll use them automatically</li>
+                                    <li>If not, we'll help you sign in before recording starts</li>
+                                    <li>Avoid private/incognito browsing</li>
                                   </ul>
                                 ) : (
-                                  <ol className="list-decimal list-inside text-gray-700 ml-3">
-                                    <li>Open {browser.name} and make sure you are signed in to the website.</li>
-                                    <li>In the replay controls, click "Validate" to check your login.</li>
-                                    <li>If validation fails, sign in again in the browser and retry validation.</li>
-                                  </ol>
+                                  <ul className="list-disc list-inside text-gray-700 space-y-1">
+                                    <li>Sign in to your website in {browser.name} first</li>
+                                    <li>Keep the browser open (don't use private browsing)</li>
+                                    <li>Come back here and click "Start Recording"</li>
+                                  </ul>
                                 )}
                               </div>
                             )
+                          ) : (
+                            // Replay instructions (simplified)
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900 mb-2">Analyzing with {browser.name}</div>
+                              <ul className="list-disc list-inside text-gray-700 space-y-1">
+                                <li>Make sure you're signed in to your website</li>
+                                <li>Click "Validate" to check your login status</li>
+                                <li>If validation fails, sign in again and retry</li>
+                              </ul>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -411,7 +394,7 @@ const BrowserSelection = forwardRef<HTMLDivElement, BrowserSelectionProps>(({
       {/* Profile sharing not available message */}
       {!canUseProfile && selectedBrowserOption && (
         <div className="mt-4 text-sm text-gray-500 bg-gray-100 p-3 rounded-lg">
-          ℹ️ Profile sharing not available for {selectedBrowserOption.name}. Will use a clean browser session.
+          ℹ️ Saved logins not available for {selectedBrowserOption.name}. You'll use a fresh browser session.
         </div>
       )}
     </div>

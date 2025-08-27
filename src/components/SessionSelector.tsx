@@ -187,8 +187,8 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({ onSessionSelect, isLo
                 </div>
                 <div className="bg-amber-100 border border-amber-300 rounded p-2 text-xs">
                   {context.useProfile 
-                    ? "⚠️ This session was recorded WITH authentication. Please log in to your website first before clicking 'Analyze Recording' to ensure accurate playback."
-                    : "✅ This session was recorded WITHOUT authentication (clean session). You can analyze directly - no login required."
+                    ? "⚠️ This recording used your saved logins. Please make sure you're signed in to the website before analyzing."
+                    : "✅ This recording was made without saved logins. You can analyze immediately - no sign-in required."
                   }
                 </div>
               </div>

@@ -91,24 +91,24 @@ const ReplayControls = ({
           {sessionId && (
             <div className="mb-2">
               {checkingStorage && (
-                <div className="text-sm text-gray-500">Checking authentication...</div>
+                <div className="text-sm text-gray-500">Checking your login status...</div>
               )}
 
               {!checkingStorage && storageStateStatus && storageStateStatus.present && storageStateStatus.expired === true && (
                 <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
-                  Storage state expired on {storageStateStatus.earliestExpiry ? new Date(storageStateStatus.earliestExpiry * 1000).toLocaleString() : 'unknown'}. Please re-login to refresh authentication.
+                  Your saved login expired on {storageStateStatus.earliestExpiry ? new Date(storageStateStatus.earliestExpiry * 1000).toLocaleString() : 'unknown'}. Please sign in again to refresh.
                   {onRefreshAuth && (
-                    <button onClick={onRefreshAuth} className="ml-3 underline text-sm">Re-login</button>
+                    <button onClick={onRefreshAuth} className="ml-3 underline text-sm">Sign In Again</button>
                   )}
                 </div>
               )}
 
               {!checkingStorage && storageStateStatus && storageStateStatus.present && (
                 <div className="mt-2">
-                  <button onClick={validateStorageState} disabled={validatingStorage} className="px-2 py-1 bg-white border rounded text-sm">{validatingStorage ? 'Validating...' : 'Validate authentication'}</button>
+                  <button onClick={validateStorageState} disabled={validatingStorage} className="px-2 py-1 bg-white border rounded text-sm">{validatingStorage ? 'Checking...' : 'Check Login Status'}</button>
                   {validationResult && (
                     <span className={`ml-3 text-sm ${validationResult.ok ? 'text-green-700' : 'text-red-700'}`}>
-                      {validationResult.ok ? `OK (${validationResult.elapsedMs}ms)` : `Failed: ${validationResult.reason || 'unknown'}`}
+                      {validationResult.ok ? `✓ Logged in (${validationResult.elapsedMs}ms)` : `✗ Login failed: ${validationResult.reason || 'unknown'}`}
                     </span>
                   )}
                 </div>
@@ -116,15 +116,15 @@ const ReplayControls = ({
 
               {!checkingStorage && storageStateStatus && storageStateStatus.present && storageStateStatus.expired !== true && (
                 <div className="p-2 bg-green-50 border border-green-200 rounded-md text-sm text-green-700">
-                  Storage state present and valid. Replay will use recorded authentication.
+                  ✓ You appear to be logged in. Replay will use your saved login.
                 </div>
               )}
 
               {!checkingStorage && (!storageStateStatus || storageStateStatus.present === false) && (
                 <div className="p-2 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
-                  No storage state found for this session. Replay will run in a clean session unless you refresh authentication.
+                  No saved login found for this recording. You'll need to sign in during replay.
                   {onRefreshAuth && (
-                    <button onClick={onRefreshAuth} className="ml-3 underline text-sm">Re-login</button>
+                    <button onClick={onRefreshAuth} className="ml-3 underline text-sm">Sign In Now</button>
                   )}
                 </div>
               )}

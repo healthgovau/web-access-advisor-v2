@@ -63,7 +63,7 @@ const ThreePhaseStatus: React.FC<ThreePhaseStatusProps> = ({
           case 'starting-browser':
       case 'recording':
         phases[0].status = 'active';
-        phases[0].message = currentStage === 'starting-browser' ? 'Launching browser...' : 'Recording in progress...';
+        phases[0].message = currentStage === 'starting-browser' ? 'Opening browser...' : 'Recording in progress...';
         phases[0].details = `${actionCount} actions captured`;
         break;
         
