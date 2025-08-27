@@ -1677,13 +1677,19 @@ export class AccessibilityAnalyzer {
           if (result.status === 'fulfilled' && result.value) {
             const components = result.value;
             if (components && components.length > 0) {
-              // Mark these components as coming from static sections
+              // Mark these components as coming from static sections and assign URL from first page
+              const firstPageUrl = snapshots.length > 0 ? (snapshots[0].axeContext?.url || 'unknown') : 'unknown';
+              const firstStep = snapshots.length > 0 ? snapshots[0].step : 1;
+              
               components.forEach((component: any) => {
                 component.componentName = `[Static] ${component.componentName}`;
                 component.explanation = `Static section accessibility issue: ${component.explanation}`;
+                // Assign URL and step from first page since static sections appear on all pages
+                component.url = firstPageUrl;
+                component.step = firstStep;
               });
               allComponents.push(...components);
-              console.log(`✅ Added ${components.length} static section components from analysis ${index + 1}`);
+              console.log(`✅ Added ${components.length} static section components from analysis ${index + 1}, assigned URL: ${firstPageUrl}`);
             }
           } else {
             console.warn(`❌ Static section analysis ${index + 1} failed:`, result.status === 'rejected' ? result.reason : 'Unknown error');
