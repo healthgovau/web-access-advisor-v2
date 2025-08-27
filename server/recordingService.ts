@@ -468,7 +468,12 @@ export class BrowserRecordingService {
 
     const launchOptions: any = {
       headless: false,
-      slowMo: 50
+      slowMo: 50,
+      args: [
+        '--start-maximized',
+        '--window-size=1920,1080',
+        '--window-position=0,0'
+      ]
     };
 
     switch (browserType) {
@@ -490,6 +495,9 @@ export class BrowserRecordingService {
             console.log('🔍 DEBUG: Adding Chrome-specific launch options...');
             launchOptions.timeout = 60000; // Longer timeout for Chrome
             launchOptions.args = [
+              '--start-maximized',
+              '--window-size=1920,1080',
+              '--window-position=0,0',
               '--no-first-run',
               '--no-default-browser-check',
               '--disable-dev-shm-usage'
