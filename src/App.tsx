@@ -89,6 +89,12 @@ const InfoModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onC
               <h3 className="text-lg font-semibold text-gray-900 mb-2 text-left">Important limitations and considerations</h3>
               <ul className="list-disc pl-6 space-y-2">
                 <li>
+                  <span className="font-semibold text-gray-900">Caution with sensitive data:</span>
+                  <span className="block text-gray-600 leading-relaxed">
+                    <span className="italic">Do not run analysis on sensitive or confidential information.</span> Accessibility analysis uses a cloud-based LLM. As such your page data may be sent to external servers. Review your content before running analysis to ensure you are not exposing private, proprietary, or personal data. For more information, please refer to our <a href="Important things to know and do" className="text-blue-600 underline">Information management</a> framework.
+                  </span>
+                </li>
+                <li>
                   <span className="font-semibold text-gray-900">AI/LLM Limitations:</span>
                   <span className="block text-gray-600 leading-relaxed">
                     Language models can make mistakes, hallucinate issues, or miss subtle problems. Their analysis is not exhaustive and should never be considered a substitute for expert human review or real user testing.
