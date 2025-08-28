@@ -444,12 +444,12 @@ function App() {
           authenticationState = 'detour';
         }
       } else if (authenticationState === 'none' && !useProfile) {
-        // No storageState found and profile sharing disabled - need detour
-        authenticationState = 'detour';
+        // No storageState found and profile sharing disabled - launch clean browser session, no detour
+        authenticationState = 'none';
       }
 
-      // Step 3: Run interactive detour if needed
-      if (authenticationState === 'detour') {
+      // Step 3: Run interactive detour if needed (only if useProfile is true)
+      if (authenticationState === 'detour' && useProfile) {
         updateProgress('starting-browser', 'Opening browser for authentication - sign in and click Continue');
         try {
           // Start manual detour - opens browser but waits for user confirmation
