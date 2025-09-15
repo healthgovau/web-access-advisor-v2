@@ -6,7 +6,8 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { AccessibilityAnalyzer, UserAction, AnalysisOptions } from '@web-access-advisor/core';
+import { AccessibilityAnalyzer } from '../../core/dist/analyzer.js';
+import { UserAction, AnalysisOptions } from '../../core/dist/types.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 
