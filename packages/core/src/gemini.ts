@@ -4,6 +4,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { ProxyAgent, fetch as undiciFetch } from 'undici';
 import type { GeminiAnalysis, ComponentAccessibilityIssue, EnhancedAxeViolation, LLMDebugLog } from './types.js';
 import { isAuthUrl, isAuthAction, type SessionAction } from './authDetection.js';
 
@@ -215,9 +216,71 @@ ${GeminiService.SHARED_REQUIREMENTS}
   Input data:
 `;
 
-  constructor(apiKey: string) {
+constructor(apiKey: string) {
+  // Check for proxy configuration in environment variables
+  const proxyUrl = process.env.https_proxy || process.env.HTTPS_PROXY || process.env.http_proxy || process.env.HTTP_PROXY;
+  
+  if (proxyUrl) {
+    console.log(`🔧 Proxy detected: ${proxyUrl}`);
+    
+    // Create ProxyAgent for undici
+    const proxyAgent = new ProxyAgent({
+      uri: proxyUrl,
+    });
+    
+    // Create custom fetch using undici with proxy agent
+    const customFetch = async (url: RequestInfo | URL, init?: RequestInit) => {
+      // Convert URL/Request to string for undici
+      const urlString = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url;
+      
+      // Cast init to any to avoid type conflicts between standard and undici types
+      return undiciFetch(urlString, {
+        ...(init as any),
+        dispatcher: proxyAgent,
+      } as any);
+    };
+    
+    // Store reference to custom fetch to avoid recursion
+    (globalThis as any).__proxyFetch = customFetch;
+    
+    // Initialize Gemini with API key
     this.genAI = new GoogleGenerativeAI(apiKey);
-  }  /**
+    
+    // Monkey-patch getGenerativeModel to inject custom fetch
+    const originalGetGenerativeModel = this.genAI.getGenerativeModel.bind(this.genAI);
+    this.genAI.getGenerativeModel = ((modelParams: any) => {
+      const model = originalGetGenerativeModel(modelParams);
+      
+      // Inject custom fetch into model
+      if (model && typeof model === 'object') {
+        const originalGenerateContent = model.generateContent?.bind(model);
+        if (originalGenerateContent) {
+          model.generateContent = async (request: any) => {
+            // Temporarily replace global fetch
+            const originalFetch = globalThis.fetch;
+            globalThis.fetch = (globalThis as any).__proxyFetch as any;
+            try {
+              return await originalGenerateContent(request);
+            } finally {
+              // Restore original fetch
+              globalThis.fetch = originalFetch;
+            }
+          };
+        }
+      }
+      return model;
+    }) as any;
+    
+    console.log(`✅ Gemini API configured to use proxy: ${proxyUrl}`);
+  } else {
+    console.log(`🌐 No proxy detected - using direct connection`);
+    this.genAI = new GoogleGenerativeAI(apiKey);
+  }
+  
+  console.log(`✅ Gemini service initialized successfully`);
+}
+
+  /**
    * Analyzes accessibility issues using Gemini AI with before/after state comparison
    * 
    * @param axeResults - Results from axe accessibility testing  
@@ -987,10 +1050,10 @@ ${GeminiService.SHARED_OUTPUT_FORMAT}
     console.log(`   - Snapshots: ${snapshots.length} steps`);
     console.log(`   - Step URLs:`, snapshots.map(s => ({ step: s.step, url: s.axeContext?.url })));
     console.log(`   - Context URL: ${context.url}`);
-    
+
     // Group snapshots by flow context
     const flowGroups = this.groupSnapshotsByFlow(snapshots, manifest);
-    
+
     // Build progressive context section
     const progressiveContextSection = progressiveContext ? `
 
@@ -1004,13 +1067,13 @@ This is batch ${progressiveContext.currentBatchMetadata.batchIndex + 1} of ${pro
 - Analyzing ${snapshots.length} snapshots from this flow segment
 
 **Previous Batch Context:**
-${progressiveContext.previousBatchSummaries.length > 0 
-  ? progressiveContext.previousBatchSummaries.map(summary => `
+${progressiveContext.previousBatchSummaries.length > 0
+        ? progressiveContext.previousBatchSummaries.map(summary => `
 - Batch: ${summary.flowType} (steps ${summary.stepRange.start}-${summary.stepRange.end})
   Key Findings: ${summary.keyFindings.join(', ')}
   Critical Issues: ${summary.criticalIssues.length} issues
   Context: ${summary.contextForNext.flowState} | ${summary.contextForNext.accessibilityPattern}`).join('\n')
-  : 'This is the first batch - no previous context available'}
+        : 'This is the first batch - no previous context available'}
 
 **Overall Session Context:**
 - Total Steps Across All Batches: ${progressiveContext.overallContext.totalSteps}
@@ -1278,13 +1341,13 @@ ${bodyMatch[1]}
   private removeStaticSections(html: string): string {
     try {
       console.log('🧹 Filtering static sections (header, footer, navigation)...');
-      
+
       let filtered = html;
       let sectionsRemoved = 0;
 
       // Remove semantic header, footer, and outermost nav elements
       // Use negative lookahead to avoid removing nested elements
-      
+
       // Remove header elements (outermost only)
       const headerMatches = filtered.match(/<header\b[^>]*>[\s\S]*?<\/header>/gi);
       if (headerMatches) {
@@ -1293,7 +1356,7 @@ ${bodyMatch[1]}
           const beforeMatch = filtered.substring(0, filtered.indexOf(match));
           const openHeaderCount = (beforeMatch.match(/<header\b[^>]*>/gi) || []).length;
           const closeHeaderCount = (beforeMatch.match(/<\/header>/gi) || []).length;
-          
+
           if (openHeaderCount === closeHeaderCount) {
             filtered = filtered.replace(match, '<!-- Header removed for analysis -->');
             sectionsRemoved++;
@@ -1308,7 +1371,7 @@ ${bodyMatch[1]}
           const beforeMatch = filtered.substring(0, filtered.indexOf(match));
           const openFooterCount = (beforeMatch.match(/<footer\b[^>]*>/gi) || []).length;
           const closeFooterCount = (beforeMatch.match(/<\/footer>/gi) || []).length;
-          
+
           if (openFooterCount === closeFooterCount) {
             filtered = filtered.replace(match, '<!-- Footer removed for analysis -->');
             sectionsRemoved++;
@@ -1323,7 +1386,7 @@ ${bodyMatch[1]}
           const beforeMatch = filtered.substring(0, filtered.indexOf(match));
           const openNavCount = (beforeMatch.match(/<nav\b[^>]*>/gi) || []).length;
           const closeNavCount = (beforeMatch.match(/<\/nav>/gi) || []).length;
-          
+
           if (openNavCount === closeNavCount) {
             filtered = filtered.replace(match, '<!-- Navigation removed for analysis -->');
             sectionsRemoved++;
@@ -1336,11 +1399,11 @@ ${bodyMatch[1]}
         // Main navigation patterns
         /<[^>]*class="[^"]*(?:main-nav|primary-nav|site-nav|global-nav)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
         /<[^>]*id="[^"]*(?:main-nav|primary-nav|site-nav|global-nav)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
-        
+
         // Header patterns
         /<[^>]*class="[^"]*(?:site-header|main-header|page-header)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
         /<[^>]*id="[^"]*(?:site-header|main-header|page-header)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
-        
+
         // Footer patterns
         /<[^>]*class="[^"]*(?:site-footer|main-footer|page-footer)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,
         /<[^>]*id="[^"]*(?:site-footer|main-footer|page-footer)[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi
@@ -1365,7 +1428,7 @@ ${bodyMatch[1]}
       return html;
     }
   }
-  
+
   /**
    * Parses Gemini response into structured component-based format
    */  private parseGeminiResponse(text: string, context: { step: number }): GeminiAnalysis {
@@ -1394,12 +1457,12 @@ ${bodyMatch[1]}
       console.log('🔍 DEBUG: Parsed JSON response:', JSON.stringify(parsed, null, 2));
 
       const validComponents = this.parseComponents(parsed.components || []);
-      
+
       // Debug: Check what we got for enhanced axe violations
       console.log(`🔍 DEBUG: Raw enhanced axe violations from LLM:`, parsed.enhancedAxeViolations);
       console.log(`🔍 DEBUG: Enhanced axe violations type:`, typeof parsed.enhancedAxeViolations);
       console.log(`🔍 DEBUG: Enhanced axe violations length:`, Array.isArray(parsed.enhancedAxeViolations) ? parsed.enhancedAxeViolations.length : 'not array');
-      
+
       const enhancedAxeViolations = this.parseEnhancedAxeViolations(parsed.enhancedAxeViolations || []);
       console.log(`🔍 DEBUG: Parsed enhanced axe violations:`, enhancedAxeViolations.length, 'items');
 
@@ -1453,10 +1516,10 @@ ${bodyMatch[1]}
             issue: component.issue
           });
           return false;
-               }
+        }
 
         return true;
-           }).map(component => {
+      }).map(component => {
         console.log('🔍 Processing component from Gemini:', {
           componentName: component.componentName,
           wcagRule: component.wcagRule,
@@ -1633,7 +1696,7 @@ ${bodyMatch[1]}
   extractStaticSections(html: string): { staticSections: string; mainContent: string } {
     try {
       console.log('🔍 Extracting static sections from HTML...');
-      
+
       let staticSections = '';
       let mainContent = html;
 
@@ -1681,7 +1744,7 @@ ${bodyMatch[1]}
       });
 
       console.log(`✅ Static sections extracted: ${staticSections.length} chars, main content: ${mainContent.length} chars`);
-      
+
       return {
         staticSections: staticSections.trim(),
         mainContent: mainContent
@@ -1738,13 +1801,13 @@ ${bodyMatch[1]}
     try {
       // Use existing analyzeComponent method for static sections
       const model = this.genAI.getGenerativeModel({ model: this.modelName });
-      
+
       // Build analysis prompt specifically for static sections
       const prompt = this.buildComponentAnalysisPrompt(
         staticSections,
         axeResults,
-        { 
-          ...context, 
+        {
+          ...context,
           action: `Static Section Analysis: ${context.action}`,
           domChangeType: 'static-section-analysis'
         },
@@ -1763,7 +1826,7 @@ ${bodyMatch[1]}
       const text = response.text();
 
       const analysis = this.parseGeminiResponse(text, context);
-      
+
       // Cache the results
       this.staticSectionCache.set(contentHash, analysis.components);
       console.log(`💾 Cached static section analysis: ${analysis.components.length} components`);

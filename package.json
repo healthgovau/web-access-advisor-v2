@@ -17,8 +17,8 @@
     "build:server": "tsc --project server/tsconfig.json",
     "preview": "vite preview",
     "cli": "node packages/cli/dist/cli.js",
-  "test": "vitest",
-  "test:run": "vitest run",
+    "test": "vitest",
+    "test:run": "vitest run",
     "postinstall": "playwright install"
   },
   "dependencies": {
@@ -39,6 +39,7 @@
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.58.0",
     "react-router-dom": "^7.6.2",
+    "undici": "^7.16.0",
     "validator": "^13.15.15"
   },
   "devDependencies": {
