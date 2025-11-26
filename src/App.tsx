@@ -132,7 +132,7 @@ const InfoModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onC
                 <li>
                   <span className="font-semibold text-gray-900">Essential: Real User Testing:</span>
                   <span className="block text-gray-600 leading-relaxed">
-                    <span className="font-bold">Always conduct testing with people with disabilities.</span> No automated tool or AI can replace the insights from users who actually rely on assistive technologies. Their lived experience will reveal issues and solutions that no algorithm can detect.
+                    <span className="font-bold">Where possible, use testers experienced in accessibility and screen reader technologies.</span> No automated tool or AI can replace the insights from users who actually rely on assistive technologies. Their lived experience will reveal issues and solutions that no algorithm can detect.
                   </span>
                 </li>
                 <li>
